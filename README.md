@@ -1,34 +1,32 @@
 # EnviroQuant Platform
 
 AI-powered environmental intelligence platform for Environmental Impact Assessment (EIA) creation, analysis, and regulatory compliance.
-> Building the future of AI-driven environmental decision-making.
-## 🌍 Vision
-To build the world’s first **AI Environmental Brain** — a global system that enables faster, smarter, and compliant environmental decision-making.
 
-## ⚙️ Core Capabilities
-- EIA Creation Engine
-- AI-powered Impact Analysis
-- Regulatory Compliance Validation
-- Environmental Data Intelligence
-- Automated Reporting
+## Vision
 
-## 🧠 System Concept
-EnviroQuant is designed as a **full lifecycle EIA platform**:
-1. Data Input (documents, GIS, reports)
-2. AI Analysis Engine
-3. Compliance & Regulation Matching
-4. Report Generation
-5. Review & Audit Layer
+Build a structured environmental intelligence platform for faster, more traceable, and more reliable environmental decision-making.
 
-## 🚀 Status
-Platform architecture and MVP development in progress.
+## Core Capabilities
 
-## 📌 Next Steps
-- Build system architecture
-- Develop MVP backend
-- Design AI evaluation engine
-- Launch first prototype
+- EIA creation support
+- AI-powered impact analysis
+- Regulatory compliance validation
+- Environmental data intelligence
+- Automated reporting
 
----
+## Current Implementation
 
-Built by EnviroQuant
+MVP Phase 1 Deliverable 1 is scaffolded as:
+
+- `backend`: FastAPI modular monolith with PostgreSQL, auth, RBAC, tenants, projects, uploads, and document versions
+- `frontend`: Next.js + Tailwind CSS dashboard, project creation UI, login/register flow, project workspace, and document upload pages
+- `docker-compose.yml`: local PostgreSQL service
+- `docs/phase-1-deliverable-1-context.md`: implementation context and API map
+
+## Next Steps
+
+- Deliverable 2: parsing pipeline for PDF and Word documents
+- Deliverable 3: chunking and traceable evidence references
+- Deliverable 4: checklist mapping for EIA sections
+
+Built by EnviroQuant.
