@@ -71,3 +71,13 @@ def require_role_in_tenant(allowed_roles: list[str]) -> Callable[..., User]:
         return current_user
 
     return dependency
+
+
+def require_platform_admin(current_user: User = Depends(get_current_user)) -> User:
+    allowed_emails = {email.lower() for email in settings.platform_admin_emails}
+    if current_user.email.lower() not in allowed_emails:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform administrator access required",
+        )
+    return current_user

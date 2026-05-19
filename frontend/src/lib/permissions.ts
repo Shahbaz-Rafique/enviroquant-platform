@@ -9,6 +9,8 @@ export const PERMISSIONS = {
   DOCUMENT_READ: "document:read",
   REVIEW_READ: "review:read",
   REVIEW_MANAGE: "review:manage",
+  USER_READ: "user:read",
+  USER_MANAGE: "user:manage",
   TENANT_MANAGE: "tenant:manage"
 } as const;
 

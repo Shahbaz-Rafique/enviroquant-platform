@@ -21,8 +21,8 @@ alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
-The default database URL expects the root `docker-compose.yml` PostgreSQL service.
-For the current local workspace, `.env` points to the workspace-local PostgreSQL fallback on port `55432`.
+Set `DATABASE_URL` in `.env` before running migrations or the API.
+The current local workspace points `DATABASE_URL` at the Neon PostgreSQL database.
 
 ## Status
 

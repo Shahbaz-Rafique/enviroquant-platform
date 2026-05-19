@@ -1,14 +1,32 @@
+export type Organization = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type User = {
   id: string;
   tenant_id: string;
+  organization_id: string;
   email: string;
   full_name: string;
   status: string;
   role: string;
   roles: string[];
   permissions: string[];
+  organization: Organization | null;
   created_at: string;
   updated_at: string;
+};
+
+export type UserInvitation = {
+  user: User;
+  invite_url: string;
+  expires_at: string;
+  email_sent: boolean;
 };
 
 export type TokenResponse = {

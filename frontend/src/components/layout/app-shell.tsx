@@ -2,18 +2,12 @@
 
 import {
   BarChart3,
-  BookOpenCheck,
   ClipboardList,
-  Database,
-  FileText,
   FolderOpen,
-  HelpCircle,
   LogOut,
-  Save,
-  Settings,
-  ShieldCheck,
   UploadCloud,
-  UserCircle
+  UserCircle,
+  Users
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -38,6 +32,12 @@ const sectionLinks = [
     label: 'Project Description',
     icon: ClipboardList,
     permission: PERMISSIONS.PROJECT_CREATE
+  },
+  {
+    href: '/team',
+    label: 'Team',
+    icon: Users,
+    permission: PERMISSIONS.USER_READ
   }
 ]
 
@@ -137,6 +137,15 @@ export function AppShell ({ children, user }: AppShellProps) {
           >
             <UploadCloud className='size-4' />
             New
+          </Link>
+        ) : null}
+        {hasPermission(user, PERMISSIONS.USER_READ) ? (
+          <Link
+            className='flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800'
+            href='/team'
+          >
+            <Users className='size-4' />
+            Team
           </Link>
         ) : null}
         <button

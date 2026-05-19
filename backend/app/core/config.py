@@ -10,10 +10,20 @@ class Settings(BaseSettings):
     app_name: str = "EnviroQuant API"
     environment: str = "local"
     api_v1_prefix: str = "/api/v1"
-    database_url: str = "postgresql+psycopg://enviroquant:enviroquant@localhost:5432/enviroquant"
+    database_url: str = Field(..., min_length=1)
     secret_key: str = Field(default="change-this-before-deployment", min_length=16)
     access_token_expire_minutes: int = 480
     allowed_origins: list[str] = ["http://localhost:3000"]
+    frontend_app_url: str = "http://localhost:3000"
+    platform_admin_emails: list[str] = []
+    email_user: str | None = None
+    email_pass: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    smtp_use_tls: bool = True
     cloudinary_cloud_name: str | None = None
     cloudinary_api_key: str | None = None
     cloudinary_api_secret: str | None = None

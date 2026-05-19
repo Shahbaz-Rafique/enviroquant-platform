@@ -76,7 +76,10 @@ def build_token_response(user: User) -> TokenResponse:
     access_token = create_access_token(
         subject=str(user.id),
         claims={
+            "user_id": str(user.id),
+            "email": user.email,
             "tenant_id": str(user.tenant_id),
+            "organization_id": str(user.tenant_id),
             "role": user.primary_role,
             "roles": user.role_names,
             "permissions": sorted(user.permission_keys),
