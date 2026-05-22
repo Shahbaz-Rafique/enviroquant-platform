@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_permission, require_role_in_tenant
@@ -89,8 +89,9 @@ def read_project_documents_alias(
 async def upload_project_document_alias(
     project_id: UUID,
     file: UploadFile = File(...),
+    document_type: str = Form("eia_report"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role_in_tenant(DOCUMENT_UPLOAD_ROLES)),
 ) -> Document:
     project = get_project_for_tenant(db, current_user, project_id)
-    return await create_project_document(db, current_user, project, file, "eia_report")
+    return await create_project_document(db, current_user, project, file, document_type)

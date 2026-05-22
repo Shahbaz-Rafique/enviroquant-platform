@@ -8,7 +8,18 @@ from sqlalchemy.orm import Session
 from app.models.document import Document, DocumentVersion
 from app.models.project import Project
 from app.models.user import User
+from app.services.audit_service import record_audit_event
 from app.utils.storage import store_document_version, validate_upload
+
+
+ALLOWED_DOCUMENT_TYPES = {
+    "eia_report",
+    "previous_eia",
+    "legacy_report",
+    "supporting_document",
+    "baseline_study",
+    "permit",
+}
 
 
 def list_project_documents(db: Session, current_user: User, project_id: UUID) -> list[Document]:
@@ -35,6 +46,7 @@ async def create_project_document(
     document_type: str,
 ) -> Document:
     validate_upload(file)
+    document_type = _normalize_document_type(document_type)
     document = Document(
         tenant_id=current_user.tenant_id,
         project_id=project.id,
@@ -45,9 +57,29 @@ async def create_project_document(
     db.add(document)
     db.flush()
     await _create_version_file(db, current_user, document, file, version_number=1)
+    record_audit_event(
+        db,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        event_type="document.created",
+        entity_type="document",
+        entity_id=document.id,
+        summary=f"Document uploaded: {document.original_filename}",
+        metadata={"project_id": str(project.id), "document_type": document.document_type},
+    )
     db.commit()
     db.refresh(document)
     return document
+
+
+def _normalize_document_type(document_type: str) -> str:
+    normalized = document_type.strip().lower()
+    if normalized not in ALLOWED_DOCUMENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported document type",
+        )
+    return normalized
 
 
 async def add_document_version(
@@ -61,7 +93,17 @@ async def add_document_version(
         select(func.max(DocumentVersion.version_number)).where(DocumentVersion.document_id == document.id)
     )
     version_number = (max_version or 0) + 1
-    await _create_version_file(db, current_user, document, file, version_number=version_number)
+    version = await _create_version_file(db, current_user, document, file, version_number=version_number)
+    record_audit_event(
+        db,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        event_type="document.version_created",
+        entity_type="document_version",
+        entity_id=version.id,
+        summary=f"Version {version.version_number} uploaded for {document.original_filename}",
+        metadata={"document_id": str(document.id), "project_id": str(document.project_id)},
+    )
     db.commit()
     db.refresh(document)
     return document

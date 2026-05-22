@@ -25,19 +25,22 @@ type AppShellProps = {
 }
 
 const sectionLinks = [
-  { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-  { href: '/projects', label: 'Projects', icon: FolderOpen },
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3, match: ['/dashboard'] },
+  { href: '/projects', label: 'Projects', icon: FolderOpen, match: ['/projects'] },
   {
     href: '/projects/new',
     label: 'Project Description',
     icon: ClipboardList,
-    permission: PERMISSIONS.PROJECT_CREATE
+    permission: PERMISSIONS.PROJECT_CREATE,
+    exact: true,
+    match: ['/projects/new']
   },
   {
     href: '/team',
     label: 'Team',
     icon: Users,
-    permission: PERMISSIONS.USER_READ
+    permission: PERMISSIONS.USER_READ,
+    match: ['/team']
   }
 ]
 
@@ -91,16 +94,14 @@ export function AppShell ({ children, user }: AppShellProps) {
                 item => !item.permission || hasPermission(user, item.permission)
               )
               .map(item => {
-                const active = pathname === item.href
+                const active = isNavItemActive(pathname, item)
                 const Icon = item.icon
                 return (
                   <Link
                     key={`${item.href}-${item.label}`}
                     href={item.href}
-                    className={cn(
-                      'blue-rail-item',
-                      active && 'blue-rail-item-active'
-                    )}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn('blue-rail-item', active && 'blue-rail-item-active')}
                   >
                     <Icon className='size-4' />
                     {item.label}
@@ -110,43 +111,31 @@ export function AppShell ({ children, user }: AppShellProps) {
           </nav>
         </aside>
 
-        <main className='min-w-0 flex-1 px-4 py-5 md:px-6 lg:px-7'>
+        <main className='min-w-0 flex-1 px-4 pb-20 pt-5 md:px-6 lg:px-7 lg:pb-5'>
           {children}
         </main>
       </div>
 
       <div className='fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-300 bg-white lg:hidden'>
-        <Link
-          className='flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800'
-          href='/dashboard'
-        >
-          <BarChart3 className='size-4' />
+        <MobileNavLink active={isPathActive(pathname, '/dashboard', true)} href='/dashboard' icon={<BarChart3 />}>
           Home
-        </Link>
-        <Link
-          className='flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800'
+        </MobileNavLink>
+        <MobileNavLink
+          active={pathname.startsWith('/projects') && pathname !== '/projects/new'}
           href='/projects'
+          icon={<FolderOpen />}
         >
-          <FolderOpen className='size-4' />
           Projects
-        </Link>
+        </MobileNavLink>
         {hasPermission(user, PERMISSIONS.PROJECT_CREATE) ? (
-          <Link
-            className='flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800'
-            href='/projects/new'
-          >
-            <UploadCloud className='size-4' />
+          <MobileNavLink active={isPathActive(pathname, '/projects/new', true)} href='/projects/new' icon={<UploadCloud />}>
             New
-          </Link>
+          </MobileNavLink>
         ) : null}
         {hasPermission(user, PERMISSIONS.USER_READ) ? (
-          <Link
-            className='flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800'
-            href='/team'
-          >
-            <Users className='size-4' />
+          <MobileNavLink active={isPathActive(pathname, '/team')} href='/team' icon={<Users />}>
             Team
-          </Link>
+          </MobileNavLink>
         ) : null}
         <button
           className='flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800'
@@ -157,5 +146,44 @@ export function AppShell ({ children, user }: AppShellProps) {
         </button>
       </div>
     </div>
+  )
+}
+
+type NavItem = (typeof sectionLinks)[number]
+
+function isNavItemActive (pathname: string, item: NavItem) {
+  if (item.href === '/projects') {
+    return pathname.startsWith('/projects') && pathname !== '/projects/new'
+  }
+  return item.match.some(path => isPathActive(pathname, path, item.exact))
+}
+
+function isPathActive (pathname: string, href: string, exact = false) {
+  return exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
+}
+
+function MobileNavLink ({
+  active,
+  children,
+  href,
+  icon
+}: {
+  active: boolean
+  children: ReactNode
+  href: string
+  icon: ReactNode
+}) {
+  return (
+    <Link
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800',
+        active && 'bg-blue-50 text-blue-950'
+      )}
+      href={href}
+    >
+      <span className='[&_svg]:size-4'>{icon}</span>
+      {children}
+    </Link>
   )
 }

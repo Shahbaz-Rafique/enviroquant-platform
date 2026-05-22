@@ -1,0 +1,288 @@
+"use client";
+
+import { CheckCircle2, FileSearch, Loader2, RefreshCcw, ShieldCheck, XCircle } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { apiRequest } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
+import type { EiaSourceMapping, ProjectDocument } from "@/lib/types";
+
+type EiaSourceMappingPanelProps = {
+  documentId: string;
+  projectId: string;
+  canManage: boolean;
+  onApplied: () => void;
+};
+
+export function EiaSourceMappingPanel({
+  documentId,
+  projectId,
+  canManage,
+  onApplied
+}: EiaSourceMappingPanelProps) {
+  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [mappings, setMappings] = useState<EiaSourceMapping[]>([]);
+  const [selectedDocumentId, setSelectedDocumentId] = useState("");
+  const [sectionNumber, setSectionNumber] = useState("");
+  const [sectionTitle, setSectionTitle] = useState("");
+  const [sectionContent, setSectionContent] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [activeMappingId, setActiveMappingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const legacyDocuments = useMemo(
+    () =>
+      documents.filter((document) =>
+        ["previous_eia", "legacy_report", "eia_report"].includes(document.document_type)
+      ),
+    [documents]
+  );
+
+  const loadPanel = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [documentData, mappingData] = await Promise.all([
+        apiRequest<ProjectDocument[]>(`/projects/${projectId}/documents`),
+        apiRequest<EiaSourceMapping[]>(`/eia-documents/${documentId}/source-mappings`)
+      ]);
+      setDocuments(documentData);
+      setMappings(mappingData);
+      setSelectedDocumentId((current) => current || documentData[0]?.id || "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Source mappings could not be loaded");
+    } finally {
+      setLoading(false);
+    }
+  }, [documentId, projectId]);
+
+  useEffect(() => {
+    loadPanel();
+  }, [loadPanel]);
+
+  async function submitDetection(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedDocumentId || !canManage) {
+      return;
+    }
+
+    const detectedSections =
+      sectionTitle.trim() || sectionContent.trim() || sectionNumber.trim()
+        ? [
+            {
+              section_number: sectionNumber.trim() || null,
+              title: sectionTitle.trim() || "Legacy section",
+              content: sectionContent.trim() || null,
+              confidence: 0.8,
+              metadata: { source: "manual_review_input" }
+            }
+          ]
+        : [];
+
+    setSaving(true);
+    setError(null);
+    try {
+      const data = await apiRequest<EiaSourceMapping[]>(`/eia-documents/${documentId}/source-mappings/detect`, {
+        method: "POST",
+        body: JSON.stringify({
+          source_document_id: selectedDocumentId,
+          detection_method: detectedSections.length ? "manual_review_input" : "metadata_detected_sections",
+          detected_sections: detectedSections
+        })
+      });
+      setMappings(data);
+      setSectionNumber("");
+      setSectionTitle("");
+      setSectionContent("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mapping detection could not be created");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateMapping(mapping: EiaSourceMapping, action: "confirm" | "apply" | "reject") {
+    setActiveMappingId(mapping.id);
+    setError(null);
+    try {
+      const path =
+        action === "reject"
+          ? `/eia-documents/${documentId}/source-mappings/${mapping.id}/reject`
+          : `/eia-documents/${documentId}/source-mappings/${mapping.id}/confirm`;
+      const updated = await apiRequest<EiaSourceMapping>(path, {
+        method: "POST",
+        body: JSON.stringify(
+          action === "reject"
+            ? { reason: "Rejected from document workspace" }
+            : {
+                apply_content: action === "apply",
+                completion_status: action === "apply" ? "IN_PROGRESS" : undefined,
+                progress_percentage: action === "apply" ? Math.max(mapping.confidence_score * 100, 50) : undefined
+              }
+        )
+      });
+      setMappings((current) => current.map((item) => (item.id === mapping.id ? updated : item)));
+      if (action === "apply") {
+        onApplied();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mapping could not be updated");
+    } finally {
+      setActiveMappingId(null);
+    }
+  }
+
+  return (
+    <section className="builder-panel overflow-hidden">
+      <div className="builder-section-title flex items-center justify-between gap-3">
+        <span className="flex items-center gap-2">
+          <FileSearch className="size-5 text-blue-700" />
+          Source Mapping
+        </span>
+        <Button aria-label="Refresh source mappings" size="icon" type="button" variant="secondary" onClick={loadPanel}>
+          <RefreshCcw className={loading ? "animate-spin" : undefined} />
+        </Button>
+      </div>
+
+      <div className="grid gap-4 p-4">
+        {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+
+        <form className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3" onSubmit={submitDetection}>
+          <div className="grid gap-2">
+            <Label htmlFor="source-document">Legacy document</Label>
+            <Select disabled={!canManage || saving || !legacyDocuments.length} value={selectedDocumentId} onValueChange={setSelectedDocumentId}>
+              <SelectTrigger id="source-document">
+                <SelectValue placeholder="Select source document" />
+              </SelectTrigger>
+              <SelectContent>
+              {legacyDocuments.map((document) => (
+                <SelectItem key={document.id} value={document.id}>
+                  {document.original_filename}
+                </SelectItem>
+              ))}
+              </SelectContent>
+            </Select>
+            {!legacyDocuments.length ? (
+              <span className="text-xs font-medium text-slate-500">Upload a previous EIA or legacy report first.</span>
+            ) : null}
+          </div>
+          <div className="grid gap-3 md:grid-cols-[120px_minmax(0,1fr)]">
+            <div className="grid gap-2">
+              <Label htmlFor="detected-section-number">Section</Label>
+              <Input
+                disabled={!canManage || saving}
+                id="detected-section-number"
+                placeholder="1.1"
+                value={sectionNumber}
+                onChange={(event) => setSectionNumber(event.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="detected-section-title">Detected title</Label>
+              <Input
+                disabled={!canManage || saving}
+                id="detected-section-title"
+                value={sectionTitle}
+                onChange={(event) => setSectionTitle(event.target.value)}
+              />
+            </div>
+          </div>
+          <Textarea
+            className="min-h-28"
+            disabled={!canManage || saving}
+            placeholder="Detected legacy content"
+            value={sectionContent}
+            onChange={(event) => setSectionContent(event.target.value)}
+          />
+          <Button disabled={!canManage || saving || !selectedDocumentId} type="submit">
+            {saving ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
+            Create Suggestions
+          </Button>
+        </form>
+
+        <div className="grid max-h-[30rem] gap-3 overflow-y-auto">
+          {loading ? <Alert>Loading source mappings...</Alert> : null}
+          {!loading && !mappings.length ? <div className="text-sm text-slate-500">No source mappings yet.</div> : null}
+          {mappings.map((mapping) => (
+            <article className="rounded-md border border-slate-200 bg-white p-3" key={mapping.id}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-slate-950">
+                    {mapping.detected_section_number ? `${mapping.detected_section_number} - ` : ""}
+                    {mapping.detected_title ?? "Detected section"}
+                  </div>
+                  <div className="mt-1 line-clamp-1 text-xs font-medium text-slate-500">
+                    {mapping.source_document_filename}
+                  </div>
+                </div>
+                <Badge className={cn(statusClass(mapping.status))}>{mapping.status.replaceAll("_", " ")}</Badge>
+              </div>
+              <div className="mt-3 rounded-sm bg-slate-50 p-2 text-sm text-slate-700">
+                {mapping.subsection_number
+                  ? `${mapping.subsection_number}: ${mapping.subsection_title}`
+                  : "Manual mapping needed"}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-500">
+                  Confidence {Math.round(mapping.confidence_score * 100)}%
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    disabled={!canManage || activeMappingId === mapping.id || !mapping.subsection_id}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                    onClick={() => updateMapping(mapping, "confirm")}
+                  >
+                    {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                    Confirm
+                  </Button>
+                  <Button
+                    disabled={!canManage || activeMappingId === mapping.id || !mapping.subsection_id}
+                    size="sm"
+                    type="button"
+                    onClick={() => updateMapping(mapping, "apply")}
+                  >
+                    {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                    Apply
+                  </Button>
+                  <Button
+                    disabled={!canManage || activeMappingId === mapping.id}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                    onClick={() => updateMapping(mapping, "reject")}
+                  >
+                    {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <XCircle />}
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function statusClass(status: string) {
+  if (status === "APPLIED" || status === "CONFIRMED") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (status === "REJECTED") {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+  if (status === "NEEDS_REVIEW") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-blue-200 bg-blue-50 text-blue-700";
+}

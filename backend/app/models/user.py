@@ -45,6 +45,7 @@ class User(TimestampMixin, Base):
     tenant = relationship("Tenant", back_populates="users")
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     created_projects = relationship("Project", back_populates="created_by")
+    created_eia_documents = relationship("EiaDocument", back_populates="created_by")
     uploaded_documents = relationship("Document", back_populates="uploaded_by")
     invited_by = relationship("User", remote_side=[id])
 

@@ -1,12 +1,13 @@
 "use client";
 
 import { ClipboardList, FileText, FileType, Loader2, Map, UploadCloud } from "lucide-react";
-import { DragEvent, FormEvent, useRef, useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { FileDropzone } from "@/components/ui/file-dropzone";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 import type { ProjectDocument } from "@/lib/types";
 
 type DocumentUploadProps = {
@@ -23,25 +24,10 @@ const fileTypes = [
 ];
 
 export function DocumentUpload({ canUpload = true, projectId, onUploaded }: DocumentUploadProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [dragActive, setDragActive] = useState(false);
+  const [documentType, setDocumentType] = useState("eia_report");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function handleFile(file: File | undefined) {
-    if (!file) {
-      return;
-    }
-    setSelectedFile(file);
-    setError(null);
-  }
-
-  function onDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    setDragActive(false);
-    handleFile(event.dataTransfer.files[0]);
-  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,7 +36,7 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
       return;
     }
 
-    const file = selectedFile ?? inputRef.current?.files?.[0];
+    const file = selectedFile;
     if (!file) {
       setError("Choose a PDF or Word document");
       return;
@@ -58,6 +44,7 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
 
     const body = new FormData();
     body.append("file", file);
+    body.append("document_type", documentType);
 
     setUploading(true);
     setError(null);
@@ -67,9 +54,6 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
         method: "POST",
         body
       });
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
       setSelectedFile(null);
       onUploaded(document);
     } catch (err) {
@@ -84,6 +68,21 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
       {error ? <Alert className="mb-4 border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
 
       <div className="rounded-md border border-slate-300 bg-white p-4">
+        <label className="mb-4 grid gap-2 text-sm font-semibold text-slate-700 md:max-w-xs">
+          Document type
+          <Select disabled={!canUpload || uploading} value={documentType} onValueChange={setDocumentType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select document type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="eia_report">Current EIA report</SelectItem>
+              <SelectItem value="previous_eia">Previous EIA</SelectItem>
+              <SelectItem value="legacy_report">Legacy report</SelectItem>
+              <SelectItem value="supporting_document">Supporting document</SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
+
         <div className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 md:grid-cols-4">
           {fileTypes.map((type) => {
             const Icon = type.icon;
@@ -96,39 +95,17 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
           })}
         </div>
 
-        <div
-          className={cn(
-            "mt-4 grid min-h-28 place-items-center rounded-md border border-dashed border-blue-300 bg-blue-50/60 px-4 text-center transition-colors",
-            dragActive && "border-blue-600 bg-blue-100",
-            !canUpload && "opacity-60"
-          )}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragActive(true);
-          }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={onDrop}
-        >
-          <input
-            ref={inputRef}
-            className="sr-only"
-            id="document"
-            type="file"
+        <div className="mt-4">
+          <FileDropzone
             accept=".pdf,.doc,.docx"
-            disabled={!canUpload}
-            onChange={(event) => handleFile(event.target.files?.[0])}
+            description="Drag and drop a PDF or Word document here."
+            disabled={!canUpload || uploading}
+            file={selectedFile}
+            onFileChange={(file) => {
+              setSelectedFile(file);
+              setError(null);
+            }}
           />
-          <div>
-            <Button asChild type="button" disabled={!canUpload || uploading}>
-              <label htmlFor="document" className="cursor-pointer">
-                {uploading ? <Loader2 className="animate-spin" /> : <UploadCloud />}
-                Upload Files
-              </label>
-            </Button>
-            <p className="mt-3 text-sm font-medium text-slate-500">
-              {selectedFile ? selectedFile.name : "Drag & drop files here or click to upload."}
-            </p>
-          </div>
         </div>
       </div>
 

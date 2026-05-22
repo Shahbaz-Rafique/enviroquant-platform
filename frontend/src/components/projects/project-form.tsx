@@ -6,6 +6,7 @@ import { FormEvent, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -164,10 +165,12 @@ export function ProjectForm() {
             <Label>Key Project Components</Label>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {projectComponents.map((component) => (
-                <label key={component} className="flex items-center gap-2 text-sm text-slate-700">
-                  <input className="size-4 rounded border-slate-300 text-blue-700" type="checkbox" />
-                  {component}
-                </label>
+                <div key={component} className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white p-3">
+                  <Checkbox id={`component-${component}`} />
+                  <Label className="cursor-pointer text-sm font-medium text-slate-700" htmlFor={`component-${component}`}>
+                    {component}
+                  </Label>
+                </div>
               ))}
             </div>
           </div>

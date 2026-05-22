@@ -29,3 +29,15 @@ export function displayRole(user: User | null): string {
   }
   return user.role || user.roles[0]?.toUpperCase() || "UNASSIGNED";
 }
+
+export function canEditEiaDocument(documentRole: string | null | undefined): boolean {
+  return documentRole === "EDITOR";
+}
+
+export function canReviewEiaDocument(documentRole: string | null | undefined): boolean {
+  return documentRole === "EDITOR" || documentRole === "REVIEWER";
+}
+
+export function canCommentOnEiaDocument(documentRole: string | null | undefined): boolean {
+  return Boolean(documentRole);
+}

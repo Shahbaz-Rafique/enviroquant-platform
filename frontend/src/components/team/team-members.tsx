@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
 import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 import type { User, UserInvitation } from "@/lib/types";
@@ -31,6 +32,7 @@ export function TeamMembers({ user }: TeamMembersProps) {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState<boolean | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [inviteRole, setInviteRole] = useState("CONSULTANT");
   const canInvite = hasPermission(user, PERMISSIONS.USER_MANAGE);
 
   const loadMembers = useCallback(async () => {
@@ -64,12 +66,13 @@ export function TeamMembers({ user }: TeamMembersProps) {
         body: JSON.stringify({
           full_name: String(form.get("full_name") ?? ""),
           email: String(form.get("email") ?? ""),
-          role: String(form.get("role") ?? "CONSULTANT")
+          role: inviteRole
         })
       });
       setInviteUrl(invitation.invite_url);
       setEmailSent(invitation.email_sent);
       formElement.reset();
+      setInviteRole("CONSULTANT");
       await loadMembers();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invitation could not be created");
@@ -139,18 +142,18 @@ export function TeamMembers({ user }: TeamMembersProps) {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="role">Role</Label>
-                <select
-                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                  id="role"
-                  name="role"
-                  defaultValue="CONSULTANT"
-                >
+                <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
                   {roleOptions.map((role) => (
-                    <option key={role.value} value={role.value}>
+                    <SelectItem key={role.value} value={role.value}>
                       {role.label}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
+                  </SelectContent>
+                </Select>
               </div>
               <Button type="submit" disabled={saving}>
                 {saving ? <Loader2 className="animate-spin" /> : <UserPlus />}

@@ -9,6 +9,7 @@ import { useRequireAuth } from "@/components/auth/auth-gate";
 import { DocumentList } from "@/components/documents/document-list";
 import { DocumentUpload } from "@/components/documents/document-upload";
 import { AppShell } from "@/components/layout/app-shell";
+import { PageNavigation } from "@/components/layout/page-navigation";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +57,15 @@ export default function ProjectDocumentsPage() {
 
   return (
     <AppShell user={user}>
+      <PageNavigation
+        backHref={`/projects/${projectId}`}
+        backLabel="Project"
+        breadcrumbs={[
+          { label: "Projects", href: "/projects" },
+          { label: project?.name ?? "Project", href: `/projects/${projectId}` },
+          { label: "Documents" }
+        ]}
+      />
       <header className="mx-auto mb-5 max-w-5xl text-center">
         <h1 className="text-3xl font-bold text-slate-950">Submit Your Project</h1>
         <p className="mt-2 text-sm text-slate-600">{project?.name ?? "Project document workspace"}</p>

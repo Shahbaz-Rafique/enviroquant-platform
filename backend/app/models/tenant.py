@@ -14,4 +14,5 @@ class Tenant(TimestampMixin, Base):
 
     users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
     projects = relationship("Project", back_populates="tenant", cascade="all, delete-orphan")
+    eia_documents = relationship("EiaDocument", back_populates="tenant", cascade="all, delete-orphan")
     roles = relationship("Role", back_populates="tenant", cascade="all, delete-orphan")

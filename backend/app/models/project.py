@@ -33,6 +33,7 @@ class Project(TimestampMixin, Base):
     tenant = relationship("Tenant", back_populates="projects")
     created_by = relationship("User", back_populates="created_projects")
     documents = relationship("Document", back_populates="project", cascade="all, delete-orphan")
+    eia_documents = relationship("EiaDocument", back_populates="project", cascade="all, delete-orphan")
     members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
 
 
