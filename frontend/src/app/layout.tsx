@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "EnviroQuant",
-  description: "Environmental intelligence workspace"
+  title: "CompanyName",
+  description: "Regenerative design and living systems for a restorative future"
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body className="bg-gradient text-white antialiased">{children}</body>
     </html>
   );
 }

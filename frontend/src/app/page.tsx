@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
 
-import { EnviroQuantLanding } from "@/components/landing/enviroquant-landing";
+import { HomeMarketingPage } from "@/components/site/marketing-pages";
 
 export const metadata: Metadata = {
-  title: "EnviroQuant | AI Environmental Intelligence Platform",
-  description:
-    "Develop, analyze, and manage Environmental Impact Assessments with AI-powered compliance intelligence, evidence traceability, and professional EIA reporting.",
-  openGraph: {
-    title: "EnviroQuant | AI Environmental Intelligence Platform",
-    description:
-      "A premium environmental intelligence platform for consultants, reviewers, regulators, and HSE teams managing Environmental Impact Assessments.",
-    type: "website"
-  }
+  title: "CompanyName | Home",
+  description: "A regenerative brand system for living technologies and restorative design."
 };
 
 export default function HomePage() {
-  return <EnviroQuantLanding />;
+  return <HomeMarketingPage />;
 }
