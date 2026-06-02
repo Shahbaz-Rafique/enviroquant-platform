@@ -111,8 +111,8 @@ export function TipTapEditor({ content, editable = true, onChange, onImageUpload
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-slate-300 bg-white">
-      <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 px-3 py-2">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm">
+      <div className="flex flex-wrap items-center gap-1 border-b border-white/10 bg-white/[0.04] px-3 py-2">
         <ToolbarButton
           active={editor?.isActive("bold")}
           disabled={!editable || !editor}
@@ -141,7 +141,7 @@ export function TipTapEditor({ content, editable = true, onChange, onImageUpload
           label="Heading 2"
           onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
         />
-        <span className="mx-1 h-6 w-px bg-slate-300" />
+        <span className="mx-1 h-6 w-px bg-white/10" />
         <ToolbarButton
           active={editor?.isActive("bulletList")}
           disabled={!editable || !editor}
@@ -172,7 +172,7 @@ export function TipTapEditor({ content, editable = true, onChange, onImageUpload
         >
           <ImageIcon />
         </FileTrigger>
-        <span className="mx-1 h-6 w-px bg-slate-300" />
+        <span className="mx-1 h-6 w-px bg-white/10" />
         <ToolbarButton
           disabled={!editable || !editor || !editor.can().undo()}
           icon={<Undo2 />}
@@ -203,7 +203,7 @@ function ToolbarButton({ active = false, disabled = false, icon, label, onClick 
   return (
     <Button
       aria-label={label}
-      className={cn(active && "border-blue-400 bg-blue-50 text-blue-700")}
+      className={cn(active && "border-[#67E8F9]/30 bg-[#67E8F9]/12 text-[#B6F7FF]")}
       disabled={disabled}
       size="icon"
       title={label}

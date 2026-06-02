@@ -144,7 +144,7 @@ export function EiaSourceMappingPanel({
     <section className="builder-panel overflow-hidden">
       <div className="builder-section-title flex items-center justify-between gap-3">
         <span className="flex items-center gap-2">
-          <FileSearch className="size-5 text-blue-700" />
+          <FileSearch className="size-5 text-[#B6F7FF]" />
           Source Mapping
         </span>
         <Button aria-label="Refresh source mappings" size="icon" type="button" variant="secondary" onClick={loadPanel}>
@@ -153,25 +153,29 @@ export function EiaSourceMappingPanel({
       </div>
 
       <div className="grid gap-4 p-4">
-        {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+        {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
-        <form className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3" onSubmit={submitDetection}>
+        <form className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3" onSubmit={submitDetection}>
           <div className="grid gap-2">
             <Label htmlFor="source-document">Legacy document</Label>
-            <Select disabled={!canManage || saving || !legacyDocuments.length} value={selectedDocumentId} onValueChange={setSelectedDocumentId}>
+            <Select
+              disabled={!canManage || saving || !legacyDocuments.length}
+              value={selectedDocumentId}
+              onValueChange={setSelectedDocumentId}
+            >
               <SelectTrigger id="source-document">
                 <SelectValue placeholder="Select source document" />
               </SelectTrigger>
               <SelectContent>
-              {legacyDocuments.map((document) => (
-                <SelectItem key={document.id} value={document.id}>
-                  {document.original_filename}
-                </SelectItem>
-              ))}
+                {legacyDocuments.map((document) => (
+                  <SelectItem key={document.id} value={document.id}>
+                    {document.original_filename}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {!legacyDocuments.length ? (
-              <span className="text-xs font-medium text-slate-500">Upload a previous EIA or legacy report first.</span>
+              <span className="text-xs font-medium text-white/52">Upload a previous EIA or legacy report first.</span>
             ) : null}
           </div>
           <div className="grid gap-3 md:grid-cols-[120px_minmax(0,1fr)]">
@@ -210,28 +214,28 @@ export function EiaSourceMappingPanel({
 
         <div className="grid max-h-[30rem] gap-3 overflow-y-auto">
           {loading ? <Alert>Loading source mappings...</Alert> : null}
-          {!loading && !mappings.length ? <div className="text-sm text-slate-500">No source mappings yet.</div> : null}
+          {!loading && !mappings.length ? <div className="text-sm text-white/52">No source mappings yet.</div> : null}
           {mappings.map((mapping) => (
-            <article className="rounded-md border border-slate-200 bg-white p-3" key={mapping.id}>
+            <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-3" key={mapping.id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-sm font-bold text-slate-950">
+                  <div className="text-sm font-bold text-white">
                     {mapping.detected_section_number ? `${mapping.detected_section_number} - ` : ""}
                     {mapping.detected_title ?? "Detected section"}
                   </div>
-                  <div className="mt-1 line-clamp-1 text-xs font-medium text-slate-500">
+                  <div className="mt-1 line-clamp-1 text-xs font-medium text-white/52">
                     {mapping.source_document_filename}
                   </div>
                 </div>
                 <Badge className={cn(statusClass(mapping.status))}>{mapping.status.replaceAll("_", " ")}</Badge>
               </div>
-              <div className="mt-3 rounded-sm bg-slate-50 p-2 text-sm text-slate-700">
+              <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] p-2 text-sm text-white/74">
                 {mapping.subsection_number
                   ? `${mapping.subsection_number}: ${mapping.subsection_title}`
                   : "Manual mapping needed"}
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-500">
+                <span className="text-xs font-bold text-white/46">
                   Confidence {Math.round(mapping.confidence_score * 100)}%
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -276,13 +280,13 @@ export function EiaSourceMappingPanel({
 
 function statusClass(status: string) {
   if (status === "APPLIED" || status === "CONFIRMED") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
   }
   if (status === "REJECTED") {
-    return "border-red-200 bg-red-50 text-red-700";
+    return "border-red-400/30 bg-red-500/10 text-red-100";
   }
   if (status === "NEEDS_REVIEW") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
   }
-  return "border-blue-200 bg-blue-50 text-blue-700";
+  return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
 }

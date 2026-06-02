@@ -14,9 +14,9 @@ type ChecklistPanelProps = {
 };
 
 const statusStyles: Record<string, string> = {
-  Compliant: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  "Partially Compliant": "border-amber-200 bg-amber-50 text-amber-700",
-  Missing: "border-red-200 bg-red-50 text-red-700"
+  Compliant: "border-emerald-400/25 bg-emerald-500/10 text-emerald-100",
+  "Partially Compliant": "border-amber-400/25 bg-amber-500/10 text-amber-100",
+  Missing: "border-red-400/30 bg-red-500/10 text-red-100"
 };
 
 export function ChecklistPanel({ activeSubsectionId, items, onAddressItem }: ChecklistPanelProps) {
@@ -33,28 +33,28 @@ export function ChecklistPanel({ activeSubsectionId, items, onAddressItem }: Che
           return (
             <article
               className={cn(
-                "rounded-md border border-slate-200 bg-white p-3",
-                active && "border-blue-300 bg-blue-50/60"
+                "rounded-2xl border border-white/10 bg-white/[0.03] p-3",
+                active && "border-[#67E8F9]/28 bg-[#67E8F9]/10"
               )}
               key={item.id}
             >
               <div className="flex items-start gap-3">
-                <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-700">
+                <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.06] text-[#B6F7FF]">
                   <Icon className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold uppercase text-slate-500">{item.subsection_number}</span>
+                    <span className="text-xs font-bold uppercase text-white/46">{item.subsection_number}</span>
                     <Badge className={cn("border", statusStyles[item.compliance_status] ?? statusStyles.Missing)}>
                       {item.compliance_status}
                     </Badge>
                   </div>
-                  <p className="mt-2 text-sm font-semibold leading-5 text-slate-900">{item.checklist_title}</p>
-                  <div className="mt-2 text-xs font-bold uppercase text-slate-500">
-                    {item.checklist_section} - {item.importance}
+                  <p className="mt-2 text-sm font-semibold leading-5 text-white">{item.checklist_title}</p>
+                  <div className="mt-2 text-xs font-bold uppercase text-white/46">
+                    {item.checklist_section} · {item.importance}
                   </div>
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <span className="text-xs font-semibold text-slate-500">{Math.round(item.progress_percentage)}%</span>
+                    <span className="text-xs font-semibold text-white/52">{Math.round(item.progress_percentage)}%</span>
                     <Button size="sm" type="button" variant="secondary" onClick={() => onAddressItem(item)}>
                       <Send />
                       Address this point

@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { BrandMark } from '@/components/site/brand-mark'
 import { Button } from '@/components/ui/button'
 import { clearSession } from '@/lib/auth'
 import { displayRole, hasPermission, PERMISSIONS } from '@/lib/permissions'
@@ -54,28 +55,27 @@ export function AppShell ({ children, user }: AppShellProps) {
   }
 
   return (
-    <div className='min-h-screen bg-[#edf3fb]'>
+    <div className='min-h-screen bg-gradient text-white'>
       <header className='builder-topbar sticky top-0 z-30'>
-        <div className='flex h-14 items-center justify-between px-5'>
-          <Link href='/dashboard' className='flex min-w-0 items-center gap-3'>
-            <span className='grid h-9 w-9 place-items-center rounded-full bg-[#8bd15f] text-sm font-black text-[#104a83]'>
-              EQ
-            </span>
-            <span className='text-xl font-bold'>EnviroQuant</span>
-            <span className='h-7 border-l border-white/35' />
-            <span className='truncate text-base font-medium text-blue-50'>
-              EIA Builder
+        <div className='flex h-20 items-center justify-between px-5 lg:px-7'>
+          <Link href='/dashboard' className='flex min-w-0 items-center gap-4'>
+            <BrandMark  />
+            <span className='hidden h-8 border-l border-white/12 lg:block' />
+            <span className='hidden truncate text-sm font-semibold uppercase tracking-[0.18em] text-white/54 lg:block'>
+              Workspace
             </span>
           </Link>
 
           <div className='hidden items-center gap-3 md:flex'>
-            <div className='flex min-w-0 items-center gap-2 rounded-md bg-white/10 px-3 py-1.5'>
-              <UserCircle className='size-5' />
+            <div className='flex min-w-0 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 backdrop-blur-sm'>
+              <span className='grid size-8 place-items-center rounded-full border border-white/10 bg-white/[0.08]'>
+                <UserCircle className='size-4' />
+              </span>
               <div className='min-w-0 leading-tight'>
-                <p className='truncate text-sm font-semibold'>
+                <p className='truncate text-sm font-semibold text-white'>
                   {user?.full_name ?? 'User'}
                 </p>
-                <p className='text-xs text-blue-100'>{displayRole(user)}</p>
+                <p className='text-xs text-white/56'>{displayRole(user)}</p>
               </div>
             </div>
             <Button variant='secondary' size='sm' onClick={logout}>
@@ -86,9 +86,9 @@ export function AppShell ({ children, user }: AppShellProps) {
         </div>
       </header>
 
-      <div className='flex min-h-[calc(100vh-3.5rem)]'>
-        <aside className='hidden w-60 shrink-0 border-r border-slate-300 bg-white/90 shadow-sm lg:block'>
-          <nav className='pt-5' aria-label='Workspace navigation'>
+      <div className='flex min-h-[calc(100vh-5rem)]'>
+        <aside className='hidden w-64 shrink-0 border-r border-white/10 bg-[rgba(255,255,255,0.03)] backdrop-blur-xl lg:block'>
+          <nav className='pt-5 space-y-2' aria-label='Workspace navigation'>
             {sectionLinks
               .filter(
                 item => !item.permission || hasPermission(user, item.permission)
@@ -111,12 +111,12 @@ export function AppShell ({ children, user }: AppShellProps) {
           </nav>
         </aside>
 
-        <main className='min-w-0 flex-1 px-4 pb-20 pt-5 md:px-6 lg:px-7 lg:pb-5'>
+        <main className='min-w-0 flex-1 px-4 pb-24 pt-5 md:px-6 lg:px-7 lg:pb-7'>
           {children}
         </main>
       </div>
 
-      <div className='fixed inset-x-0 bottom-0 z-20 flex border-t border-slate-300 bg-white lg:hidden'>
+      <div className='fixed inset-x-0 bottom-0 z-20 flex border-t border-white/10 bg-[rgba(4,17,14,0.92)] backdrop-blur-xl lg:hidden'>
         <MobileNavLink active={isPathActive(pathname, '/dashboard', true)} href='/dashboard' icon={<BarChart3 />}>
           Home
         </MobileNavLink>
@@ -138,7 +138,7 @@ export function AppShell ({ children, user }: AppShellProps) {
           </MobileNavLink>
         ) : null}
         <button
-          className='flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800'
+          className='flex flex-1 flex-col items-center gap-1 py-3 text-xs font-semibold text-white/72'
           onClick={logout}
         >
           <LogOut className='size-4' />
@@ -177,8 +177,8 @@ function MobileNavLink ({
     <Link
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex flex-1 flex-col items-center gap-1 py-2 text-xs font-semibold text-blue-800',
-        active && 'bg-blue-50 text-blue-950'
+        'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-semibold text-white/66 transition-colors',
+        active && 'bg-white/[0.06] text-white'
       )}
       href={href}
     >

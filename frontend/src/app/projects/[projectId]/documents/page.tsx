@@ -67,17 +67,17 @@ export default function ProjectDocumentsPage() {
         ]}
       />
       <header className="mx-auto mb-5 max-w-5xl text-center">
-        <h1 className="text-3xl font-bold text-slate-950">Submit Your Project</h1>
-        <p className="mt-2 text-sm text-slate-600">{project?.name ?? "Project document workspace"}</p>
+        <h1 className="text-3xl font-bold text-white">Submit Your Project</h1>
+        <p className="mt-2 text-sm text-white/66">{project?.name ?? "Project document workspace"}</p>
       </header>
 
-      <div className="mx-auto mb-4 grid max-w-5xl grid-cols-2 overflow-hidden rounded-md border border-slate-300 bg-white text-center text-sm font-bold text-[#164577] md:grid-cols-6">
+      <div className="mx-auto mb-4 grid max-w-5xl grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-center text-sm font-bold text-white/58 md:grid-cols-6">
         {["Project Details", "Location Info", "Environmental Data", "Survey & Studies", "Add Information", "Review & Submit"].map(
           (step) => (
             <div
               key={step}
-              className={`border-r border-slate-300 px-3 py-3 last:border-r-0 ${
-                step === "Add Information" ? "bg-[#2c76bd] text-white" : ""
+              className={`border-r border-white/10 px-3 py-3 last:border-r-0 ${
+                step === "Add Information" ? "bg-white/[0.08] text-white" : ""
               }`}
             >
               {step}
@@ -87,13 +87,13 @@ export default function ProjectDocumentsPage() {
       </div>
 
       <section className="mx-auto grid max-w-5xl gap-5">
-        {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+        {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
         {loading ? <Alert>Loading documents...</Alert> : null}
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="size-5 text-blue-700" />
+              <FileText className="size-5 text-[#B6F7FF]" />
               Attach Files & Documents
             </CardTitle>
           </CardHeader>
@@ -115,7 +115,7 @@ export default function ProjectDocumentsPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-between border-t border-slate-300 py-4">
+        <div className="flex justify-between border-t border-white/10 py-4">
           <Button asChild variant="secondary">
             <Link href={`/projects/${projectId}`}>
               <ArrowLeft />

@@ -305,29 +305,29 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   }
 
   if (!workspace) {
-    return <Alert className="border-red-200 bg-red-50 text-red-700">{error ?? "Workspace unavailable"}</Alert>;
+    return <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error ?? "Workspace unavailable"}</Alert>;
   }
 
   const subsection = workspace.subsection;
 
   return (
     <div className="grid gap-5">
-      {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+      {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
       <header className="builder-panel overflow-hidden">
         <div className="builder-section-title flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-bold uppercase text-blue-700">
+              <span className="text-sm font-bold uppercase text-[#B6F7FF]">
                 Section {workspace.section_number} / {subsection.subsection_number}
               </span>
               <Badge className={cn(statusBadgeClass(completionStatus))}>{statusLabel(completionStatus)}</Badge>
             </div>
-            <h1 className="mt-2 text-2xl font-bold leading-tight text-slate-950">{subsection.title}</h1>
-            <p className="mt-2 text-sm font-medium text-slate-500">{workspace.eia_document_title}</p>
+            <h1 className="mt-2 text-2xl font-bold leading-tight text-white">{subsection.title}</h1>
+            <p className="mt-2 text-sm font-medium text-white/52">{workspace.eia_document_title}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="min-w-32 text-sm font-semibold text-slate-500">{saveStatusText}</span>
+            <span className="min-w-32 text-sm font-semibold text-white/52">{saveStatusText}</span>
             <Button disabled={!canEdit || saving} type="button" variant="secondary" onClick={() => void saveContent()}>
               {saving ? <Loader2 className="animate-spin" /> : <Save />}
               Save
@@ -347,23 +347,23 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(320px,3fr)]">
         <main className="grid gap-5" ref={editorRegionRef}>
           <div className="builder-panel overflow-hidden">
-            <div className="grid gap-4 border-b border-slate-200 p-4 lg:grid-cols-[minmax(0,1fr)_180px_170px]">
-              <label className="grid gap-2 text-sm font-semibold text-slate-700">
+            <div className="grid gap-4 border-b border-white/10 p-4 lg:grid-cols-[minmax(0,1fr)_180px_170px]">
+              <label className="grid gap-2 text-sm font-semibold text-white/78">
                 Completion status
                 <Select disabled={!canEdit} value={completionStatus} onValueChange={updateCompletionStatus}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </label>
-              <label className="grid gap-2 text-sm font-semibold text-slate-700">
+              <label className="grid gap-2 text-sm font-semibold text-white/78">
                 Progress
                 <NumberStepper
                   disabled={!canEdit}
@@ -374,7 +374,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                 />
               </label>
               <div className="grid content-end">
-                <div className="h-10 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
+                <div className="h-10 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-100">
                   {Math.round(progressPercentage)}% complete
                 </div>
               </div>
@@ -417,13 +417,13 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
           />
           <section className="builder-panel overflow-hidden">
             <div className="builder-section-title flex items-center gap-2">
-              <Bot className="size-5 text-blue-700" />
+              <Bot className="size-5 text-[#B6F7FF]" />
               AI Assistant
             </div>
-            <div className="grid gap-3 p-4 text-sm text-slate-600">
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-1 flex items-center gap-2 font-bold text-slate-900">
-                  <ShieldCheck className="size-4 text-emerald-700" />
+            <div className="grid gap-3 p-4 text-sm text-white/66">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="mb-1 flex items-center gap-2 font-bold text-white">
+                  <ShieldCheck className="size-4 text-[#8BD15F]" />
                   Draft review placeholder
                 </div>
                 <p>Checklist-aware drafting support will be connected here.</p>
@@ -442,13 +442,13 @@ function statusLabel(status: string) {
 
 function statusBadgeClass(status: string) {
   if (status === "COMPLETE") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
   }
   if (status === "READY_FOR_REVIEW") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
   }
   if (status === "IN_PROGRESS") {
-    return "border-blue-200 bg-blue-50 text-blue-700";
+    return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
   }
-  return "border-slate-200 bg-slate-50 text-slate-600";
+  return "border-white/12 bg-white/[0.05] text-white/68";
 }

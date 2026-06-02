@@ -108,14 +108,14 @@ export function CommentsPanel({ subsectionId, user, canComment, canResolve, onCh
     <section className="builder-panel overflow-hidden">
       <div className="builder-section-title flex items-center justify-between gap-3">
         <span className="flex items-center gap-2">
-          <MessageSquare className="size-5 text-blue-700" />
+          <MessageSquare className="size-5 text-[#B6F7FF]" />
           Comments
         </span>
-        <span className="text-sm font-semibold text-slate-500">{countComments(comments)}</span>
+        <span className="text-sm font-semibold text-white/52">{countComments(comments)}</span>
       </div>
 
       <div className="grid gap-4 p-4">
-        {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+        {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
         <form className="grid gap-3" onSubmit={submitComment}>
           <Textarea
@@ -133,7 +133,7 @@ export function CommentsPanel({ subsectionId, user, canComment, canResolve, onCh
 
         <div className="grid gap-3">
           {loading ? <Alert>Loading comments...</Alert> : null}
-          {!loading && !comments.length ? <div className="text-sm text-slate-500">No comments yet.</div> : null}
+          {!loading && !comments.length ? <div className="text-sm text-white/52">No comments yet.</div> : null}
           {comments.map((comment) => (
             <CommentItem
               canComment={canComment}
@@ -181,19 +181,19 @@ function CommentItem({
   onResolve
 }: CommentItemProps) {
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-3">
+    <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-sm font-bold text-slate-900">{comment.user.full_name}</div>
-          <div className="text-xs font-medium text-slate-500">{formatDateTime(comment.created_at)}</div>
+          <div className="text-sm font-bold text-white">{comment.user.full_name}</div>
+          <div className="text-xs font-medium text-white/52">{formatDateTime(comment.created_at)}</div>
         </div>
         {comment.is_resolved ? (
-          <span className="rounded-sm bg-emerald-50 px-2 py-1 text-xs font-bold uppercase text-emerald-700">
+          <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2 py-1 text-xs font-bold uppercase text-emerald-100">
             Resolved
           </span>
         ) : null}
       </div>
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{comment.content}</p>
+      <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/74">{comment.content}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button disabled={!canComment} size="sm" type="button" variant="secondary" onClick={() => onReplyStart(comment.id)}>
           <Reply />
@@ -229,7 +229,7 @@ function CommentItem({
       ) : null}
 
       {comment.replies.length ? (
-        <div className="mt-3 grid gap-3 border-l border-slate-200 pl-3">
+        <div className="mt-3 grid gap-3 border-l border-white/10 pl-3">
           {comment.replies.map((reply) => (
             <CommentItem
               canComment={canComment}

@@ -61,29 +61,29 @@ export function RevisionPanel({ subsectionId, tenantId, canRestore, onRestored }
     <section className="builder-panel overflow-hidden">
       <div className="builder-section-title flex items-center justify-between gap-3">
         <span className="flex items-center gap-2">
-          <History className="size-5 text-blue-700" />
+          <History className="size-5 text-[#B6F7FF]" />
           Revisions
         </span>
         <Badge>{revisions.length}</Badge>
       </div>
       <div className="grid max-h-[28rem] gap-3 overflow-y-auto p-4">
-        {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+        {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
         {loading ? <Alert>Loading revisions...</Alert> : null}
-        {!loading && !revisions.length ? <div className="text-sm text-slate-500">No saved revisions yet.</div> : null}
+        {!loading && !revisions.length ? <div className="text-sm text-white/52">No saved revisions yet.</div> : null}
         {revisions.map((revision) => (
-          <article className="rounded-md border border-slate-200 bg-white p-3" key={revision.id}>
+          <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-3" key={revision.id}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-sm font-bold text-slate-900">Revision {revision.revision_number}</div>
-                <div className="mt-1 text-xs font-medium text-slate-500">{formatDateTime(revision.created_at)}</div>
+                <div className="text-sm font-bold text-white">Revision {revision.revision_number}</div>
+                <div className="mt-1 text-xs font-medium text-white/52">{formatDateTime(revision.created_at)}</div>
               </div>
               <Badge>{revision.source_type.replaceAll("_", " ")}</Badge>
             </div>
-            <p className="mt-2 line-clamp-2 text-sm text-slate-600">
+            <p className="mt-2 line-clamp-2 text-sm text-white/66">
               {revision.change_summary ?? revision.completion_status}
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-xs font-bold text-slate-500">{Math.round(revision.progress_percentage)}%</span>
+              <span className="text-xs font-bold text-white/46">{Math.round(revision.progress_percentage)}%</span>
               <Button
                 disabled={!canRestore || restoringId === revision.id}
                 size="sm"

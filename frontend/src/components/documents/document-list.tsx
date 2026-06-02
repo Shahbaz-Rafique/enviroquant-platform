@@ -23,25 +23,25 @@ export function DocumentList({ documents }: DocumentListProps) {
   if (!documents.length) {
     return (
       <Card>
-        <CardContent className="text-sm text-slate-600">No documents uploaded.</CardContent>
+        <CardContent className="text-sm text-white/66">No documents uploaded.</CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="divide-y divide-slate-200 rounded-md border border-slate-300 bg-white">
+    <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
       {documents.map((document) => {
         const version = document.versions[0];
         return (
           <div className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto]" key={document.id}>
             <div className="flex min-w-0 items-start gap-3">
-              <span className="mt-1 grid size-9 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700">
+              <span className="mt-1 grid size-9 shrink-0 place-items-center rounded-xl border border-[#67E8F9]/20 bg-[#67E8F9]/10 text-[#B6F7FF]">
                 <FileText className="size-5" />
               </span>
               <div className="min-w-0">
-                <strong className="block truncate text-sm text-slate-950">{document.original_filename}</strong>
-                <span className="mt-1 block truncate text-sm text-slate-500">
-                  {version ? `Version ${version.version_number} - ${formatBytes(version.size_bytes)}` : "No version"}
+                <strong className="block truncate text-sm text-white">{document.original_filename}</strong>
+                <span className="mt-1 block truncate text-sm text-white/52">
+                  {version ? `Version ${version.version_number} • ${formatBytes(version.size_bytes)}` : "No version"}
                 </span>
               </div>
             </div>

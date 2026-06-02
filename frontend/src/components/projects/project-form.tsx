@@ -81,7 +81,7 @@ export function ProjectForm() {
 
   return (
     <form onSubmit={submit}>
-      {error ? <Alert className="mb-5 border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+      {error ? <Alert className="mb-5 border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="grid gap-5">
@@ -165,9 +165,9 @@ export function ProjectForm() {
             <Label>Key Project Components</Label>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {projectComponents.map((component) => (
-                <div key={component} className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white p-3">
+                <div key={component} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                   <Checkbox id={`component-${component}`} />
-                  <Label className="cursor-pointer text-sm font-medium text-slate-700" htmlFor={`component-${component}`}>
+                  <Label className="cursor-pointer text-sm font-medium text-white/76" htmlFor={`component-${component}`}>
                     {component}
                   </Label>
                 </div>
@@ -176,18 +176,18 @@ export function ProjectForm() {
           </div>
         </div>
 
-        <aside className="rounded-md border border-dashed border-slate-300 bg-blue-50/45 p-4">
+        <aside className="rounded-2xl border border-dashed border-white/12 bg-white/[0.03] p-4">
           <Label>Upload Project Map</Label>
-          <div className="mt-3 grid aspect-video place-items-center rounded-md border border-dashed border-blue-300 bg-white">
-            <div className="text-center text-sm text-slate-500">
-              <Map className="mx-auto mb-2 size-10 text-blue-700" />
+          <div className="mt-3 grid aspect-video place-items-center rounded-2xl border border-dashed border-[#67E8F9]/20 bg-white/[0.03]">
+            <div className="text-center text-sm text-white/56">
+              <Map className="mx-auto mb-2 size-10 text-[#B6F7FF]" />
               Map upload comes with document evidence in this phase.
             </div>
           </div>
         </aside>
       </div>
 
-      <div className="mt-8 flex justify-end border-t border-slate-200 pt-5">
+      <div className="mt-8 flex justify-end border-t border-white/10 pt-5">
         <Button type="submit" disabled={saving}>
           {saving ? <Loader2 className="animate-spin" /> : <Save />}
           Save & Continue

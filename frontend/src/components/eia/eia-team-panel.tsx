@@ -109,7 +109,7 @@ export function EiaTeamPanel({
     <section className="builder-panel overflow-hidden">
       <div className="builder-section-title flex items-center justify-between gap-3">
         <span className="flex items-center gap-2">
-          <Users className="size-5 text-blue-700" />
+          <Users className="size-5 text-[#B6F7FF]" />
           Team
         </span>
         <Button size="icon" type="button" variant="secondary" onClick={refresh} aria-label="Refresh team">
@@ -118,9 +118,9 @@ export function EiaTeamPanel({
       </div>
 
       <div className="grid gap-4 p-4">
-        {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+        {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
         {inviteUrl ? (
-          <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800">
+          <Alert className="border-emerald-400/20 bg-emerald-500/10 text-emerald-100">
             <div className="flex min-w-0 gap-2">
               <Input readOnly value={inviteUrl} className="font-mono text-xs" />
               <Button type="button" variant="secondary" size="icon" onClick={copyInviteUrl} aria-label="Copy invite link">
@@ -162,15 +162,15 @@ export function EiaTeamPanel({
           </form>
         ) : null}
 
-        <div className="divide-y divide-slate-200 rounded-md border border-slate-200">
-          {loading ? <div className="p-3 text-sm text-slate-500">Loading team...</div> : null}
-          {!loading && !members.length ? <div className="p-3 text-sm text-slate-500">No document members.</div> : null}
+        <div className="divide-y divide-white/10 rounded-2xl border border-white/10">
+          {loading ? <div className="p-3 text-sm text-white/52">Loading team...</div> : null}
+          {!loading && !members.length ? <div className="p-3 text-sm text-white/52">No document members.</div> : null}
           {members.map((member) => (
             <div className="flex items-center justify-between gap-3 p-3" key={member.id}>
               <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-slate-900">{member.user.full_name}</div>
-                <div className="truncate text-xs font-medium text-slate-500">{member.user.email}</div>
-                <div className="mt-1 text-xs font-bold uppercase text-blue-700">{member.role}</div>
+                <div className="truncate text-sm font-bold text-white">{member.user.full_name}</div>
+                <div className="truncate text-xs font-medium text-white/52">{member.user.email}</div>
+                <div className="mt-1 text-xs font-bold uppercase text-[#B6F7FF]">{member.role}</div>
               </div>
               {canManage && member.user_id !== currentUserId ? (
                 <Button

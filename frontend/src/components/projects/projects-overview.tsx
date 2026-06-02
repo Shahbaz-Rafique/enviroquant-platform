@@ -84,14 +84,14 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
 
   return (
     <>
-      <section className="mb-5 overflow-hidden rounded-md border border-slate-300 bg-white shadow-workspace">
-        <div className="grid gap-5 border-b border-slate-200 p-5 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <section className="builder-panel mb-5 overflow-hidden">
+        <div className="grid gap-5 border-b border-white/10 p-5 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="min-w-0">
-            <p className="text-sm font-black uppercase text-blue-700">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#67E8F9]">
               {compact ? "Project Management" : "Core Workspace"}
             </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-normal text-slate-950">{pageTitle}</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{pageDescription}</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-normal text-white">{pageTitle}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/66">{pageDescription}</p>
           </div>
           <div className="flex flex-wrap items-start gap-2">
             <Button variant="secondary" onClick={loadProjects}>
@@ -109,7 +109,7 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
           </div>
         </div>
 
-        <div className="grid divide-y divide-slate-200 md:grid-cols-4 md:divide-x md:divide-y-0">
+        <div className="grid divide-y divide-white/10 md:grid-cols-4 md:divide-x md:divide-y-0">
           <PortfolioStat icon={<BriefcaseBusiness />} label="Total Projects" value={stats.total} />
           <PortfolioStat icon={<FileClock />} label="Active" value={stats.active} denominator={stats.total} />
           <PortfolioStat icon={<ClipboardCheck />} label="Draft" value={stats.draft} denominator={stats.total} />
@@ -118,17 +118,17 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
       </section>
 
       <section className="builder-panel">
-        <div className="border-b border-slate-200 px-5 py-4">
+        <div className="border-b border-white/10 px-5 py-4">
           <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
             <div>
-              <h2 className="text-lg font-bold text-slate-950">Projects</h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <h2 className="text-lg font-bold text-white">Projects</h2>
+              <p className="mt-1 text-sm text-white/52">
                 Showing {filteredProjects.length} of {projects.length} project records.
               </p>
             </div>
             <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_180px] xl:min-w-[540px]">
               <label className="relative block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/34" />
                 <Input
                   className="pl-9"
                   placeholder="Search by name, sector, location, or status"
@@ -186,15 +186,15 @@ function PortfolioStat({
 
   return (
     <div className="flex min-w-0 items-center gap-3 px-5 py-4">
-      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700 [&_svg]:size-5">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#67E8F9]/20 bg-[#67E8F9]/10 text-[#B6F7FF] [&_svg]:size-5">
         {icon}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-end justify-between gap-3">
-          <strong className="block text-2xl font-black leading-none text-slate-950">{value}</strong>
-          {percentage !== null ? <span className="text-xs font-bold text-slate-500">{percentage}%</span> : null}
+          <strong className="block text-2xl font-black leading-none text-white">{value}</strong>
+          {percentage !== null ? <span className="text-xs font-bold text-white/52">{percentage}%</span> : null}
         </div>
-        <span className="mt-1 block truncate text-xs font-bold uppercase text-slate-500">{label}</span>
+        <span className="mt-1 block truncate text-xs font-bold uppercase text-white/52">{label}</span>
         {percentage !== null ? <Progress className="mt-3 h-1.5" value={percentage} /> : null}
       </div>
     </div>
@@ -203,13 +203,13 @@ function PortfolioStat({
 
 function EmptyProjects({ canCreate }: { canCreate: boolean }) {
   return (
-    <div className="grid min-h-60 place-items-center rounded-md border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+    <div className="grid min-h-60 place-items-center rounded-2xl border border-dashed border-white/14 bg-white/[0.03] p-6 text-center">
       <div className="max-w-md">
-        <div className="mx-auto grid size-12 place-items-center rounded-md bg-blue-50 text-blue-700">
+        <div className="mx-auto grid size-12 place-items-center rounded-2xl border border-[#67E8F9]/20 bg-[#67E8F9]/10 text-[#B6F7FF]">
           <BriefcaseBusiness className="size-6" />
         </div>
-        <h3 className="mt-4 text-lg font-bold text-slate-950">No projects yet</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+        <h3 className="mt-4 text-lg font-bold text-white">No projects yet</h3>
+        <p className="mt-2 text-sm leading-6 text-white/66">
           Create a project workspace before uploading evidence or building a structured EIA document.
         </p>
         {canCreate ? (

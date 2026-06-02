@@ -17,7 +17,7 @@ export function EiaProgressOverview({ progress }: EiaProgressOverviewProps) {
     <section className="builder-panel overflow-hidden">
       <div className="builder-section-title flex items-center justify-between gap-3">
         <span className="flex items-center gap-2">
-          <BarChart3 className="size-5 text-blue-700" />
+          <BarChart3 className="size-5 text-[#B6F7FF]" />
           Progress
         </span>
         <Badge>{percentage}%</Badge>
@@ -25,8 +25,8 @@ export function EiaProgressOverview({ progress }: EiaProgressOverviewProps) {
       <div className="grid gap-4 p-4">
         <div>
           <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-            <span className="font-semibold text-slate-700">Overall document</span>
-            <span className="font-bold text-slate-950">
+            <span className="font-semibold text-white/74">Overall document</span>
+            <span className="font-bold text-white">
               {progress?.completed_subsections ?? 0}/{progress?.total_subsections ?? 0}
             </span>
           </div>
@@ -37,10 +37,10 @@ export function EiaProgressOverview({ progress }: EiaProgressOverviewProps) {
           {progress?.sections.map((section) => (
             <div key={section.section_id}>
               <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                <span className="line-clamp-1 font-bold text-slate-700">
+                <span className="line-clamp-1 font-bold text-white/74">
                   {section.section_number}. {section.title}
                 </span>
-                <span className="shrink-0 font-bold text-slate-500">{Math.round(section.progress_percentage)}%</span>
+                <span className="shrink-0 font-bold text-white/52">{Math.round(section.progress_percentage)}%</span>
               </div>
               <Progress value={section.progress_percentage} />
             </div>

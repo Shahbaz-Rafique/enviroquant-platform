@@ -36,8 +36,8 @@ export function FileDropzone({
   return (
     <div
       className={cn(
-        "grid min-h-28 place-items-center rounded-md border border-dashed border-blue-300 bg-blue-50/60 px-4 text-center transition-colors",
-        dragActive && "border-blue-600 bg-blue-100",
+        "grid min-h-28 place-items-center rounded-2xl border border-dashed border-white/14 bg-white/[0.03] px-4 text-center transition-colors",
+        dragActive && "border-[#67E8F9]/30 bg-white/[0.06]",
         disabled && "opacity-60"
       )}
       onDragOver={(event) => {
@@ -52,7 +52,7 @@ export function FileDropzone({
           <UploadCloud />
           Choose file
         </FileTrigger>
-        <p className="max-w-full truncate text-sm font-medium text-slate-500">
+        <p className="max-w-full truncate text-sm font-medium text-white/52">
           {file ? file.name : description}
         </p>
         {file ? (

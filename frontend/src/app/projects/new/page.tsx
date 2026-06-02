@@ -36,9 +36,9 @@ export default function NewProjectPage() {
       />
       <header className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <div>
-          <p className="text-sm font-bold uppercase text-blue-700">Section 2</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-950">Project Description</h1>
-          <p className="mt-2 text-sm text-slate-600">Provide detailed information about the proposed project.</p>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#67E8F9]">Section 2</p>
+          <h1 className="mt-1 text-3xl font-bold text-white">Project Description</h1>
+          <p className="mt-2 text-sm text-white/66">Provide detailed information about the proposed project.</p>
         </div>
       </header>
 

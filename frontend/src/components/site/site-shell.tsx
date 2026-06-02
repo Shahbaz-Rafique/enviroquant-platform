@@ -1,11 +1,18 @@
 'use client'
 
 import { motion, useReducedMotion } from 'framer-motion'
-import { Mail } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, LogOut, UserCircle } from 'lucide-react'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { useCurrentUser } from '@/components/auth/auth-gate'
+import { BrandMark } from '@/components/site/brand-mark'
+import { clearSession } from '@/lib/auth'
+import { displayRole } from '@/lib/permissions'
+import type { User } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { GreenButton } from './marketing-pages'
 
 const navigation = [
   { label: 'Home', href: '/' },
@@ -15,20 +22,118 @@ const navigation = [
 ]
 
 const pageNumbers = [
-  { label: 'Eleven', href: '/' },
-  { label: 'Twelve', href: '/about' },
-  { label: 'Thirteen', href: '/services' },
-  { label: 'Fourteen', href: '/contact' },
-  { label: 'Fifteen', href: '/' }
+  { label: 'Home', href: '/' },
+  { label: 'About', href: '/about' },
+  { label: 'Services', href: '/services' },
+  { label: 'Contact', href: '/contact' }
 ]
 
-function BrandMark () {
+function SiteHeaderAuthButtons () {
   return (
-    <Link href='/' aria-label='Home' className='group flex items-center gap-3'>
-      <span className='grid size-11 place-items-center rounded-full border border-white/70 bg-white text-sm font-black text-[#06110F] shadow-[0_0_30px_rgba(255,255,255,0.28)] transition-transform duration-300 group-hover:scale-105'>
-        <span className='size-2 rounded-full bg-[#00F5D4]' />
-      </span>
-    </Link>
+    <div className='flex items-center gap-2 sm:gap-3'>
+      <GreenButton href='/login'  outline>
+        Login
+      </GreenButton>
+      <GreenButton href='/register'>Get Started</GreenButton>
+     
+    </div>
+  )
+}
+
+function SiteHeaderProfileMenu ({
+  user,
+  onLogout
+}: Readonly<{
+  user: User
+  onLogout: () => void
+}>) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    function handlePointerDown (event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    function handleEscape (event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  return (
+    <div ref={menuRef} className='relative'>
+      <button
+        type='button'
+        aria-haspopup='menu'
+        aria-expanded={open}
+        onClick={() => setOpen(current => !current)}
+        className='flex items-center gap-3 rounded-full border border-white/12 bg-white/8 px-2.5 py-1.5 text-left backdrop-blur-md transition-all duration-300 hover:border-white/20 hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#67E8F9]/70'
+      >
+        <span className='grid size-9 place-items-center rounded-full border border-white/10 bg-white/12 text-white'>
+          <UserCircle className='size-5' />
+        </span>
+        <div className='hidden min-w-0 leading-tight sm:block'>
+          <p className='max-w-32 truncate text-sm font-semibold text-white'>
+            {user.full_name || 'User'}
+          </p>
+          <p className='truncate text-xs text-white/62'>{displayRole(user)}</p>
+        </div>
+        <ChevronDown
+          className={`size-4 text-white/72 transition-transform duration-200 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {open ? (
+        <div
+          role='menu'
+          className='absolute right-0 top-full mt-3 w-64 overflow-hidden rounded-2xl border border-white/12 bg-[rgba(5,25,20,0.96)] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl'
+        >
+          <div className='border-b border-white/10 px-4 py-3'>
+            <p className='truncate text-sm font-semibold text-white'>
+              {user.full_name || 'User'}
+            </p>
+            <p className='mt-1 truncate text-xs text-white/58'>{user.email}</p>
+          </div>
+
+          <Link
+            href='/dashboard'
+            role='menuitem'
+            onClick={() => setOpen(false)}
+            className='mt-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/88 transition-colors hover:bg-white/8 hover:text-white'
+          >
+            <LayoutDashboard className='size-4' />
+            Dashboard
+          </Link>
+
+          <button
+            type='button'
+            role='menuitem'
+            onClick={() => {
+              setOpen(false)
+              onLogout()
+            }}
+            className='flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-white/72 transition-colors hover:bg-white/8 hover:text-white'
+          >
+            <LogOut className='size-4' />
+            Logout
+          </button>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -66,21 +171,63 @@ export function SiteBackground () {
 }
 
 export function SiteHeader () {
+  const pathname = usePathname()
+  const router = useRouter()
+  const { user, loading } = useCurrentUser()
+  const [hasHydrated, setHasHydrated] = useState(false)
+  const [sessionUser, setSessionUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    setHasHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hasHydrated) {
+      return
+    }
+    setSessionUser(user)
+  }, [hasHydrated, user])
+
+  function handleLogout () {
+    clearSession()
+    setSessionUser(null)
+    router.push('/')
+  }
+
+  const showAuthenticatedState = hasHydrated && Boolean(sessionUser)
+  const showSessionLoading = !hasHydrated || loading
+
   return (
     <header className='fixed inset-x-0 top-0 z-50 backdrop-blur-sm'>
       <div className='mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-7 sm:px-10 lg:px-12'>
         <BrandMark />
-        <nav className='flex items-center gap-5 sm:gap-10'>
-          {navigation.map(item => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className='rounded-full px-1 py-1 text-[0.95rem] font-normal text-white/90 transition-all duration-300 hover:text-white hover:drop-shadow-[0_0_12px_rgba(103,232,249,0.55)]'
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <div className='flex items-center gap-4 sm:gap-6 lg:gap-8'>
+          <nav className='flex items-center gap-4 sm:gap-6 lg:gap-10'>
+            {navigation.map(item => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={cn(
+                  'rounded-md px-3 py-2 text-sm font-semibold text-white/92 transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
+                  pathname === item.href && 'bg-white/10 text-white'
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          {showAuthenticatedState && sessionUser ? (
+            <SiteHeaderProfileMenu user={sessionUser} onLogout={handleLogout} />
+          ) : showSessionLoading ? (
+            <div
+              aria-label='Checking session'
+              className='h-10 w-36 animate-pulse rounded-full border border-white/10 bg-white/8'
+            />
+          ) : (
+            <SiteHeaderAuthButtons />
+          )}
+        </div>
       </div>
     </header>
   )
@@ -209,9 +356,9 @@ export function SiteFooter () {
               key={item.label}
               href={item.href}
               aria-label={item.label}
-              className='grid size-4 place-items-center rounded-full bg-white/12 text-[0.52rem] font-semibold uppercase tracking-[0.16em] transition hover:bg-white/18'
+              className='grid size-5 place-items-center aspect-square bg-white/12 text-[0.52rem] font-semibold uppercase tracking-[0.16em] transition-all hover:bg-white/18 hover:translate-y-[-2px]'
             >
-              <span className='size-4'>{item.icon}</span>
+              {item.icon}
             </Link>
           ))}
         </div>

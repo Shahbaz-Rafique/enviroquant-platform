@@ -100,15 +100,15 @@ export default function ProjectWorkspacePage() {
       />
       <header className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <div>
-          <p className="text-sm font-bold uppercase text-blue-700">Project Workspace</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-950">{project?.name ?? "Workspace"}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#67E8F9]">Project Workspace</p>
+          <h1 className="mt-1 text-3xl font-bold text-white">{project?.name ?? "Workspace"}</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/66">
             {project?.description ?? "Document foundation and project metadata."}
           </p>
         </div>
       </header>
 
-      {error ? <Alert className="mb-5 border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+      {error ? <Alert className="mb-5 border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
       {loading ? <Alert className="mb-5">Loading workspace...</Alert> : null}
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px]">
@@ -118,14 +118,14 @@ export default function ProjectWorkspacePage() {
           </div> */}
           <div className="grid">
             <div className="p-5">
-              <div className="mb-5 rounded-md border border-slate-300 bg-white p-4">
+              <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <div className="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-center">
                   <div>
-                    <div className="flex items-center gap-2 text-base font-bold text-slate-950">
-                      <BookOpenCheck className="size-5 text-blue-700" />
+                    <div className="flex items-center gap-2 text-base font-bold text-white">
+                      <BookOpenCheck className="size-5 text-[#B6F7FF]" />
                       Structured EIA Documents
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-white/66">
                       Create checklist-aligned EIA drafts with seeded sections and subsections.
                     </p>
                   </div>
@@ -143,13 +143,13 @@ export default function ProjectWorkspacePage() {
                   ) : (
                     eiaDocuments.map((eiaDocument) => (
                       <Link
-                        className="grid gap-2 rounded-md border border-slate-200 p-4 transition-colors hover:border-blue-300 hover:bg-blue-50/50 md:grid-cols-[minmax(0,1fr)_auto]"
+                        className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-[#67E8F9]/24 hover:bg-white/[0.06] md:grid-cols-[minmax(0,1fr)_auto]"
                         href={`/projects/${projectId}/eia/${eiaDocument.id}`}
                         key={eiaDocument.id}
                       >
                         <div className="min-w-0">
-                          <strong className="block truncate text-sm text-slate-950">{eiaDocument.title}</strong>
-                          <span className="mt-1 block text-sm text-slate-500">
+                          <strong className="block truncate text-sm text-white">{eiaDocument.title}</strong>
+                          <span className="mt-1 block text-sm text-white/52">
                             Standard 8-section EIA checklist structure
                           </span>
                         </div>
@@ -160,9 +160,9 @@ export default function ProjectWorkspacePage() {
                 </div>
               </div>
 
-              <div className="mb-5 rounded-md border border-slate-300 bg-white p-4">
-                <div className="mb-3 flex items-center gap-2 text-base font-bold text-slate-950">
-                  <FileText className="size-5 text-blue-700" />
+              <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="mb-3 flex items-center gap-2 text-base font-bold text-white">
+                  <FileText className="size-5 text-[#B6F7FF]" />
                   Attach Files & Documents
                 </div>
                 <DocumentUpload
@@ -191,23 +191,23 @@ export default function ProjectWorkspacePage() {
             </CardHeader>
             <CardContent>
               <dl className="grid gap-3 text-sm">
-                <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                  <dt className="font-semibold text-slate-500">Status</dt>
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <dt className="font-semibold text-white/52">Status</dt>
                   <dd>
                     <Badge>{project?.status ?? "DRAFT"}</Badge>
                   </dd>
                 </div>
-                <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                  <dt className="font-semibold text-slate-500">Sector</dt>
-                  <dd className="text-right text-slate-800">{project?.sector || "Pending"}</dd>
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <dt className="font-semibold text-white/52">Sector</dt>
+                  <dd className="text-right text-white/84">{project?.sector || "Pending"}</dd>
                 </div>
-                <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                  <dt className="font-semibold text-slate-500">Country</dt>
-                  <dd className="text-right text-slate-800">{project?.country || "Pending"}</dd>
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <dt className="font-semibold text-white/52">Country</dt>
+                  <dd className="text-right text-white/84">{project?.country || "Pending"}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="font-semibold text-slate-500">Documents</dt>
-                  <dd className="text-right text-slate-800">{documents.length}</dd>
+                  <dt className="font-semibold text-white/52">Documents</dt>
+                  <dd className="text-right text-white/84">{documents.length}</dd>
                 </div>
               </dl>
             </CardContent>
@@ -217,9 +217,9 @@ export default function ProjectWorkspacePage() {
             <CardHeader>
               <CardTitle>Review Controls</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-3 text-sm text-slate-600">
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-                <div className="mb-1 flex items-center gap-2 font-bold text-blue-900">
+            <CardContent className="grid gap-3 text-sm text-white/66">
+              <div className="rounded-2xl border border-[#67E8F9]/18 bg-[#67E8F9]/10 p-3">
+                <div className="mb-1 flex items-center gap-2 font-bold text-white">
                   <BookOpenCheck className="size-4" />
                   Evidence-first review
                 </div>

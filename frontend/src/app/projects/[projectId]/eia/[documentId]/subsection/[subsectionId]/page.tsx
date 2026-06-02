@@ -40,8 +40,8 @@ export default function EiaSubsectionWorkspacePage() {
       />
       <div className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <div>
-          <p className="text-sm font-bold uppercase text-blue-700">Subsection Workspace</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-950">Checklist-Aligned Editor</h1>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#67E8F9]">Subsection Workspace</p>
+          <h1 className="mt-1 text-3xl font-bold text-white">Checklist-Aligned Editor</h1>
         </div>
       </div>
 

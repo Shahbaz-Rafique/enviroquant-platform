@@ -214,31 +214,31 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
 
   return (
     <div className="grid gap-5">
-      <section className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-workspace">
-        <div className="grid gap-5 border-b border-slate-200 p-5 xl:grid-cols-[minmax(0,1fr)_auto]">
+      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+        <div className="grid gap-5 border-b border-white/10 p-5 xl:grid-cols-[minmax(0,1fr)_auto]">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <Badge className="border-blue-200 bg-blue-50 text-blue-800">Structured EIA</Badge>
+              <Badge className="border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]">Structured EIA</Badge>
               <Badge className={cn(statusBadgeClass(document?.status ?? "draft"))}>
                 {document?.status ?? "draft"}
               </Badge>
-              <span className="text-xs font-semibold uppercase text-slate-500">
+              <span className="text-xs font-semibold uppercase text-white/46">
                 {progress.complete}/{progress.total} complete
               </span>
             </div>
-            <h1 className="truncate text-2xl font-bold leading-tight text-slate-950">
+            <h1 className="truncate text-2xl font-bold leading-tight text-white">
               {document?.title ?? "Loading EIA document"}
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/66">
               Work through  checklist method section by section, keep draft changes traceable,
               and promote detailed editing to the focused subsection workspace.
             </p>
           </div>
 
-          <div className="grid min-w-72 gap-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+          <div className="grid min-w-72 gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-bold text-slate-700">Overall Progress</span>
-              <span className="text-2xl font-black text-slate-950">
+              <span className="text-sm font-bold text-white/74">Overall Progress</span>
+              <span className="text-2xl font-black text-white">
                 {Math.round(progressSummary?.progress_percentage ?? 0)}%
               </span>
             </div>
@@ -246,7 +246,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
           </div>
         </div>
 
-        <div className="grid divide-y divide-slate-200 md:grid-cols-4 md:divide-x md:divide-y-0">
+        <div className="grid divide-y divide-white/10 md:grid-cols-4 md:divide-x md:divide-y-0">
           <MetricTile icon={<BookOpenCheck />} label="Sections" value={documentStats.sections || 8} />
           <MetricTile icon={<FileText />} label="Checklist Items" value={documentStats.subsections || progress.total} />
           <MetricTile icon={<Clock3 />} label="In Progress" value={documentStats.inProgress} />
@@ -254,26 +254,26 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
         </div>
       </section>
 
-      {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+      {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
       <section className="grid min-h-[calc(100vh-11rem)] gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_380px]">
         <aside className="builder-panel sticky top-20 self-start overflow-hidden">
-          <div className="border-b border-slate-200 px-4 py-3">
+          <div className="border-b border-white/10 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 text-base font-bold text-slate-950">
-                <BookOpenCheck className="size-5 text-blue-700" />
+              <span className="flex items-center gap-2 text-base font-bold text-white">
+                <BookOpenCheck className="size-5 text-[#B6F7FF]" />
                 Checklist
               </span>
               <Badge>{progress.complete}/{progress.total}</Badge>
             </div>
-            <p className="mt-1 text-xs font-medium text-slate-500">Select a subsection to draft or review.</p>
+            <p className="mt-1 text-xs font-medium text-white/52">Select a subsection to draft or review.</p>
           </div>
 
           <div className="max-h-[calc(100vh-13rem)] overflow-y-auto p-3">
             {loading ? <Alert>Loading checklist...</Alert> : null}
             {document?.sections.map((section) => (
               <div className="mb-4" key={section.id}>
-                <div className="sticky top-0 z-10 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase text-slate-700">
+                <div className="sticky top-0 z-10 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black uppercase text-white/68 backdrop-blur-sm">
                   {section.section_number}. {section.title}
                 </div>
                 <div className="mt-2 grid gap-1">
@@ -283,25 +283,25 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                     return (
                       <button
                         className={cn(
-                          "group grid gap-1 rounded-sm border border-transparent px-3 py-2 text-left transition-colors hover:border-blue-200 hover:bg-blue-50",
-                          active && "border-blue-300 bg-blue-50 shadow-sm"
+                          "group grid gap-1 rounded-xl border border-transparent px-3 py-2 text-left transition-colors hover:border-[#67E8F9]/20 hover:bg-white/[0.05]",
+                          active && "border-[#67E8F9]/28 bg-[#67E8F9]/10"
                         )}
                         key={subsection.id}
                         onClick={() => setSelectedSubsectionId(subsection.id)}
                         type="button"
                       >
                         <span className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-black uppercase text-blue-700">
+                          <span className="text-xs font-black uppercase text-[#B6F7FF]">
                             {subsection.subsection_number}
                           </span>
                           <StatusIcon
                             className={cn("size-4 shrink-0", statusIconClass(subsection.completion_status))}
                           />
                         </span>
-                        <span className="line-clamp-2 text-sm font-semibold leading-5 text-slate-800">
+                        <span className="line-clamp-2 text-sm font-semibold leading-5 text-white">
                           {subsection.title}
                         </span>
-                        <span className="text-xs font-medium text-slate-500">
+                        <span className="text-xs font-medium text-white/52">
                           {Math.round(subsection.progress_percentage)}% complete
                         </span>
                       </button>
@@ -314,16 +314,16 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
         </aside>
 
         <form className="builder-panel min-w-0 self-start overflow-hidden" onSubmit={submit}>
-          <div className="border-b border-slate-200 bg-white px-5 py-4">
+          <div className="border-b border-white/10 bg-white/[0.03] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-black uppercase text-blue-700">
+                  <span className="text-sm font-black uppercase text-[#B6F7FF]">
                     {selectedSection ? `Section ${selectedSection.section_number}` : "Section"}
                   </span>
                   <Badge className={cn(statusBadgeClass(completionStatus))}>{statusLabel(completionStatus)}</Badge>
                 </div>
-                <h2 className="mt-2 text-xl font-bold leading-tight text-slate-950">
+                <h2 className="mt-2 text-xl font-bold leading-tight text-white">
                   {selectedSubsection?.subsection_number ? `${selectedSubsection.subsection_number}. ` : ""}
                   {selectedSubsection?.title ?? "Select a subsection"}
                 </h2>
@@ -345,8 +345,8 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
             </div>
           </div>
 
-          <div className="grid gap-5 border-b border-slate-200 bg-slate-50 p-5 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+          <div className="grid gap-5 border-b border-white/10 bg-white/[0.04] p-5 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
+            <label className="grid gap-2 text-sm font-semibold text-white/78">
               Completion status
               <Select disabled={!canEdit} value={completionStatus} onValueChange={setCompletionStatus}>
                 <SelectTrigger>
@@ -361,7 +361,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                 </SelectContent>
               </Select>
             </label>
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
+            <label className="grid gap-2 text-sm font-semibold text-white/78">
               Progress
               <NumberStepper
                 disabled={!canEdit}
@@ -372,7 +372,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
               />
             </label>
             <div className="grid content-end">
-              <div className="h-10 rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-500">
+              <div className="h-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white/52">
                 {savedAt ? `Saved ${savedAt}` : "Not saved this session"}
               </div>
             </div>
@@ -380,7 +380,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
 
           <div className="p-5">
             <Textarea
-              className="min-h-[560px] resize-y rounded-md border-slate-300 bg-white text-base leading-7"
+              className="min-h-[560px] resize-y rounded-2xl border-white/12 bg-white/[0.03] text-base leading-7 text-white"
               disabled={!canEdit || !selectedSubsection}
               placeholder="Draft structured EIA content for this checklist item. Include evidence references, quantified details, assumptions, and source notes."
               value={content}
@@ -392,9 +392,9 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
         <aside className="xl:col-span-2 2xl:col-span-1">
           <div className="sticky top-20 grid content-start gap-4">
             <section className="builder-panel overflow-hidden">
-              <div className="border-b border-slate-200 px-4 py-3">
+              <div className="border-b border-white/10 px-4 py-3">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-base font-bold text-slate-950">Workspace Insights</span>
+                  <span className="text-base font-bold text-white">Workspace Insights</span>
                   <Badge>{activeInsightLabel}</Badge>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -403,8 +403,8 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                     return (
                       <button
                         className={cn(
-                          "flex h-9 items-center justify-center gap-2 rounded-sm border border-slate-200 bg-white px-3 text-xs font-bold uppercase text-slate-600 transition-colors hover:bg-blue-50",
-                          activeInsight === tab.value && "border-blue-300 bg-blue-50 text-blue-800"
+                          "flex h-9 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-xs font-bold uppercase text-white/62 transition-colors hover:bg-white/[0.07] hover:text-white",
+                          activeInsight === tab.value && "border-[#67E8F9]/28 bg-[#67E8F9]/10 text-[#B6F7FF]"
                         )}
                         key={tab.value}
                         type="button"
@@ -452,12 +452,12 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
 function MetricTile({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
     <div className="flex items-center gap-3 px-5 py-4">
-      <span className="grid size-10 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700 [&_svg]:size-5">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#67E8F9]/18 bg-[#67E8F9]/10 text-[#B6F7FF] [&_svg]:size-5">
         {icon}
       </span>
       <div>
-        <div className="text-2xl font-black leading-none text-slate-950">{value}</div>
-        <div className="mt-1 text-xs font-bold uppercase text-slate-500">{label}</div>
+        <div className="text-2xl font-black leading-none text-white">{value}</div>
+        <div className="mt-1 text-xs font-bold uppercase text-white/46">{label}</div>
       </div>
     </div>
   );
@@ -478,12 +478,12 @@ function statusIconClass(status: string) {
     return "text-emerald-600";
   }
   if (status === "READY_FOR_REVIEW") {
-    return "text-amber-600";
+    return "text-amber-300";
   }
   if (status === "IN_PROGRESS") {
-    return "text-blue-600";
+    return "text-[#67E8F9]";
   }
-  return "text-slate-400";
+  return "text-white/32";
 }
 
 function statusLabel(status: string) {
@@ -493,15 +493,15 @@ function statusLabel(status: string) {
 function statusBadgeClass(status: string) {
   const normalized = status.toUpperCase();
   if (normalized === "COMPLETE" || normalized === "PUBLISHED") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
   }
   if (normalized === "READY_FOR_REVIEW" || normalized === "IN_REVIEW") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
   }
   if (normalized === "IN_PROGRESS" || normalized === "DRAFT") {
-    return "border-blue-200 bg-blue-50 text-blue-700";
+    return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
   }
-  return "border-slate-200 bg-slate-50 text-slate-600";
+  return "border-white/12 bg-white/[0.05] text-white/68";
 }
 
 function replaceSubsection(

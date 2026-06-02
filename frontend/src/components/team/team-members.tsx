@@ -112,9 +112,9 @@ export function TeamMembers({ user }: TeamMembersProps) {
     <>
       <header className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <div>
-          <p className="text-sm font-bold uppercase text-blue-700">Organization access</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-950">Team Members</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#67E8F9]">Organization access</p>
+          <h1 className="mt-1 text-3xl font-bold text-white">Team Members</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/66">
             Invite consultants, reviewers, and admins into the current organization boundary.
           </p>
         </div>
@@ -128,7 +128,7 @@ export function TeamMembers({ user }: TeamMembersProps) {
         {canInvite ? (
           <section className="builder-panel">
             <div className="builder-section-title flex items-center gap-2">
-              <UserPlus className="size-5 text-blue-700" />
+              <UserPlus className="size-5 text-[#B6F7FF]" />
               Invite Member
             </div>
             <form className="grid gap-4 p-5" onSubmit={submit}>
@@ -166,15 +166,15 @@ export function TeamMembers({ user }: TeamMembersProps) {
         <section className="builder-panel">
           <div className="builder-section-title flex items-center justify-between gap-3">
             <span className="flex items-center gap-2">
-              <Users className="size-5 text-blue-700" />
+              <Users className="size-5 text-[#B6F7FF]" />
               Members
             </span>
-            <span className="text-sm font-medium text-slate-500">{members.length} users</span>
+            <span className="text-sm font-medium text-white/52">{members.length} users</span>
           </div>
           <div className="p-5">
-            {error ? <Alert className="mb-4 border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+            {error ? <Alert className="mb-4 border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
             {inviteUrl ? (
-              <Alert className="mb-4 border-green-200 bg-green-50 text-green-800">
+              <Alert className="mb-4 border-emerald-400/20 bg-emerald-500/10 text-emerald-100">
                 <div className="grid gap-3">
                   <span className="font-semibold">Invitation created. Share this activation link:</span>
                   {emailSent ? (
@@ -194,10 +194,10 @@ export function TeamMembers({ user }: TeamMembersProps) {
             {loading ? <Alert>Loading team members...</Alert> : null}
             {!loading && !members.length ? <Alert>No team members found.</Alert> : null}
             {!loading && members.length ? (
-              <div className="overflow-hidden rounded-md border border-slate-200">
+              <div className="overflow-hidden rounded-2xl border border-white/10">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <thead className="bg-white/[0.03] text-xs uppercase text-white/52">
                       <tr>
                         <th className="px-4 py-3 font-bold">Name</th>
                         <th className="px-4 py-3 font-bold">Email</th>
@@ -206,20 +206,20 @@ export function TeamMembers({ user }: TeamMembersProps) {
                         <th className="px-4 py-3 font-bold">Access</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody className="divide-y divide-white/10">
                       {members.map((member) => (
                         <tr key={member.id}>
-                          <td className="px-4 py-3 font-semibold text-slate-900">{member.full_name}</td>
-                          <td className="px-4 py-3 text-slate-600">{member.email}</td>
-                          <td className="px-4 py-3 text-slate-700">{member.role}</td>
+                          <td className="px-4 py-3 font-semibold text-white">{member.full_name}</td>
+                          <td className="px-4 py-3 text-white/66">{member.email}</td>
+                          <td className="px-4 py-3 text-white/74">{member.role}</td>
                           <td className="px-4 py-3">
-                            <span className="rounded-sm bg-slate-100 px-2 py-1 text-xs font-bold uppercase text-slate-700">
+                            <span className="rounded-full border border-white/12 bg-white/[0.05] px-2.5 py-1 text-xs font-bold uppercase text-white/74">
                               {member.status.replace("_", " ")}
                             </span>
                           </td>
                           <td className="px-4 py-3">
                             {member.id === user.id ? (
-                              <span className="text-xs font-semibold text-slate-500">Current user</span>
+                              <span className="text-xs font-semibold text-white/52">Current user</span>
                             ) : member.status === "active" ? (
                               <Button
                                 type="button"
@@ -251,7 +251,7 @@ export function TeamMembers({ user }: TeamMembersProps) {
                                 Activate
                               </Button>
                             ) : (
-                              <span className="text-xs font-semibold text-slate-500">Pending</span>
+                              <span className="text-xs font-semibold text-white/52">Pending</span>
                             )}
                           </td>
                         </tr>

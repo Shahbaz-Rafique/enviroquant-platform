@@ -65,10 +65,10 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
 
   return (
     <form onSubmit={submit}>
-      {error ? <Alert className="mb-4 border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+      {error ? <Alert className="mb-4 border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
-      <div className="rounded-md border border-slate-300 bg-white p-4">
-        <label className="mb-4 grid gap-2 text-sm font-semibold text-slate-700 md:max-w-xs">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <label className="mb-4 grid gap-2 text-sm font-semibold text-white/78 md:max-w-xs">
           Document type
           <Select disabled={!canUpload || uploading} value={documentType} onValueChange={setDocumentType}>
             <SelectTrigger>
@@ -83,13 +83,13 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
           </Select>
         </label>
 
-        <div className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 md:grid-cols-4">
+        <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 md:grid-cols-4">
           {fileTypes.map((type) => {
             const Icon = type.icon;
             return (
-              <div key={type.label} className="grid min-h-24 place-items-center border-r border-slate-200 p-4 last:border-r-0">
-                <Icon className="mb-2 size-9 text-blue-700" />
-                <span className="text-sm font-bold text-slate-800">{type.label}</span>
+              <div key={type.label} className="grid min-h-24 place-items-center border-r border-white/10 p-4 last:border-r-0">
+                <Icon className="mb-2 size-9 text-[#B6F7FF]" />
+                <span className="text-sm font-bold text-white/84">{type.label}</span>
               </div>
             );
           })}
