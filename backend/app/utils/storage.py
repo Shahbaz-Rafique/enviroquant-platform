@@ -2,6 +2,7 @@ import hashlib
 import os
 import re
 import tempfile
+from io import BytesIO
 from pathlib import Path
 from uuid import UUID
 
@@ -114,6 +115,29 @@ async def store_document_version(
     )
 
 
+def store_document_version_bytes(
+    content: bytes,
+    filename: str,
+    organization_id: UUID,
+    project_id: UUID,
+    document_id: UUID,
+    version_number: int,
+) -> StoredFile:
+    safe_filename = sanitize_filename(filename or "document")
+    return _store_bytes(
+        content=content,
+        original_filename=filename or safe_filename,
+        folder=(
+            f"{settings.cloudinary_folder}/organizations/{organization_id}/projects/"
+            f"{project_id}/documents/{document_id}/v{version_number}"
+        ),
+        resource_type="raw",
+        safe_filename=safe_filename,
+        allowed_extensions=DOCUMENT_ALLOWED_EXTENSIONS,
+        error_message="Only PDF and Word documents are supported",
+    )
+
+
 async def store_subsection_attachment(
     file: UploadFile,
     organization_id: UUID,
@@ -193,4 +217,64 @@ async def _store_upload(
         size_bytes=total_size,
         checksum_sha256=checksum.hexdigest(),
         original_filename=file.filename or safe_filename,
+    )
+
+
+def _store_bytes(
+    content: bytes,
+    original_filename: str,
+    folder: str,
+    resource_type: str,
+    safe_filename: str,
+    allowed_extensions: set[str],
+    error_message: str,
+) -> StoredFile:
+    extension = Path(original_filename).suffix.lower()
+    if extension not in allowed_extensions:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
+
+    total_size = len(content)
+    max_bytes = settings.max_upload_size_mb * 1024 * 1024
+    if total_size > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Upload exceeds {settings.max_upload_size_mb} MB limit",
+        )
+
+    checksum = hashlib.sha256(content).hexdigest()
+    temp_file_path: str | None = None
+    upload_result: dict[str, object] = {}
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(safe_filename).suffix) as temp_file:
+            temp_file_path = temp_file.name
+            temp_file.write(content)
+
+        upload_result = uploader.upload(
+            temp_file_path,
+            resource_type=resource_type,
+            folder=folder,
+            use_filename=True,
+            unique_filename=False,
+            overwrite=True,
+            filename_override=original_filename or safe_filename,
+        )
+    except Exception:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+        raise
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+
+    return StoredFile(
+        storage_url=str(upload_result["secure_url"]),
+        public_id=str(upload_result["public_id"]),
+        asset_id=str(upload_result.get("asset_id", "")),
+        resource_type=str(upload_result.get("resource_type", "raw")),
+        format=upload_result.get("format") if isinstance(upload_result.get("format"), str) else None,
+        version=upload_result.get("version") if isinstance(upload_result.get("version"), int) else None,
+        size_bytes=total_size,
+        checksum_sha256=checksum,
+        original_filename=original_filename or safe_filename,
     )

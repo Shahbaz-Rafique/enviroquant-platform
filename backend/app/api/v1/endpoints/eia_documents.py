@@ -1,6 +1,9 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from io import BytesIO
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role_in_tenant
@@ -20,6 +23,12 @@ from app.schemas.eia import (
     EiaDocumentProgressRead,
     EiaDocumentRead,
     EiaDocumentStructureRead,
+    EiaEvaluationComparisonRead,
+    EiaEvaluationFindingCommentCreate,
+    EiaEvaluationFindingCommentRead,
+    EiaEvaluationRunCreate,
+    EiaEvaluationRunDetailRead,
+    EiaEvaluationRunRead,
     EiaSourceDocumentAttachmentCreate,
     EiaSourceMappingConfirmRequest,
     EiaSourceMappingDetectRequest,
@@ -48,6 +57,20 @@ from app.services.eia_collaboration_service import (
     list_subsection_comments,
     remove_eia_document_member,
     update_subsection_comment,
+)
+from app.services.eia_evaluation_service import (
+    compare_eia_evaluation_runs,
+    create_finding_comment,
+    enqueue_eia_evaluation_run,
+    get_eia_evaluation_run,
+    list_finding_comments,
+    list_eia_evaluation_runs,
+    process_eia_evaluation_run_background,
+)
+from app.services.eia_evaluation_report_service import (
+    build_report_docx_bytes,
+    build_report_json_bytes,
+    build_report_pdf_bytes,
 )
 from app.services.eia_service import (
     create_eia_document,
@@ -99,6 +122,141 @@ def read_eia_document_structure(
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> EiaDocument:
     return get_eia_document_structure(db, current_user, document_id)
+
+
+@router.get("/{document_id}/evaluation-runs", response_model=list[EiaEvaluationRunRead])
+def read_eia_evaluation_runs(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> list[object]:
+    return list_eia_evaluation_runs(db, current_user, document_id)
+
+
+@router.post(
+    "/{document_id}/evaluation-runs",
+    response_model=EiaEvaluationRunDetailRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def post_eia_evaluation_run(
+    document_id: UUID,
+    background_tasks: BackgroundTasks,
+    payload: EiaEvaluationRunCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> object:
+    run = enqueue_eia_evaluation_run(db, current_user, document_id, payload)
+    background_tasks.add_task(process_eia_evaluation_run_background, run.id)
+    return run
+
+
+@router.get("/{document_id}/evaluation-runs/{run_id}", response_model=EiaEvaluationRunDetailRead)
+def read_eia_evaluation_run(
+    document_id: UUID,
+    run_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> object:
+    return get_eia_evaluation_run(db, current_user, document_id, run_id)
+
+
+@router.get("/{document_id}/evaluation-runs/{run_id}/report", response_model=EiaEvaluationRunDetailRead)
+def read_eia_evaluation_report(
+    document_id: UUID,
+    run_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> object:
+    return get_eia_evaluation_run(db, current_user, document_id, run_id)
+
+
+@router.get(
+    "/{document_id}/evaluation-runs/{run_id}/compare/{baseline_run_id}",
+    response_model=EiaEvaluationComparisonRead,
+)
+def read_eia_evaluation_comparison(
+    document_id: UUID,
+    run_id: UUID,
+    baseline_run_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return compare_eia_evaluation_runs(db, current_user, document_id, run_id, baseline_run_id)
+
+
+@router.get("/{document_id}/evaluation-runs/{run_id}/report.json")
+def download_eia_evaluation_report_json(
+    document_id: UUID,
+    run_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> StreamingResponse:
+    report_bytes = build_report_json_bytes(db, current_user, document_id, run_id)
+    return StreamingResponse(
+        BytesIO(report_bytes),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="enviroquant-review-{run_id}.json"'},
+    )
+
+
+@router.get("/{document_id}/evaluation-runs/{run_id}/report.docx")
+def download_eia_evaluation_report_docx(
+    document_id: UUID,
+    run_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> StreamingResponse:
+    report_bytes = build_report_docx_bytes(db, current_user, document_id, run_id)
+    return StreamingResponse(
+        BytesIO(report_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="enviroquant-review-{run_id}.docx"'},
+    )
+
+
+@router.get("/{document_id}/evaluation-runs/{run_id}/report.pdf")
+def download_eia_evaluation_report_pdf(
+    document_id: UUID,
+    run_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> StreamingResponse:
+    report_bytes = build_report_pdf_bytes(db, current_user, document_id, run_id)
+    return StreamingResponse(
+        BytesIO(report_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="enviroquant-review-{run_id}.pdf"'},
+    )
+
+
+@router.get(
+    "/{document_id}/evaluation-runs/{run_id}/findings/{finding_id}/comments",
+    response_model=list[EiaEvaluationFindingCommentRead],
+)
+def read_eia_evaluation_finding_comments(
+    document_id: UUID,
+    run_id: UUID,
+    finding_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> list[object]:
+    return list_finding_comments(db, current_user, document_id, run_id, finding_id)
+
+
+@router.post(
+    "/{document_id}/evaluation-runs/{run_id}/findings/{finding_id}/comments",
+    response_model=EiaEvaluationFindingCommentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def post_eia_evaluation_finding_comment(
+    document_id: UUID,
+    run_id: UUID,
+    finding_id: UUID,
+    payload: EiaEvaluationFindingCommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> object:
+    return create_finding_comment(db, current_user, document_id, run_id, finding_id, payload)
 
 
 @router.post(

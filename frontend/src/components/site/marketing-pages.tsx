@@ -203,7 +203,7 @@ export function HomeMarketingPage () {
           <Image
             src='/images/leaf.png'
             alt='Leaf'
-            fill
+            fill 
             //priority
             className='absolute object-cover translate-y-40 h-auto'
           />

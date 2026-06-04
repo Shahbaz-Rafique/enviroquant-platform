@@ -153,3 +153,5 @@ venv/
 # EnviroQuant local storage
 backend/storage/
 .postgres-data/
+.env 
+backend/.env 

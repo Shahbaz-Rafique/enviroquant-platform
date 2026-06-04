@@ -117,19 +117,21 @@ export function CommentsPanel({ subsectionId, user, canComment, canResolve, onCh
       <div className="grid gap-4 p-4">
         {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
-        <form className="grid gap-3" onSubmit={submitComment}>
-          <Textarea
-            className="min-h-24 resize-y"
-            disabled={!canComment || saving}
-            placeholder="Add a comment"
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-          />
-          <Button disabled={!canComment || saving || !content.trim()} type="submit">
-            {saving ? <Loader2 className="animate-spin" /> : <MessageSquare />}
-            Comment
-          </Button>
-        </form>
+        {canComment ? (
+          <form className="grid gap-3" onSubmit={submitComment}>
+            <Textarea
+              className="min-h-24 resize-y"
+              disabled={saving}
+              placeholder="Add a comment"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+            />
+            <Button disabled={saving || !content.trim()} type="submit">
+              {saving ? <Loader2 className="animate-spin" /> : <MessageSquare />}
+              Comment
+            </Button>
+          </form>
+        ) : null}
 
         <div className="grid gap-3">
           {loading ? <Alert>Loading comments...</Alert> : null}
@@ -195,10 +197,12 @@ function CommentItem({
       </div>
       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/74">{comment.content}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button disabled={!canComment} size="sm" type="button" variant="secondary" onClick={() => onReplyStart(comment.id)}>
-          <Reply />
-          Reply
-        </Button>
+        {canComment ? (
+          <Button size="sm" type="button" variant="secondary" onClick={() => onReplyStart(comment.id)}>
+            <Reply />
+            Reply
+          </Button>
+        ) : null}
         {canResolve ? (
           <Button size="sm" type="button" variant="secondary" onClick={() => onResolve(comment)}>
             <CheckCircle2 />
@@ -211,7 +215,7 @@ function CommentItem({
         <form className="mt-3 grid gap-2" onSubmit={(event) => onSubmitReply(event, comment.id)}>
           <Textarea
             className="min-h-20 resize-y"
-            disabled={!canComment || saving}
+            disabled={saving}
             placeholder="Write a reply"
             value={replyContent}
             onChange={(event) => onReplyContentChange(event.target.value)}

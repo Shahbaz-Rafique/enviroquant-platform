@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenCheck, FilePlus2, FileText, RefreshCcw } from "lucide-react";
+import { BookOpenCheck, FilePlus2, FileSearch, FileText, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -153,24 +153,32 @@ export default function ProjectWorkspacePage() {
                             Standard 8-section EIA checklist structure
                           </span>
                         </div>
-                        <Badge>{eiaDocument.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge>{eiaDocument.status}</Badge>
+                          <span className="hidden items-center gap-1 text-xs font-semibold text-white/52 md:inline-flex">
+                            <FileSearch className="size-3.5" />
+                            Review
+                          </span>
+                        </div>
                       </Link>
                     ))
                   )}
                 </div>
               </div>
 
-              <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="mb-3 flex items-center gap-2 text-base font-bold text-white">
-                  <FileText className="size-5 text-[#B6F7FF]" />
-                  Attach Files & Documents
+              {canUpload ? (
+                <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="mb-3 flex items-center gap-2 text-base font-bold text-white">
+                    <FileText className="size-5 text-[#B6F7FF]" />
+                    Attach Files & Documents
+                  </div>
+                  <DocumentUpload
+                    canUpload={canUpload}
+                    projectId={projectId}
+                    onUploaded={(document) => setDocuments((current) => [document, ...current])}
+                  />
                 </div>
-                <DocumentUpload
-                  canUpload={canUpload}
-                  projectId={projectId}
-                  onUploaded={(document) => setDocuments((current) => [document, ...current])}
-                />
-              </div>
+              ) : null}
 
               <Card>
                 <CardHeader>
