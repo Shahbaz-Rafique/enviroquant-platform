@@ -63,6 +63,10 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
     }
   }
 
+  if (!canUpload) {
+    return null;
+  }
+
   return (
     <form onSubmit={submit}>
       {error ? <Alert className="mb-4 border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
@@ -70,7 +74,7 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         <label className="mb-4 grid gap-2 text-sm font-semibold text-white/78 md:max-w-xs">
           Document type
-          <Select disabled={!canUpload || uploading} value={documentType} onValueChange={setDocumentType}>
+          <Select disabled={uploading} value={documentType} onValueChange={setDocumentType}>
             <SelectTrigger>
               <SelectValue placeholder="Select document type" />
             </SelectTrigger>
@@ -99,7 +103,7 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
           <FileDropzone
             accept=".pdf,.doc,.docx"
             description="Drag and drop a PDF or Word document here."
-            disabled={!canUpload || uploading}
+            disabled={uploading}
             file={selectedFile}
             onFileChange={(file) => {
               setSelectedFile(file);
@@ -110,7 +114,7 @@ export function DocumentUpload({ canUpload = true, projectId, onUploaded }: Docu
       </div>
 
       <div className="mt-4 flex justify-end">
-        <Button type="submit" disabled={!canUpload || uploading}>
+        <Button type="submit" disabled={uploading}>
           {uploading ? <Loader2 className="animate-spin" /> : <UploadCloud />}
           Submit Upload
         </Button>

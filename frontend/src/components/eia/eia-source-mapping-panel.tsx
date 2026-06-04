@@ -155,62 +155,64 @@ export function EiaSourceMappingPanel({
       <div className="grid gap-4 p-4">
         {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
-        <form className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3" onSubmit={submitDetection}>
-          <div className="grid gap-2">
-            <Label htmlFor="source-document">Legacy document</Label>
-            <Select
-              disabled={!canManage || saving || !legacyDocuments.length}
-              value={selectedDocumentId}
-              onValueChange={setSelectedDocumentId}
-            >
-              <SelectTrigger id="source-document">
-                <SelectValue placeholder="Select source document" />
-              </SelectTrigger>
-              <SelectContent>
-                {legacyDocuments.map((document) => (
-                  <SelectItem key={document.id} value={document.id}>
-                    {document.original_filename}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!legacyDocuments.length ? (
-              <span className="text-xs font-medium text-white/52">Upload a previous EIA or legacy report first.</span>
-            ) : null}
-          </div>
-          <div className="grid gap-3 md:grid-cols-[120px_minmax(0,1fr)]">
+        {canManage ? (
+          <form className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3" onSubmit={submitDetection}>
             <div className="grid gap-2">
-              <Label htmlFor="detected-section-number">Section</Label>
-              <Input
-                disabled={!canManage || saving}
-                id="detected-section-number"
-                placeholder="1.1"
-                value={sectionNumber}
-                onChange={(event) => setSectionNumber(event.target.value)}
-              />
+              <Label htmlFor="source-document">Legacy document</Label>
+              <Select
+                disabled={saving || !legacyDocuments.length}
+                value={selectedDocumentId}
+                onValueChange={setSelectedDocumentId}
+              >
+                <SelectTrigger id="source-document">
+                  <SelectValue placeholder="Select source document" />
+                </SelectTrigger>
+                <SelectContent>
+                  {legacyDocuments.map((document) => (
+                    <SelectItem key={document.id} value={document.id}>
+                      {document.original_filename}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!legacyDocuments.length ? (
+                <span className="text-xs font-medium text-white/52">Upload a previous EIA or legacy report first.</span>
+              ) : null}
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="detected-section-title">Detected title</Label>
-              <Input
-                disabled={!canManage || saving}
-                id="detected-section-title"
-                value={sectionTitle}
-                onChange={(event) => setSectionTitle(event.target.value)}
-              />
+            <div className="grid gap-3 md:grid-cols-[120px_minmax(0,1fr)]">
+              <div className="grid gap-2">
+                <Label htmlFor="detected-section-number">Section</Label>
+                <Input
+                  disabled={saving}
+                  id="detected-section-number"
+                  placeholder="1.1"
+                  value={sectionNumber}
+                  onChange={(event) => setSectionNumber(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="detected-section-title">Detected title</Label>
+                <Input
+                  disabled={saving}
+                  id="detected-section-title"
+                  value={sectionTitle}
+                  onChange={(event) => setSectionTitle(event.target.value)}
+                />
+              </div>
             </div>
-          </div>
-          <Textarea
-            className="min-h-28"
-            disabled={!canManage || saving}
-            placeholder="Detected legacy content"
-            value={sectionContent}
-            onChange={(event) => setSectionContent(event.target.value)}
-          />
-          <Button disabled={!canManage || saving || !selectedDocumentId} type="submit">
-            {saving ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
-            Create Suggestions
-          </Button>
-        </form>
+            <Textarea
+              className="min-h-28"
+              disabled={saving}
+              placeholder="Detected legacy content"
+              value={sectionContent}
+              onChange={(event) => setSectionContent(event.target.value)}
+            />
+            <Button disabled={saving || !selectedDocumentId} type="submit">
+              {saving ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
+              Create Suggestions
+            </Button>
+          </form>
+        ) : null}
 
         <div className="grid max-h-[30rem] gap-3 overflow-y-auto">
           {loading ? <Alert>Loading source mappings...</Alert> : null}
@@ -238,37 +240,43 @@ export function EiaSourceMappingPanel({
                 <span className="text-xs font-bold text-white/46">
                   Confidence {Math.round(mapping.confidence_score * 100)}%
                 </span>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    disabled={!canManage || activeMappingId === mapping.id || !mapping.subsection_id}
-                    size="sm"
-                    type="button"
-                    variant="secondary"
-                    onClick={() => updateMapping(mapping, "confirm")}
-                  >
-                    {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-                    Confirm
-                  </Button>
-                  <Button
-                    disabled={!canManage || activeMappingId === mapping.id || !mapping.subsection_id}
-                    size="sm"
-                    type="button"
-                    onClick={() => updateMapping(mapping, "apply")}
-                  >
-                    {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-                    Apply
-                  </Button>
-                  <Button
-                    disabled={!canManage || activeMappingId === mapping.id}
-                    size="sm"
-                    type="button"
-                    variant="secondary"
-                    onClick={() => updateMapping(mapping, "reject")}
-                  >
-                    {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <XCircle />}
-                    Reject
-                  </Button>
-                </div>
+                {canManage ? (
+                  <div className="flex flex-wrap gap-2">
+                    {mapping.subsection_id ? (
+                      <>
+                        <Button
+                          disabled={activeMappingId === mapping.id}
+                          size="sm"
+                          type="button"
+                          variant="secondary"
+                          onClick={() => updateMapping(mapping, "confirm")}
+                        >
+                          {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                          Confirm
+                        </Button>
+                        <Button
+                          disabled={activeMappingId === mapping.id}
+                          size="sm"
+                          type="button"
+                          onClick={() => updateMapping(mapping, "apply")}
+                        >
+                          {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                          Apply
+                        </Button>
+                      </>
+                    ) : null}
+                    <Button
+                      disabled={activeMappingId === mapping.id}
+                      size="sm"
+                      type="button"
+                      variant="secondary"
+                      onClick={() => updateMapping(mapping, "reject")}
+                    >
+                      {activeMappingId === mapping.id ? <Loader2 className="animate-spin" /> : <XCircle />}
+                      Reject
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </article>
           ))}

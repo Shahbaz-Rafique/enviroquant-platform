@@ -84,16 +84,18 @@ export function RevisionPanel({ subsectionId, tenantId, canRestore, onRestored }
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-white/46">{Math.round(revision.progress_percentage)}%</span>
-              <Button
-                disabled={!canRestore || restoringId === revision.id}
-                size="sm"
-                type="button"
-                variant="secondary"
-                onClick={() => restoreRevision(revision)}
-              >
-                {restoringId === revision.id ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-                Restore
-              </Button>
+              {canRestore ? (
+                <Button
+                  disabled={restoringId === revision.id}
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => restoreRevision(revision)}
+                >
+                  {restoringId === revision.id ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+                  Restore
+                </Button>
+              ) : null}
             </div>
           </article>
         ))}

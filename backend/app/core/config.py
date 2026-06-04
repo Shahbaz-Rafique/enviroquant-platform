@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     cloudinary_api_secret: str | None = None
     cloudinary_folder: str = "enviroquant"
     max_upload_size_mb: int = 50
+    openai_api_key: str | None = None
+    openai_evaluation_model: str = "gpt-4.1-mini"
+    openai_evaluation_timeout_seconds: int = 90
 
 
 @lru_cache

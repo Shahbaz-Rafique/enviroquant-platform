@@ -41,7 +41,9 @@ export function DocumentList({ documents }: DocumentListProps) {
               <div className="min-w-0">
                 <strong className="block truncate text-sm text-white">{document.original_filename}</strong>
                 <span className="mt-1 block truncate text-sm text-white/52">
-                  {version ? `Version ${version.version_number} • ${formatBytes(version.size_bytes)}` : "No version"}
+                  {version
+                    ? `Version ${version.version_number} · ${formatBytes(version.size_bytes)} · ${Number(version.version_metadata?.chunk_count ?? 0)} chunks`
+                    : "No version"}
                 </span>
               </div>
             </div>

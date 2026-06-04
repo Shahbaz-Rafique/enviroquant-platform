@@ -5,11 +5,13 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.document_chunk import DocumentChunk
 from app.models.document import Document, DocumentVersion
 from app.models.project import Project
 from app.models.user import User
+from app.services.document_parsing_service import parse_document_bytes
 from app.services.audit_service import record_audit_event
-from app.utils.storage import store_document_version, validate_upload
+from app.utils.storage import store_document_version_bytes, validate_upload
 
 
 ALLOWED_DOCUMENT_TYPES = {
@@ -36,6 +38,28 @@ def get_document_for_tenant(db: Session, current_user: User, document_id: UUID) 
     if document is None or document.tenant_id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return document
+
+
+def list_document_version_chunks(
+    db: Session,
+    current_user: User,
+    document_id: UUID,
+    version_id: UUID,
+) -> list[DocumentChunk]:
+    document = get_document_for_tenant(db, current_user, document_id)
+    version = db.get(DocumentVersion, version_id)
+    if version is None or version.tenant_id != current_user.tenant_id or version.document_id != document.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document version not found")
+    statement = (
+        select(DocumentChunk)
+        .where(
+            DocumentChunk.tenant_id == current_user.tenant_id,
+            DocumentChunk.document_id == document.id,
+            DocumentChunk.document_version_id == version.id,
+        )
+        .order_by(DocumentChunk.chunk_index.asc())
+    )
+    return list(db.scalars(statement).all())
 
 
 async def create_project_document(
@@ -116,8 +140,13 @@ async def _create_version_file(
     file: UploadFile,
     version_number: int,
 ) -> DocumentVersion:
-    stored_file = await store_document_version(
-        file=file,
+    original_filename = file.filename or "document"
+    content = await file.read()
+    await file.close()
+    parsed_document = parse_document_bytes(content, original_filename, file.content_type)
+    stored_file = store_document_version_bytes(
+        content=content,
+        filename=original_filename,
         organization_id=current_user.tenant_id,
         project_id=document.project_id,
         document_id=document.id,
@@ -133,10 +162,11 @@ async def _create_version_file(
         mime_type=file.content_type,
         size_bytes=stored_file.size_bytes,
         checksum_sha256=stored_file.checksum_sha256,
-        parser_status="pending",
+        parser_status=parsed_document.parser_status,
         version_metadata={
             "original_filename": stored_file.original_filename,
             "storage_backend": "cloudinary",
+            **parsed_document.metadata,
             "cloudinary": {
                 "asset_id": stored_file.asset_id,
                 "public_id": stored_file.public_id,
@@ -150,6 +180,33 @@ async def _create_version_file(
     )
     db.add(version)
     db.flush()
+    _replace_document_version_chunks(db, version, document, parsed_document.chunks)
     document.current_version_id = version.id
     document.status = "uploaded"
     return version
+
+
+def _replace_document_version_chunks(
+    db: Session,
+    version: DocumentVersion,
+    document: Document,
+    chunks,
+) -> None:
+    db.query(DocumentChunk).filter(DocumentChunk.document_version_id == version.id).delete()
+    for chunk in chunks:
+        db.add(
+            DocumentChunk(
+                tenant_id=version.tenant_id,
+                project_id=document.project_id,
+                document_id=document.id,
+                document_version_id=version.id,
+                chunk_index=chunk.chunk_index,
+                chunk_key=f"{version.id}:chunk:{chunk.chunk_index}",
+                page_number=chunk.page_number,
+                section_number=chunk.section_number,
+                section_title=chunk.section_title,
+                heading_path=chunk.heading_path,
+                content=chunk.content,
+                content_metadata=chunk.content_metadata,
+            )
+        )

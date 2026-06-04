@@ -77,15 +77,16 @@ function AcceptInviteForm() {
               Set your password and complete the final step to enter the EnviroQuant workspace under your organization.
             </p>
           </div>
-          <div className="pointer-events-none relative z-10 mt-10 min-h-56 sm:min-h-64">
-            <Image
-              src="/images/green-world.png"
+           <div className="pointer-events-none absolute  inset-0">
+                      <Image
+                       src="/images/green-world.png"
               alt="Glowing earth network"
-              fill
-              className="object-contain object-right-bottom opacity-90 drop-shadow-[0_0_38px_rgba(0,245,212,0.16)]"
-              sizes="(min-width: 1024px) 34vw, 100vw"
-            />
-          </div>
+                        fill
+                        className="object-contain object-right-bottom opacity-20 backdrop-blur-md"
+                        sizes="(min-width: 1024px) 34vw, 100vw"
+                      />
+                    </div>
+          
         </aside>
 
         <CardContent className="p-8 sm:p-10 lg:p-12">

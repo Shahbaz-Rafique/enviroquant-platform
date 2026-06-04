@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCcw } from "lucide-react";
+import { FileSearch, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -22,12 +22,20 @@ export default function EiaDocumentBuilderPage() {
     <AppShell user={user}>
       <PageNavigation
         actions={
-          <Button asChild variant="secondary">
-            <Link href={`/projects/${params.projectId}/eia/${params.documentId}`}>
-              <RefreshCcw />
-              Reload
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/projects/${params.projectId}/eia/${params.documentId}/review`}>
+                <FileSearch />
+                Review Center
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href={`/projects/${params.projectId}/eia/${params.documentId}`}>
+                <RefreshCcw />
+                Reload
+              </Link>
+            </Button>
+          </div>
         }
         backHref={`/projects/${params.projectId}`}
         backLabel="Project"

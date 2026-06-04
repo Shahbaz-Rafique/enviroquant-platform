@@ -20,6 +20,24 @@ class DocumentVersionRead(ORMModel):
     updated_at: datetime
 
 
+class DocumentChunkRead(ORMModel):
+    id: UUID
+    tenant_id: UUID
+    project_id: UUID
+    document_id: UUID
+    document_version_id: UUID
+    chunk_index: int
+    chunk_key: str
+    page_number: int | None
+    section_number: str | None
+    section_title: str | None
+    heading_path: list
+    content: str
+    content_metadata: dict
+    created_at: datetime
+    updated_at: datetime
+
+
 class DocumentRead(ORMModel):
     id: UUID
     tenant_id: UUID

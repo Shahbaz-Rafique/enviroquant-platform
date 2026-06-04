@@ -295,4 +295,130 @@ class EiaActivityItemRead(BaseModel):
     subsection_number: str | None = None
 
 
+class EiaEvaluationRunCreate(BaseModel):
+    source_document_id: UUID | None = None
+    source_version_id: UUID | None = None
+    prompt_version: str | None = Field(default=None, max_length=60)
+
+
+class EiaEvaluationEvidenceReferenceRead(BaseModel):
+    chunk_id: str
+    source_type: str
+    document_chunk_id: UUID | None = None
+    document_version_id: UUID | None = None
+    subsection_id: UUID | None = None
+    subsection_number: str | None = None
+    excerpt: str | None = None
+    page_number: int | None = None
+    source_document_id: UUID | None = None
+    source_document_filename: str | None = None
+
+
+class EiaEvaluationFindingRead(ORMModel):
+    id: UUID
+    tenant_id: UUID
+    evaluation_run_id: UUID
+    subsection_id: UUID | None
+    checklist_section: str
+    checklist_title: str
+    subsection_number: str | None
+    subsection_title: str | None
+    status: str
+    adequacy: str
+    confidence_score: float
+    evidence_summary: str
+    ai_analysis: str
+    recommendation: str | None
+    missing_elements: list[str] = Field(default_factory=list)
+    evidence_references: list[EiaEvaluationEvidenceReferenceRead] = Field(default_factory=list)
+    finding_metadata: dict = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+
+
+class EiaEvaluationSectionSummaryRead(ORMModel):
+    id: UUID
+    tenant_id: UUID
+    evaluation_run_id: UUID
+    section_number: str
+    section_title: str
+    findings_count: int
+    compliant_count: int
+    partially_compliant_count: int
+    needs_improvement_count: int
+    missing_count: int
+    needs_review_count: int
+    score: float
+    summary_comment: str | None
+    summary_metadata: dict = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+
+
+class EiaEvaluationRunRead(ORMModel):
+    id: UUID
+    tenant_id: UUID
+    project_id: UUID
+    eia_document_id: UUID
+    source_document_id: UUID | None
+    source_version_id: UUID | None
+    created_by_id: UUID
+    status: str
+    prompt_version: str
+    model_version: str
+    evaluation_scope: str
+    started_at: datetime
+    completed_at: datetime | None
+    run_metadata: dict = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+
+
+class EiaEvaluationRunDetailRead(EiaEvaluationRunRead):
+    findings: list[EiaEvaluationFindingRead] = Field(default_factory=list)
+    section_summaries: list[EiaEvaluationSectionSummaryRead] = Field(default_factory=list)
+
+
+class EiaEvaluationFindingCommentCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=10_000)
+
+
+class EiaEvaluationFindingCommentRead(ORMModel):
+    id: UUID
+    tenant_id: UUID
+    evaluation_run_id: UUID
+    finding_id: UUID
+    user_id: UUID
+    content: str
+    user: EiaDocumentUserSummary
+    created_at: datetime
+    updated_at: datetime
+
+
+class EiaEvaluationSectionComparisonRead(BaseModel):
+    section_number: str
+    section_title: str
+    current_score: float
+    baseline_score: float
+    delta: float
+
+
+class EiaEvaluationFindingComparisonRead(BaseModel):
+    checklist_section: str
+    checklist_title: str
+    current_status: str
+    baseline_status: str
+    changed: bool
+
+
+class EiaEvaluationComparisonRead(BaseModel):
+    run_id: UUID
+    baseline_run_id: UUID
+    current_overall_score: float
+    baseline_overall_score: float
+    delta: float
+    sections: list[EiaEvaluationSectionComparisonRead] = Field(default_factory=list)
+    changed_findings: list[EiaEvaluationFindingComparisonRead] = Field(default_factory=list)
+
+
 SubSectionCommentRead.model_rebuild()
