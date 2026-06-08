@@ -4,6 +4,19 @@ from uuid import UUID
 from app.schemas.common import ORMModel
 
 
+class DocumentUserSummaryRead(ORMModel):
+    id: UUID
+    email: str
+    full_name: str
+    status: str
+
+
+class DocumentProjectSummaryRead(ORMModel):
+    id: UUID
+    name: str
+    status: str
+
+
 class DocumentVersionRead(ORMModel):
     id: UUID
     tenant_id: UUID
@@ -16,6 +29,8 @@ class DocumentVersionRead(ORMModel):
     checksum_sha256: str
     parser_status: str
     version_metadata: dict
+    uploaded_at: datetime | None
+    uploaded_by: DocumentUserSummaryRead | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -48,6 +63,8 @@ class DocumentRead(ORMModel):
     document_type: str
     status: str
     document_metadata: dict
+    project: DocumentProjectSummaryRead | None = None
+    uploaded_by: DocumentUserSummaryRead | None = None
     versions: list[DocumentVersionRead] = []
     created_at: datetime
     updated_at: datetime

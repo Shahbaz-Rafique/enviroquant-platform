@@ -779,10 +779,38 @@ def _deterministic_content_evaluation(
     ).lower()
     coverage_signals = sum(
         1
-        for token in ["impact", "mitigation", "evidence", "monitor", "baseline", "risk", "assessment", "data"]
+        for token in [
+            "impact",
+            "mitigation",
+            "evidence",
+            "monitor",
+            "baseline",
+            "risk",
+            "assessment",
+            "data",
+            "significance",
+            "compliance",
+            "threshold",
+        ]
         if token in combined_text
     )
-    has_numeric_support = any(char.isdigit() for char in combined_text)
+    has_numeric_support = any(char.isdigit() for char in combined_text) or any(
+        token in combined_text
+        for token in [
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+            "ten",
+            "threshold",
+            "monitored",
+        ]
+    )
     has_sources = bool(routed_chunks or source_notes)
     draft_length = len(draft_content)
 

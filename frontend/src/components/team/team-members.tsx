@@ -18,10 +18,9 @@ type TeamMembersProps = {
 
 const roleOptions = [
   { value: "ADMIN", label: "Admin" },
+  { value: "PROJECT_MANAGER", label: "Project Manager" },
   { value: "CONSULTANT", label: "Consultant" },
-  { value: "REVIEWER", label: "Reviewer" },
-  { value: "REGULATOR", label: "Regulator" },
-  { value: "VIEWER", label: "Viewer" }
+  { value: "REVIEWER", label: "Reviewer" }
 ];
 
 export function TeamMembers({ user }: TeamMembersProps) {
@@ -115,7 +114,7 @@ export function TeamMembers({ user }: TeamMembersProps) {
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#67E8F9]">Organization access</p>
           <h1 className="mt-1 text-3xl font-bold text-white">Team Members</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/66">
-            Invite consultants, reviewers, and admins into the current organization boundary.
+            Invite admins, project managers, consultants, and reviewers into the current organization boundary.
           </p>
         </div>
         <Button variant="secondary" onClick={loadMembers}>

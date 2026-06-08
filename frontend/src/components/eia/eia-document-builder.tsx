@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   CircleDashed,
   Clock3,
+  Download,
   ExternalLink,
   FileSearch,
   FileText,
@@ -30,7 +31,8 @@ import { NumberStepper } from "@/components/ui/number-stepper";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { apiRequest } from "@/lib/api-client";
+import { getAccessToken } from "@/lib/auth";
+import { API_URL, apiRequest } from "@/lib/api-client";
 import { canEditEiaDocument, hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type {
@@ -78,6 +80,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [activeInsight, setActiveInsight] = useState<InsightTab>("progress");
+  const [exportingFormat, setExportingFormat] = useState<"json" | "docx" | "pdf" | null>(null);
   const currentMemberRole = members.find((member) => member.user_id === user.id)?.role ?? null;
   const effectiveDocumentRole = currentMemberRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
   const canEdit = canEditEiaDocument(effectiveDocumentRole);
@@ -212,6 +215,31 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
     }
   }
 
+  async function downloadCompiledDocument(format: "json" | "docx" | "pdf") {
+    setExportingFormat(format);
+    setError(null);
+    try {
+      const token = getAccessToken();
+      const response = await fetch(`${API_URL}/eia-documents/${documentId}/export.${format}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) {
+        throw new Error(`Compiled EIA export failed with status ${response.status}`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = window.document.createElement("a");
+      anchor.href = url;
+      anchor.download = `enviroquant-eia-${documentId}.${format}`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Compiled EIA export failed");
+    } finally {
+      setExportingFormat(null);
+    }
+  }
+
   return (
     <div className="grid gap-5">
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl">
@@ -343,6 +371,33 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                     </Link>
                   </Button>
                 ) : null}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={exportingFormat !== null}
+                  onClick={() => void downloadCompiledDocument("pdf")}
+                >
+                  {exportingFormat === "pdf" ? <Loader2 className="animate-spin" /> : <Download />}
+                  Export PDF
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={exportingFormat !== null}
+                  onClick={() => void downloadCompiledDocument("docx")}
+                >
+                  {exportingFormat === "docx" ? <Loader2 className="animate-spin" /> : <Download />}
+                  Export DOCX
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={exportingFormat !== null}
+                  onClick={() => void downloadCompiledDocument("json")}
+                >
+                  {exportingFormat === "json" ? <Loader2 className="animate-spin" /> : <Download />}
+                  Export JSON
+                </Button>
                 {canEdit ? (
                   <Button type="submit" disabled={!selectedSubsection || saving}>
                     {saving ? <Loader2 className="animate-spin" /> : <Save />}

@@ -1,8 +1,9 @@
 class Roles:
-    OWNER = "owner"
     ADMIN = "admin"
+    PROJECT_MANAGER = "project_manager"
     CONSULTANT = "consultant"
     REVIEWER = "reviewer"
+    OWNER = "owner"
     REGULATOR = "regulator"
     VIEWER = "viewer"
 
@@ -43,12 +44,12 @@ ALL_PERMISSIONS = [
 
 
 DEFAULT_ROLE_PERMISSIONS = {
-    Roles.OWNER: ALL_PERMISSIONS,
     Roles.ADMIN: [
+        *ALL_PERMISSIONS,
+    ],
+    Roles.PROJECT_MANAGER: [
         Permissions.TENANT_READ,
-        Permissions.TENANT_MANAGE,
         Permissions.USER_READ,
-        Permissions.USER_MANAGE,
         Permissions.PROJECT_CREATE,
         Permissions.PROJECT_READ,
         Permissions.PROJECT_UPDATE,
@@ -56,7 +57,6 @@ DEFAULT_ROLE_PERMISSIONS = {
         Permissions.DOCUMENT_UPLOAD,
         Permissions.DOCUMENT_READ,
         Permissions.DOCUMENT_VERSION_CREATE,
-        Permissions.DOCUMENT_DELETE,
         Permissions.REVIEW_READ,
         Permissions.REVIEW_MANAGE,
     ],
@@ -68,6 +68,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         Permissions.DOCUMENT_UPLOAD,
         Permissions.DOCUMENT_READ,
         Permissions.DOCUMENT_VERSION_CREATE,
+        Permissions.REVIEW_READ,
     ],
     Roles.REVIEWER: [
         Permissions.TENANT_READ,
@@ -75,6 +76,10 @@ DEFAULT_ROLE_PERMISSIONS = {
         Permissions.DOCUMENT_READ,
         Permissions.REVIEW_READ,
         Permissions.REVIEW_MANAGE,
+    ],
+    # Legacy compatibility for pre-MVP role names already present in existing tenants.
+    Roles.OWNER: [
+        *ALL_PERMISSIONS,
     ],
     Roles.REGULATOR: [
         Permissions.TENANT_READ,
@@ -91,7 +96,15 @@ DEFAULT_ROLE_PERMISSIONS = {
 }
 
 
-PROJECT_MANAGE_ROLES = [Roles.OWNER, Roles.ADMIN, Roles.CONSULTANT]
-DOCUMENT_UPLOAD_ROLES = [Roles.OWNER, Roles.ADMIN, Roles.CONSULTANT]
-READ_ONLY_ROLES = [Roles.OWNER, Roles.ADMIN, Roles.CONSULTANT, Roles.REVIEWER, Roles.REGULATOR, Roles.VIEWER]
+PROJECT_MANAGE_ROLES = [Roles.OWNER, Roles.ADMIN, Roles.PROJECT_MANAGER, Roles.CONSULTANT]
+DOCUMENT_UPLOAD_ROLES = [Roles.OWNER, Roles.ADMIN, Roles.PROJECT_MANAGER, Roles.CONSULTANT]
+READ_ONLY_ROLES = [
+    Roles.OWNER,
+    Roles.ADMIN,
+    Roles.PROJECT_MANAGER,
+    Roles.CONSULTANT,
+    Roles.REVIEWER,
+    Roles.REGULATOR,
+    Roles.VIEWER,
+]
 TENANT_ADMIN_ROLES = [Roles.OWNER, Roles.ADMIN]

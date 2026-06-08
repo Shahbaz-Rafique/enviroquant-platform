@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.document_chunk import DocumentChunk
 from app.models.document import Document, DocumentVersion
@@ -24,9 +24,20 @@ ALLOWED_DOCUMENT_TYPES = {
 }
 
 
+def list_tenant_documents(db: Session, current_user: User) -> list[Document]:
+    statement = (
+        select(Document)
+        .options(*_document_query_options())
+        .where(Document.tenant_id == current_user.tenant_id)
+        .order_by(Document.updated_at.desc())
+    )
+    return list(db.scalars(statement).unique().all())
+
+
 def list_project_documents(db: Session, current_user: User, project_id: UUID) -> list[Document]:
     statement = (
         select(Document)
+        .options(*_document_query_options())
         .where(Document.tenant_id == current_user.tenant_id, Document.project_id == project_id)
         .order_by(Document.updated_at.desc())
     )
@@ -34,8 +45,13 @@ def list_project_documents(db: Session, current_user: User, project_id: UUID) ->
 
 
 def get_document_for_tenant(db: Session, current_user: User, document_id: UUID) -> Document:
-    document = db.get(Document, document_id)
-    if document is None or document.tenant_id != current_user.tenant_id:
+    statement = (
+        select(Document)
+        .options(*_document_query_options())
+        .where(Document.id == document_id, Document.tenant_id == current_user.tenant_id)
+    )
+    document = db.scalar(statement)
+    if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     return document
 
@@ -92,8 +108,7 @@ async def create_project_document(
         metadata={"project_id": str(project.id), "document_type": document.document_type},
     )
     db.commit()
-    db.refresh(document)
-    return document
+    return get_document_for_tenant(db, current_user, document.id)
 
 
 def _normalize_document_type(document_type: str) -> str:
@@ -104,6 +119,14 @@ def _normalize_document_type(document_type: str) -> str:
             detail="Unsupported document type",
         )
     return normalized
+
+
+def _document_query_options():
+    return (
+        selectinload(Document.project),
+        selectinload(Document.uploaded_by),
+        selectinload(Document.versions).selectinload(DocumentVersion.uploaded_by),
+    )
 
 
 async def add_document_version(
@@ -129,8 +152,7 @@ async def add_document_version(
         metadata={"document_id": str(document.id), "project_id": str(document.project_id)},
     )
     db.commit()
-    db.refresh(document)
-    return document
+    return get_document_for_tenant(db, current_user, document.id)
 
 
 async def _create_version_file(

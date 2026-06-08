@@ -72,6 +72,11 @@ from app.services.eia_evaluation_report_service import (
     build_report_json_bytes,
     build_report_pdf_bytes,
 )
+from app.services.eia_document_export_service import (
+    build_compiled_eia_docx_bytes,
+    build_compiled_eia_json_bytes,
+    build_compiled_eia_pdf_bytes,
+)
 from app.services.eia_service import (
     create_eia_document,
     get_eia_document_progress,
@@ -122,6 +127,48 @@ def read_eia_document_structure(
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> EiaDocument:
     return get_eia_document_structure(db, current_user, document_id)
+
+
+@router.get("/{document_id}/export.json")
+def download_compiled_eia_json(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> StreamingResponse:
+    report_bytes = build_compiled_eia_json_bytes(db, current_user, document_id)
+    return StreamingResponse(
+        BytesIO(report_bytes),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="enviroquant-eia-{document_id}.json"'},
+    )
+
+
+@router.get("/{document_id}/export.docx")
+def download_compiled_eia_docx(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> StreamingResponse:
+    report_bytes = build_compiled_eia_docx_bytes(db, current_user, document_id)
+    return StreamingResponse(
+        BytesIO(report_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="enviroquant-eia-{document_id}.docx"'},
+    )
+
+
+@router.get("/{document_id}/export.pdf")
+def download_compiled_eia_pdf(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> StreamingResponse:
+    report_bytes = build_compiled_eia_pdf_bytes(db, current_user, document_id)
+    return StreamingResponse(
+        BytesIO(report_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="enviroquant-eia-{document_id}.pdf"'},
+    )
 
 
 @router.get("/{document_id}/evaluation-runs", response_model=list[EiaEvaluationRunRead])

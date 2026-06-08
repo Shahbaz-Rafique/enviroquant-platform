@@ -95,6 +95,7 @@ class DocumentVersion(TimestampMixin, Base):
     uploaded_at: Mapped[datetime] = mapped_column(nullable=True)
 
     document = relationship("Document", back_populates="versions", foreign_keys=[document_id])
+    uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
     chunks = relationship(
         "DocumentChunk",
         back_populates="document_version",

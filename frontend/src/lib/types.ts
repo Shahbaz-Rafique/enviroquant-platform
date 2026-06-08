@@ -50,6 +50,14 @@ export type Project = {
   updated_at: string;
 };
 
+export type DocumentUserSummary = Pick<User, "id" | "email" | "full_name" | "status">;
+
+export type DocumentProjectSummary = {
+  id: string;
+  name: string;
+  status: string;
+};
+
 export type DocumentVersion = {
   id: string;
   tenant_id: string;
@@ -62,6 +70,8 @@ export type DocumentVersion = {
   checksum_sha256: string;
   parser_status: string;
   version_metadata: Record<string, unknown>;
+  uploaded_at: string | null;
+  uploaded_by: DocumentUserSummary | null;
   created_at: string;
   updated_at: string;
 };
@@ -94,6 +104,8 @@ export type ProjectDocument = {
   document_type: string;
   status: string;
   document_metadata: Record<string, unknown>;
+  project: DocumentProjectSummary | null;
+  uploaded_by: DocumentUserSummary | null;
   versions: DocumentVersion[];
   created_at: string;
   updated_at: string;

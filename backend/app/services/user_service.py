@@ -24,6 +24,7 @@ settings = get_settings()
 INVITATION_EXPIRY_DAYS = 7
 ASSIGNABLE_ROLES = {
     Roles.ADMIN,
+    Roles.PROJECT_MANAGER,
     Roles.CONSULTANT,
     Roles.REVIEWER,
     Roles.REGULATOR,
@@ -53,7 +54,10 @@ def normalize_assignable_role(role: str) -> str:
     if requested_role not in ASSIGNABLE_ROLES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be ADMIN, CONSULTANT, REVIEWER, REGULATOR, or VIEWER",
+            detail=(
+                "Role must be ADMIN, PROJECT_MANAGER, CONSULTANT, REVIEWER, "
+                "REGULATOR, or VIEWER"
+            ),
         )
     return requested_role
 

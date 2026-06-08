@@ -61,7 +61,7 @@ class User(TimestampMixin, Base):
     def primary_role(self) -> str:
         if not self.roles:
             return "UNASSIGNED"
-        priority = ["owner", "admin", "consultant", "reviewer", "regulator", "viewer"]
+        priority = ["admin", "project_manager", "consultant", "reviewer", "owner", "regulator", "viewer"]
         role_names = {role.name.lower(): role.name for role in self.roles}
         for role_name in priority:
             if role_name in role_names:

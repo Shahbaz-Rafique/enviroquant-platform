@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  BookOpen,
   ClipboardList,
   FolderOpen,
   LogOut,
@@ -35,6 +36,13 @@ const sectionLinks = [
     permission: PERMISSIONS.PROJECT_CREATE,
     exact: true,
     match: ['/projects/new']
+  },
+  {
+    href: '/library',
+    label: 'Library',
+    icon: BookOpen,
+    permission: PERMISSIONS.DOCUMENT_READ,
+    match: ['/library']
   },
   {
     href: '/team',
@@ -130,6 +138,11 @@ export function AppShell ({ children, user }: AppShellProps) {
         {hasPermission(user, PERMISSIONS.PROJECT_CREATE) ? (
           <MobileNavLink active={isPathActive(pathname, '/projects/new', true)} href='/projects/new' icon={<UploadCloud />}>
             New
+          </MobileNavLink>
+        ) : null}
+        {hasPermission(user, PERMISSIONS.DOCUMENT_READ) ? (
+          <MobileNavLink active={isPathActive(pathname, '/library')} href='/library' icon={<BookOpen />}>
+            Library
           </MobileNavLink>
         ) : null}
         {hasPermission(user, PERMISSIONS.USER_READ) ? (

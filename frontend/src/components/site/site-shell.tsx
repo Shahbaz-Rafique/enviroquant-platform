@@ -1,7 +1,14 @@
 'use client'
 
-import { motion, useReducedMotion } from 'framer-motion'
-import { ChevronDown, LayoutDashboard, LogOut, UserCircle } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import {
+  ChevronDown,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  UserCircle,
+  X
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -176,6 +183,7 @@ export function SiteHeader () {
   const { user, loading } = useCurrentUser()
   const [hasHydrated, setHasHydrated] = useState(false)
   const [sessionUser, setSessionUser] = useState<User | null>(null)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
     setHasHydrated(true)
@@ -188,9 +196,31 @@ export function SiteHeader () {
     setSessionUser(user)
   }, [hasHydrated, user])
 
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return
+    }
+
+    function handleEscape (event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isMenuOpen])
+
   function handleLogout () {
     clearSession()
     setSessionUser(null)
+    setIsMenuOpen(false)
     router.push('/')
   }
 
@@ -199,10 +229,10 @@ export function SiteHeader () {
 
   return (
     <header className='fixed inset-x-0 top-0 z-50 backdrop-blur-sm'>
-      <div className='mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-7 sm:px-10 lg:px-12'>
-        <BrandMark />
+      <div className='mx-auto flex h-20 w-full max-w-[1440px] items-center justify-between px-5 sm:px-10 lg:px-12'>
+        <BrandMark imageClassName='h-auto w-[11rem] sm:w-[13rem] lg:w-[15.625rem]' />
         <div className='flex items-center gap-4 sm:gap-6 lg:gap-8'>
-          <nav className='flex items-center gap-4 sm:gap-6 lg:gap-10'>
+          <nav className='hidden items-center gap-4 sm:gap-6 lg:flex lg:gap-10'>
             {navigation.map(item => (
               <Link
                 key={item.label}
@@ -217,18 +247,116 @@ export function SiteHeader () {
             ))}
           </nav>
 
-          {showAuthenticatedState && sessionUser ? (
-            <SiteHeaderProfileMenu user={sessionUser} onLogout={handleLogout} />
-          ) : showSessionLoading ? (
-            <div
-              aria-label='Checking session'
-              className='h-10 w-36 animate-pulse rounded-full border border-white/10 bg-white/8'
-            />
-          ) : (
-            <SiteHeaderAuthButtons />
-          )}
+          <div className='hidden lg:block'>
+            {showAuthenticatedState && sessionUser ? (
+              <SiteHeaderProfileMenu user={sessionUser} onLogout={handleLogout} />
+            ) : showSessionLoading ? (
+              <div
+                aria-label='Checking session'
+                className='h-10 w-36 animate-pulse rounded-full border border-white/10 bg-white/8'
+              />
+            ) : (
+              <SiteHeaderAuthButtons />
+            )}
+          </div>
+
+          <button
+            type='button'
+            aria-label='Toggle navigation menu'
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen(open => !open)}
+            className='inline-flex size-11 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white backdrop-blur-md transition-all duration-300 hover:border-white/20 hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:hidden'
+          >
+            {isMenuOpen ? <X className='size-5' /> : <Menu className='size-5' />}
+          </button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isMenuOpen ? (
+          <>
+            <motion.button
+              type='button'
+              aria-label='Close navigation menu'
+              onClick={() => setIsMenuOpen(false)}
+              className='fixed inset-0 top-20 bg-black/55 lg:hidden'
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            />
+            <motion.aside
+              className='fixed bottom-0 left-0 top-20 z-50 flex w-[min(22rem,86vw)] flex-col border-r border-white/12 bg-[rgba(5,25,20,0.96)] h-fit px-5 py-6 shadow-[0_24px_80px_rgba(0,0,0,0.4)] backdrop-blur-xl lg:hidden'
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+            >
+              <nav className='flex flex-col gap-2'>
+                {navigation.map(item => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={cn(
+                      'rounded-2xl border border-white/10 bg-[rgba(8,34,27,0.86)] px-4 py-3 text-base font-semibold text-white/92 shadow-[0_12px_28px_rgba(0,0,0,0.18)] transition-all duration-300 hover:bg-[rgba(255,255,255,0.12)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70',
+                      pathname === item.href &&
+                        'border-[#77A63C]/55 bg-[rgba(119,166,60,0.22)] text-white'
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+
+              <div className='mt-6 border-t border-white/10 pt-6'>
+                {showAuthenticatedState && sessionUser ? (
+                  <div className='overflow-hidden rounded-[1.6rem] border border-white/12 bg-[rgba(8,34,27,0.86)] shadow-[0_12px_28px_rgba(0,0,0,0.18)]'>
+                    <div className='border-b border-white/10 px-4 py-4'>
+                      <p className='truncate text-base font-semibold text-white'>
+                        {sessionUser.full_name || 'User'}
+                      </p>
+                      <p className='mt-1 truncate text-sm text-white/58'>
+                        {sessionUser.email}
+                      </p>
+                    </div>
+
+                    <Link
+                      href='/dashboard'
+                      onClick={() => setIsMenuOpen(false)}
+                      className='flex items-center gap-3 px-4 py-3 text-sm font-medium text-white/88 transition-colors hover:bg-white/8 hover:text-white'
+                    >
+                      <LayoutDashboard className='size-4' />
+                      Dashboard
+                    </Link>
+
+                    <button
+                      type='button'
+                      onClick={handleLogout}
+                      className='flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-white/72 transition-colors hover:bg-white/8 hover:text-white'
+                    >
+                      <LogOut className='size-4' />
+                      Logout
+                    </button>
+                  </div>
+                ) : showSessionLoading ? (
+                  <div
+                    aria-label='Checking session'
+                    className='h-12 w-full animate-pulse rounded-[1.4rem] border border-white/10 bg-white/8'
+                  />
+                ) : (
+                  <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+                    <GreenButton href='/login' outline>
+                      Login
+                    </GreenButton>
+                    <GreenButton href='/register'>Get Started</GreenButton>
+                  </div>
+                )}
+              </div>
+            </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
     </header>
   )
 }

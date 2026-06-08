@@ -66,7 +66,7 @@ function HomeHeroBackdrop () {
       <Image
         src='/images/hero-left.png'
         alt='Hero Backdrop'
-        className=' absolute left-0 top-0'
+        className='absolute left-0 top-0 object-cover object-left'
         fill
         //priority
       />
@@ -81,12 +81,12 @@ export function HomeMarketingPage () {
 
   return (
     <SiteShell>
-      <section className='relative min-h-full  px-5 pb-16 sm:px-8 lg:px-12'>
+      <section className='relative min-h-full px-5 pb-16 pt-24 sm:px-8 lg:px-12 lg:pt-0'>
         <HomeHeroBackdrop />
-        <div className='mx-auto grid min-h-screen items-center gap-10 max-w-7xl'>
-          <div className='relative min-h-[42rem] w-full lg:min-h-[50rem] max-w-5xl ml-auto text-right'>
+        <div className='mx-auto grid min-h-screen max-w-7xl items-center gap-10'>
+          <div className='relative ml-auto w-full max-w-5xl pt-6 text-right sm:min-h-[42rem] lg:min-h-[50rem]'>
             <motion.div
-              className='absolute right-0 z-20 top-44 w-full '
+              className='relative right-0 top-0 z-20 w-full lg:absolute lg:top-44'
               animate={reduceMotion ? undefined : { y: [0, -10, 0] }}
               transition={{
                 duration: 8.5,
@@ -96,17 +96,17 @@ export function HomeMarketingPage () {
             >
               <GlowingCard
                 intensity='strong'
-                className='min-h-[32rem] w-full p-8 flex flex-col items-end sm:p-10 text-right'
+                className='flex min-h-0 w-full flex-col items-end p-6 text-right sm:min-h-[32rem] sm:p-10'
               >
                 <div className='max-w-2xl'>
-                  <h2 className='mt-5 text-4xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[3.45rem] lg:leading-[1.02]'>
+                  <h2 className='mt-5 text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-[3.45rem] lg:leading-[1.02]'>
                    We Don’t Just Build Technology. We Cultivate a New World.
                   </h2>
-                  <p className='mt-6  text-2xl leading-8 text-white/74'>
+                  <p className='mt-6 text-lg leading-8 text-white/74 sm:text-2xl'>
                    The future is not a destination—it’s a design. Every step forward is a choice: will we build walls between us and nature, or bridges that bring us closer?
                   </p>
                 </div>
-                <div className='mt-8 flex flex-wrap gap-4'>
+                <div className='mt-8 flex w-full flex-wrap justify-end gap-4'>
                   <GreenButton href='#philosophy' outline>
                     Our Philosophy
                   </GreenButton>
@@ -116,12 +116,12 @@ export function HomeMarketingPage () {
             </motion.div>
           </div>
 
-          <GlowingCard className='p-0 mt-8 !overflow-visible max-h-[28rem] flex'>
+          <GlowingCard className='mt-8 flex max-h-none p-0 !overflow-visible lg:max-h-[28rem]'>
             {' '}
             {/* Removed padding from className */}
-            <div className='p-8 sm:p-12 lg:p-20 lg:py-32'>
+            <div className='p-6 sm:p-12 lg:p-20 lg:py-32'>
               <SectionHeading title='A World Out of Balance' />
-              <p className='mt-8 max-w-xl text-xl font-normal  text-white/74'>
+              <p className='mt-8 max-w-xl text-lg font-normal text-white/74 sm:text-xl'>
                For centuries, we’ve chased progress as if nature was an obstacle to overcome. Forests became resources, rivers became waste channels, and cities grew into machines that suffocate the very life they depend on. This separation has left us with more technology than ever—yet less harmony than before.
               </p>
             </div>
@@ -139,14 +139,22 @@ export function HomeMarketingPage () {
         </div>
       </section>
 
-      <section className='relative mt-32 px-5 py-10 sm:px-8 lg:px-12 isolate'>
+      <section className='relative isolate mt-20 px-5 py-10 sm:mt-32 sm:px-8 lg:px-12'>
         <Image
           src='/images/left-hand.png'
           alt='Left Hand'
           width={500}
           height={500}
           //priority
-          className='absolute left-0 -top-full z-10 '
+          className='absolute left-[-3.5rem] top-[-4.5rem] z-10 h-auto w-[8rem] max-w-[34vw] opacity-50 sm:left-[-2rem] sm:top-[-7rem] sm:w-[11rem] lg:hidden'
+        />
+        <Image
+          src='/images/left-hand.png'
+          alt='Left Hand'
+          width={500}
+          height={500}
+          //priority
+          className='absolute left-0 -top-full z-10 hidden lg:block'
         />
         <Image
           src='/images/right-hand.png'
@@ -154,7 +162,15 @@ export function HomeMarketingPage () {
           width={500}
           height={500}
           //priority
-          className='absolute -right-10  z-1 '
+          className='absolute -right-8 top-8 z-1 h-auto w-[8rem] max-w-[34vw] opacity-50 sm:right-[-1rem] sm:top-2 sm:w-[11rem] lg:hidden'
+        />
+        <Image
+          src='/images/right-hand.png'
+          alt='Right Hand'
+          width={500}
+          height={500}
+          //priority
+          className='absolute -right-10  z-1 hidden lg:block'
         />
         <div className='mx-auto relative grid max-w-7xl gap-6 lg:grid-cols-2'>
           {[
@@ -174,14 +190,14 @@ export function HomeMarketingPage () {
             >
               <GlowingCard
                 intensity='strong'
-                className='min-h-[20rem]  p-8 sm:p-10'
+                className='min-h-[18rem] p-6 sm:min-h-[20rem] sm:p-10'
               >
                 <div className='flex h-full flex-col justify-between items-center text-center'>
                   <div>
-                    <h3 className='mt-4 text-4xl font-medium text-white'>
+                    <h3 className='mt-4 text-3xl font-medium text-white sm:text-4xl'>
                       {card.title}
                     </h3>
-                    <p className='mt-5 max-w-lg text-lg leading-8 text-white/72'>
+                    <p className='mt-5 max-w-lg text-base leading-8 text-white/72 sm:text-lg'>
                       {card.text}
                     </p>
                   </div>
@@ -192,22 +208,29 @@ export function HomeMarketingPage () {
         </div>
       </section>
 
-      <section className='px-5 py-20 w-full sm:px-8 lg:px-12 mt-20'>
-        <div className='mx-auto flex flex-col items-center h-auto relative'>
+      <section className='mt-14 w-full px-5 py-16 sm:mt-20 sm:px-8 sm:py-20 lg:px-12'>
+        <div className='relative mx-auto flex h-auto flex-col items-center'>
           <SectionReveal from='up'>
             <SectionHeading
               title='What We Create'
-              titleClassName='text-center  font-bold text-5xl'
+              titleClassName='text-center font-bold text-4xl sm:text-5xl'
             />
           </SectionReveal>
           <Image
             src='/images/leaf.png'
             alt='Leaf'
-            fill 
+            fill
             //priority
-            className='absolute object-cover translate-y-40 h-auto'
+            className='absolute inset-0 h-auto object-contain object-center opacity-18 translate-y-20 sm:translate-y-28 lg:hidden'
           />
-          <div className='relative mt-14 h-full w-full min-h-[44rem] isolate gap-6 '>
+          <Image
+            src='/images/leaf.png'
+            alt='Leaf'
+            fill
+            //priority
+            className='absolute hidden object-cover translate-y-40 h-auto lg:block'
+          />
+          <div className='relative mt-14 grid h-full w-full min-h-0 gap-6 lg:min-h-[44rem]'>
             {[
               {
                 title: 'Walls That Grow',
@@ -231,26 +254,26 @@ export function HomeMarketingPage () {
               }
             ].map((card, index) => {
               const positions = [
-                'top-5 left-0',
-                'top-0 right-0',
-                'bottom-20 left-0',
-                'bottom-0 right-0'
+                'lg:top-5 lg:left-0',
+                'lg:top-0 lg:right-0',
+                'lg:bottom-20 lg:left-0',
+                'lg:bottom-0 lg:right-0'
               ]
               return (
                 <SectionReveal
                   key={card.title}
                   from={index % 2 === 0 ? 'left' : 'right'}
                   delay={index * 0.08}
-                  className={`absolute w-fit ${positions[index]}`}
+                  className={`w-full lg:absolute lg:w-fit ${positions[index]}`}
                 >
                   <GlowingCard
                     intensity='strong'
-                    className='relative z-10  px-8 '
+                    className='relative z-10 px-6 py-6 sm:px-8'
                   >
-                    <h3 className='mt-4 text-3xl font-medium text-white'>
+                    <h3 className='mt-4 text-2xl font-medium text-white sm:text-3xl'>
                       {card.title}
                     </h3>
-                    <p className='mt-4 max-w-sm text-sm leading-7 text-white/72'>
+                    <p className='mt-4 max-w-sm text-sm leading-7 text-white/72 sm:text-base'>
                       {card.description}
                     </p>
                   </GlowingCard>
@@ -262,10 +285,10 @@ export function HomeMarketingPage () {
       </section>
 
       <section className='px-5 py-20 sm:px-8 lg:px-12'>
-        <GlowingCard className='mx-auto max-w-5xl py-8'>
-          <SectionReveal from='scale' className='grid grid-cols-2 gap-8'>
+        <GlowingCard className='mx-auto max-w-5xl px-6 py-8 sm:px-8'>
+          <SectionReveal from='scale' className='grid gap-8 lg:grid-cols-2'>
             <div>
-              <h2 className='mt-5 text-5xl font-bold tracking-tight text-white max-w-lg'>
+              <h2 className='mt-5 max-w-lg text-4xl font-bold tracking-tight text-white sm:text-5xl'>
                 Be Part of the Great Restoration
               </h2>
               <div className='mt-8 flex justify-start'>
@@ -281,7 +304,7 @@ export function HomeMarketingPage () {
                 </motion.div>
               </div>
             </div>
-            <p className='mx-auto mt-6 max-w-sm text-left text-base leading-8 text-white/72'>
+            <p className='mx-auto mt-6 max-w-none text-left text-base leading-8 text-white/72 lg:max-w-sm'>
              This is not just about us—it’s about all of us. We invite dreamers, builders, investors, and visionaries to take part in shaping a future where humanity and nature thrive together. The restoration begins with a choice, and that choice can start with you.
             </p>
           </SectionReveal>
@@ -406,14 +429,14 @@ export function AboutMarketingPage () {
 
   return (
     <SiteShell>
-      <section className='relative h-auto px-5 pb-8 pt-24 sm:px-8 lg:px-12 bg-[rgba(8,28,21,0.5)] min-h-screen'>
+      <section className='relative min-h-screen h-auto bg-[rgba(8,28,21,0.5)] px-5 pb-12 pt-28 sm:px-8 sm:pt-32 lg:px-12 lg:pb-8'>
         <div className='mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.2fr_0.9fr] '>
           <SectionReveal from='left'>
             <div className='max-w-sm pt-6'>
-              <h1 className='text-5xl font-semibold tracking-tight text-white  lg:leading-[0.98]'>
+              <h1 className='text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:leading-[0.98]'>
                 The Genesis of a Movement
               </h1>
-              <p className='mt-7 text-xl font-medium  text-white/72'>
+              <p className='mt-7 text-lg font-medium text-white/72 sm:text-xl'>
                 We did not begin as a company chasing markets. We began as a
                 group of restless minds who asked: What if progress could heal
                 instead of harm? That question became a movement.
@@ -422,7 +445,7 @@ export function AboutMarketingPage () {
           </SectionReveal>
 
           <SectionReveal from='scale'>
-            <div className='relative mx-auto flex min-h-[34rem] w-full items-center justify-center sm:min-h-[40rem]'>
+            <div className='relative mx-auto flex min-h-[20rem] w-full items-center justify-center sm:min-h-[34rem] lg:min-h-[40rem]'>
               <motion.div
                 className='absolute inset-x-[18%] top-[16%] h-[58%] '
                 animate={
@@ -450,34 +473,34 @@ export function AboutMarketingPage () {
                   alt='Wireframe earth with a growing plant'
                   width={900}
                   height={1024}
-                  className='object-cover '
+                  className='h-auto w-full max-w-[24rem] object-cover sm:max-w-[32rem] lg:max-w-full'
                 />
               </motion.div>
             </div>
           </SectionReveal>
 
-          <SectionReveal from='right' className='mt-auto mb-28'>
-            <div className='max-w-sm pt-10 text-left lg:ml-auto lg:pt-28 lg:text-right'>
-              <h2 className='text-5xl font-semibold tracking-tight text-white  '>
+          <SectionReveal from='right' className='mb-0 mt-0 lg:mb-28 lg:mt-auto'>
+            <div className='max-w-sm pt-4 text-left lg:ml-auto lg:pt-28 lg:text-right'>
+              <h2 className='text-4xl font-semibold tracking-tight text-white sm:text-5xl'>
                 Born from a Silent Crisis
               </h2>
-              <p className='mt-7 text-xl font-medium  text-white/72 lg:text-right'>
+              <p className='mt-7 text-lg font-medium text-white/72 sm:text-xl lg:text-right'>
                 We witnessed the grey spread of concrete, the vanishing of
                 green, and the quiet loss of life beneath the noise of progress.
               </p>
             </div>
           </SectionReveal>
         </div>
-        <div className='mx-auto max-w-5xl z-10 -translate-y-20'>
+        <div className='mx-auto z-10 mt-8 max-w-5xl lg:-translate-y-20'>
           <SectionReveal from='up'>
             <GlowingCard
               intensity='strong'
-              className='z-10 px-8 py-10 text-center sm:px-12 sm:py-12'
+              className='z-10 px-6 py-8 text-center sm:px-12 sm:py-12'
             >
-              <h2 className='text-4xl font-semibold tracking-tight text-white sm:text-[2.8rem]'>
+              <h2 className='text-3xl font-semibold tracking-tight text-white sm:text-[2.8rem]'>
                 A Collective of Dreamers & Doers
               </h2>
-              <p className='mx-auto mt-7 max-w-5xl text-lg leading-9 text-white/78 sm:text-[1.44rem] sm:leading-[1.45]'>
+              <p className='mx-auto mt-7 max-w-5xl text-base leading-8 text-white/78 sm:text-[1.44rem] sm:leading-[1.45]'>
                 We are bio-engineers, artists, architects, and rebels united by
                 one belief: creation is more powerful than destruction.
                 Together, we design systems that do not dominate nature but live
@@ -493,12 +516,12 @@ export function AboutMarketingPage () {
         <div className='mx-auto max-w-7xl'>
           <div className='grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start'>
             <SectionReveal from='left'>
-              <h2 className='max-w-md text-4xl font-semibold tracking-tight text-white  lg:leading-[1.02]'>
+              <h2 className='max-w-md text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:leading-[1.02]'>
                 The Pillars of Our Purpose
               </h2>
             </SectionReveal>
             <SectionReveal from='right'>
-              <p className='max-w-4xl text-xl leading-9 text-white/76'>
+              <p className='max-w-4xl text-lg leading-8 text-white/76 sm:text-xl sm:leading-9'>
                 Our manifesto is not a statement on paper. It is a living guide
                 for everything we build. It reminds us that true progress is
                 measured not by efficiency or profit, but by harmony. These are
@@ -515,10 +538,10 @@ export function AboutMarketingPage () {
                   className='h-full bg-transparent backdrop-blur-xl border-0 glowing-border  px-8 py-10 text-center sm:min-h-[26.25rem]'
 
                 >
-                  <h3 className='mt-5 text-[2.25rem] font-semibold leading-[1.08] text-white'>
+                  <h3 className='mt-5 text-3xl font-semibold leading-[1.08] text-white sm:text-[2.25rem]'>
                     {pillar.title}
                   </h3>
-                  <p className='mt-6 text-xl leading-8 text-white/72'>
+                  <p className='mt-6 text-lg leading-8 text-white/72 sm:text-xl'>
                     {pillar.description}
                   </p>
                 </GlowingCard>
@@ -555,10 +578,10 @@ export function AboutMarketingPage () {
 
           <SectionReveal from='right'>
             <div className='max-w-2xl'>
-              <h2 className='text-4xl font-semibold tracking-tight text-white sm:text-[2.8rem] sm:leading-[1.04]'>
+              <h2 className='text-3xl font-semibold tracking-tight text-white sm:text-[2.8rem] sm:leading-[1.04]'>
                 A New Way of Creating
               </h2>
-              <p className='mt-7 text-2xl leading-9 text-white/76'>
+              <p className='mt-7 text-lg leading-8 text-white/76 sm:text-2xl sm:leading-9'>
                 This movement is not about disruption. It is about restoration.
                 We are here to prove that technology can be more than machinery.
                 It can be a living bridge back to the earth. And this is only
@@ -577,14 +600,14 @@ export function ServicesMarketingPage () {
 
   return (
     <SiteShell>
-      <section className='relative overflow-hidden isolate px-5 pb-8 pt-12 sm:px-8 lg:px-12'>
-        <div className='mx-auto min-h-[32rem] isolate relative flex flex-col items-start justify-center  max-w-7xl gap-10 '>
+      <section className='relative isolate overflow-hidden px-5 pb-8 pt-24 sm:px-8 sm:pt-28 lg:px-12 lg:pt-12'>
+        <div className='mx-auto relative isolate flex max-w-7xl flex-col items-start justify-center gap-8 lg:min-h-[32rem] lg:gap-10'>
           <SectionReveal from='left' className='relative z-10'>
-            <div className='max-w-3xl pt-10'>
-              <h1 className='max-w-4xl text-5xl font-semibold tracking-tight text-white sm:text-6xl  lg:leading-[1.02]'>
+            <div className='max-w-3xl pt-0 lg:pt-10'>
+              <h1 className='max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl lg:leading-[1.02]'>
                 Curating a Living Future
               </h1>
-              <p className='mt-8 max-w-3xl text-[1.75rem] leading-[1.22] text-white/76'>
+              <p className='mt-8 max-w-3xl text-xl leading-[1.3] text-white/76 sm:text-[1.75rem] sm:leading-[1.22]'>
                 We do not just offer services. We create pathways into a
                 different kind of world. Every project is more than a solution;
                 it is a seed for renewal.
@@ -592,9 +615,7 @@ export function ServicesMarketingPage () {
             </div>
           </SectionReveal>
 
-          <SectionReveal from='right'
-            className="absolute -right-[47%] "
-          >
+          <SectionReveal from='right' className='relative w-full lg:absolute lg:-right-[47%]'>
           
               <motion.div
                
@@ -624,7 +645,7 @@ export function ServicesMarketingPage () {
                   alt='Abstract innovation globe'
                  width={1400}
                  height={1400}
-                  className='object-cover h-auto  w-full max-w-full translate-y-[10%]'
+                  className='mx-auto h-auto w-full max-w-[26rem] object-cover sm:max-w-[34rem] lg:max-w-full lg:translate-y-[10%]'
                 />
               </motion.div>
           
@@ -635,13 +656,13 @@ export function ServicesMarketingPage () {
       <section className='border-custom border-up-down glassmorphism px-5 py-16 sm:px-8 lg:px-12'>
         <div className='mx-auto grid max-w-7xl gap-8 lg:grid-cols-[30%_1fr] lg:items-start'>
           <SectionReveal from='left'>
-            <h2 className='max-w-md text-4xl font-medium tracking-tight text-white sm:text-[3.3225rem] sm:leading-[1.02]'>
+            <h2 className='max-w-md text-3xl font-medium tracking-tight text-white sm:text-[3.3225rem] sm:leading-[1.02]'>
               Innovation as an Ecosystem
             </h2>
           </SectionReveal>
 
           <SectionReveal from='right'>
-            <p className='max-w-5xl text-[1.65rem] leading-[1.22] text-white/76'>
+            <p className='max-w-5xl text-lg leading-8 text-white/76 sm:text-[1.65rem] sm:leading-[1.22]'>
               Technology should not stand apart from life. It should flow within
               it. That is why our services are not isolated offerings, but
               interconnected designs. Together, they form ecosystems that grow,
@@ -674,13 +695,13 @@ export function ServicesMarketingPage () {
 
           
         </div>
-        <div className='mx-auto mt-24 min-h-[40rem]  grid max-w-7xl gap-8 lg:grid-cols-[1fr_0.9fr_0.8fr] '>
+        <div className='mx-auto mt-16 grid max-w-7xl gap-8 lg:mt-24 lg:min-h-[40rem] lg:grid-cols-[1fr_0.9fr_0.8fr]'>
           <SectionReveal from='left' >
             <div className='flex h-full flex-col justify-start pt-6 lg:pr-6'>
-              <h2 className='max-w-sm text-4xl font-medium tracking-tight text-white sm:text-[2.94rem] sm:leading-[1.02]'>
+              <h2 className='max-w-sm text-3xl font-medium tracking-tight text-white sm:text-[2.94rem] sm:leading-[1.02]'>
                 Regenerative Technology
               </h2>
-              <p className='mt-6 max-w-md text-[1.7rem] leading-[1.2] text-white/74'>
+              <p className='mt-6 max-w-md text-lg leading-8 text-white/74 sm:text-[1.7rem] sm:leading-[1.2]'>
                 True progress does not just do less harm. It gives more back.
                 Our technologies are designed to actively restore damaged
                 ecosystems and nurture life where it is fading.
@@ -693,7 +714,7 @@ export function ServicesMarketingPage () {
               key={card.title}
               from={index === 0 ? 'up' : 'right'}
               delay={0.14 + index * 0.08}
-              className={`h-auto ${index === 0 ? 'mt-auto' : 'mb-auto'}`}
+              className={`h-auto ${index === 0 ? 'lg:mt-auto' : 'lg:mb-auto'}`}
             >
               <ServiceFeatureCard
                 title={card.title}
@@ -710,10 +731,10 @@ export function ServicesMarketingPage () {
       <section className='px-5 pb-24 pt-12 text-center sm:px-8 lg:px-12'>
         <div className='mx-auto max-w-5xl'>
           <SectionReveal from='up'>
-            <h2 className='text-4xl font-medium tracking-tight text-white sm:text-[3.4rem]'>
+            <h2 className='text-3xl font-medium tracking-tight text-white sm:text-[3.4rem]'>
               From Services to Stewardship
             </h2>
-            <p className='mx-auto mt-16 max-w-4xl text-[1.7rem] leading-[1.26] text-white/74'>
+            <p className='mx-auto mt-10 max-w-4xl text-lg leading-8 text-white/74 sm:mt-16 sm:text-[1.7rem] sm:leading-[1.26]'>
               What we create is more than service. It is stewardship. Each
               solution is a promise that technology can serve as a guardian, not
               a destroyer. When combined, our pillars form a living framework
@@ -746,15 +767,15 @@ export function ContactMarketingPage () {
 
   return (
     <SiteShell>
-      <section className='px-5 pb-20 pt-24 sm:px-8 lg:px-12'>
+      <section className='px-5 pb-20 pt-28 sm:px-8 sm:pt-32 lg:px-12 lg:pt-24'>
         <div className='mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.94fr_1.06fr] lg:items-start'>
           <SectionReveal from='left' className='h-full'>
-            <div className='max-w-2xl pt-10 flex flex-col justify-between flex-1 h-full'>
+            <div className='flex h-full max-w-2xl flex-1 flex-col justify-between pt-0 lg:pt-10'>
               <div >
-                <h1 className='max-w-xl text-5xl font-semibold tracking-tight text-white sm:text-[3.2rem]  lg:leading-[1.05]'>
+                <h1 className='max-w-xl text-4xl font-semibold tracking-tight text-white sm:text-[3.2rem] lg:leading-[1.05]'>
                   Join Us in the Great Restoration
                 </h1>
-                <p className='mt-8 max-w-2xl text-[1.3rem] leading-[1.24] text-white/76'>
+                <p className='mt-8 max-w-2xl text-lg leading-8 text-white/76 sm:text-[1.3rem] sm:leading-[1.24]'>
                   This is not just business. It is a movement. A call to reimagine
                   what progress can mean, and to rebuild our bond with the earth.
                   Whether you are a visionary, an innovator, or simply someone who
@@ -762,7 +783,7 @@ export function ContactMarketingPage () {
                 </p>
               </div>
 
-              <p className=' max-w-3xl font-semibold leading-[1.18] mb-20 text-white text-[1.75rem]'>
+              <p className='mt-10 max-w-3xl text-xl font-semibold leading-[1.28] text-white sm:text-[1.75rem] sm:leading-[1.18] lg:mb-20'>
                 We are not looking for clients. We are looking for allies. If
                 you feel the pull to create differently, to heal, to restore, to
                 cultivate, then you have already taken the first step.
@@ -772,17 +793,17 @@ export function ContactMarketingPage () {
           </SectionReveal>
 
           <SectionReveal from='right'>
-            <div className='pt-8 lg:pl-6'>
+            <div className='pt-0 lg:pl-6 lg:pt-8'>
               <h2 className='text-2xl font-medium tracking-tight text-white sm:text-[1.9rem]'>
                 Begin Your Journey
               </h2>
-              <p className='mt-5 max-w-2xl text-[1.3rem] leading-[1.28] text-white/74'>
+              <p className='mt-5 max-w-2xl text-lg leading-8 text-white/74 sm:text-[1.3rem] sm:leading-[1.28]'>
                 The restoration of our planet begins with small choices.
                 Reaching out is one of them. Share your vision, and let&apos;s
                 explore how we can bring it to life.
               </p>
 
-              <form className='mt-12 space-y-6'>
+              <form className='mt-10 space-y-6 sm:mt-12'>
                 <ContactField label='Full Name'>
                   <Input
                     aria-label='Full Name'
@@ -813,8 +834,9 @@ export function ContactMarketingPage () {
                   />
                 </ContactField>
 
-                <div className='flex justify-end pt-2'>
+                <div className='flex justify-stretch pt-2 sm:justify-end'>
                   <motion.div
+                    className='w-full sm:w-auto'
                     animate={reduceMotion ? undefined : { scale: [1, 1.02, 1] }}
                     transition={{
                       duration: 3.1,
@@ -822,7 +844,7 @@ export function ContactMarketingPage () {
                       ease: 'easeInOut'
                     }}
                   >
-                    <Button className='h-14 rounded-2xl bg-[#8AB83E] px-10 text-lg font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#99C847] hover:shadow-[0_0_26px_rgba(0,245,212,0.3)]'>
+                    <Button className='h-14 w-full rounded-2xl bg-[#8AB83E] px-10 text-lg font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#99C847] hover:shadow-[0_0_26px_rgba(0,245,212,0.3)] sm:w-auto'>
                       Send a Message
                     </Button>
                   </motion.div>

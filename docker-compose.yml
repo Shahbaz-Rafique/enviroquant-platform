@@ -16,6 +16,34 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  backend:
+    build:
+      context: ./backend
+    container_name: enviroquant-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://enviroquant:enviroquant@postgres:5432/enviroquant
+      ALLOWED_ORIGINS: '["http://localhost:3000"]'
+      FRONTEND_APP_URL: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+  frontend:
+    build:
+      context: ./frontend
+    container_name: enviroquant-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:3000"
 
 volumes:
   enviroquant_postgres_data:

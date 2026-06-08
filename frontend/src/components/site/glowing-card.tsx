@@ -18,6 +18,10 @@ export function GlowingCard({
   intensity?: "normal" | "strong";
 }) {
   const reduceMotion = useReducedMotion();
+  const intensityClass =
+    intensity === "normal"
+      ? "border-white/20 bg-[rgba(119,_166,_60,_0.08)]"
+      : "border-white/30 bg-[rgba(119,_166,_60,_0.1)]";
 
   return (
     <motion.div
@@ -27,14 +31,11 @@ export function GlowingCard({
       transition={{ duration: 0.7, delay, ease: "easeOut" }}
       whileHover={reduceMotion ? undefined : { scale: hoverScale, y: -4 }}
       className={cn(
-        "group relative  rounded-[15px] border-2 border-white/30 bg-[rgba(119,_166,_60,_0.1)] p-6 backdrop-blur-sm transition-all duration-500",
-       
+        "group relative rounded-[15px] border-2 p-6 backdrop-blur-sm transition-all duration-500",
+        intensityClass,
         className
       )}
     >
-     
-    
-
       {children}
     </motion.div>
   );

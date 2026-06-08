@@ -15,11 +15,20 @@ from app.services.document_service import (
     get_document_for_tenant,
     list_document_version_chunks,
     list_project_documents,
+    list_tenant_documents,
 )
 from app.services.project_service import get_project_for_tenant
 
 
 router = APIRouter()
+
+
+@router.get("", response_model=list[DocumentRead])
+def read_tenant_documents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permissions.DOCUMENT_READ)),
+) -> list[Document]:
+    return list_tenant_documents(db, current_user)
 
 
 @router.get("/project/{project_id}", response_model=list[DocumentRead])
