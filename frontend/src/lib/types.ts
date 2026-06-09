@@ -433,3 +433,78 @@ export type EiaEvaluationComparison = {
   sections: EiaEvaluationSectionComparison[];
   changed_findings: EiaEvaluationFindingComparison[];
 };
+
+export type EiaAuthoringAssistRequest = {
+  action: "OUTLINE" | "EVIDENCE_GAPS" | "GENERATE_DRAFT" | "IMPROVE_DRAFT";
+  instructions?: string | null;
+  tenant_id?: string | null;
+};
+
+export type EiaAuthoringAssistResponse = {
+  action: string;
+  engine: string;
+  model_version: string;
+  summary: string;
+  generated_html: string;
+  guidance_points: string[];
+  metadata: Record<string, unknown>;
+};
+
+export type EiaReviewApproval = {
+  id: string;
+  tenant_id: string;
+  project_id: string;
+  eia_document_id: string;
+  evaluation_run_id: string;
+  requested_by_id: string;
+  decided_by_id: string | null;
+  status: "REQUESTED" | "APPROVED" | "CHANGES_REQUESTED" | string;
+  request_note: string | null;
+  decision_note: string | null;
+  requested_at: string;
+  decided_at: string | null;
+  approval_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EiaRegulatorBenchmarkItem = {
+  eia_document_id: string;
+  title: string;
+  document_status: string;
+  latest_run_id: string | null;
+  latest_score: number;
+  latest_appraisal: string | null;
+  latest_run_completed_at: string | null;
+  approval_status: string | null;
+};
+
+export type EiaRegulatorTrendPoint = {
+  run_id: string;
+  eia_document_id: string;
+  eia_document_title: string;
+  created_at: string;
+  completed_at: string | null;
+  overall_score: number;
+  overall_appraisal: string | null;
+};
+
+export type EiaDocumentCrossComparison = {
+  left_document_id: string;
+  right_document_id: string;
+  left_title: string;
+  right_title: string;
+  left_score: number;
+  right_score: number;
+  delta: number;
+  left_status_counts: Record<string, number>;
+  right_status_counts: Record<string, number>;
+  section_deltas: EiaEvaluationSectionComparison[];
+};
+
+export type EiaRegulatorOverview = {
+  project_id: string;
+  benchmark_documents: EiaRegulatorBenchmarkItem[];
+  trend_points: EiaRegulatorTrendPoint[];
+  recent_decisions: EiaReviewApproval[];
+};

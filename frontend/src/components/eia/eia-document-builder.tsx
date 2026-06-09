@@ -574,8 +574,11 @@ function statusLabel(status: string) {
 
 function statusBadgeClass(status: string) {
   const normalized = status.toUpperCase();
-  if (normalized === "COMPLETE" || normalized === "PUBLISHED") {
+  if (normalized === "COMPLETE" || normalized === "PUBLISHED" || normalized === "APPROVED") {
     return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+  }
+  if (normalized === "CHANGES_REQUESTED") {
+    return "border-red-400/25 bg-red-500/10 text-red-100";
   }
   if (normalized === "READY_FOR_REVIEW" || normalized === "IN_REVIEW") {
     return "border-amber-400/25 bg-amber-500/10 text-amber-100";

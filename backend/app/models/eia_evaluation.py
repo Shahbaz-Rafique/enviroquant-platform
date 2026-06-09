@@ -71,6 +71,12 @@ class EiaEvaluationRun(TimestampMixin, Base):
         cascade="all, delete-orphan",
         order_by="EiaEvaluationSectionSummary.section_number.asc()",
     )
+    review_approvals = relationship(
+        "EiaReviewApproval",
+        back_populates="evaluation_run",
+        cascade="all, delete-orphan",
+        order_by="EiaReviewApproval.created_at.desc()",
+    )
 
 
 class EiaEvaluationFinding(TimestampMixin, Base):

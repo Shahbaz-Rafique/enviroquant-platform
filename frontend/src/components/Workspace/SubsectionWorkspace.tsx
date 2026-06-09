@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   EiaAttachment,
+  EiaAuthoringAssistResponse,
   EiaChecklistItem,
   EiaDocumentMember,
   EiaSourceMapping,
@@ -84,6 +85,9 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [assistantActionId, setAssistantActionId] = useState<string | null>(null);
+  const [assistantSummary, setAssistantSummary] = useState<string | null>(null);
+  const [assistantGuidance, setAssistantGuidance] = useState<string[]>([]);
+  const [assistantEngine, setAssistantEngine] = useState<string | null>(null);
   const [sourceMappings, setSourceMappings] = useState<EiaSourceMapping[]>([]);
 
   const effectiveDocumentRole = documentRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
@@ -354,22 +358,38 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
     });
   }
 
-  function insertDraftingOutline() {
-    if (!workspace || !canEdit) {
+  function mergeAssistantContent(action: string, generatedHtml: string) {
+    if (action === "GENERATE_DRAFT" && !hasDraftContent) {
+      applyAssistantContent(generatedHtml);
       return;
     }
-    const generated = buildDraftingOutlineHtml(workspace, coverageGaps);
-    const nextHtml = hasDraftContent ? `${editorContent.html}${generated}` : generated;
+    const nextHtml = hasDraftContent ? `${editorContent.html}${generatedHtml}` : generatedHtml;
     applyAssistantContent(nextHtml);
   }
 
-  function insertEvidencePrompts() {
+  async function runAssistantAction(action: "OUTLINE" | "EVIDENCE_GAPS" | "GENERATE_DRAFT" | "IMPROVE_DRAFT") {
     if (!workspace || !canEdit) {
       return;
     }
-    const generated = buildEvidencePromptHtml(workspace.attachments);
-    const nextHtml = hasDraftContent ? `${editorContent.html}${generated}` : generated;
-    applyAssistantContent(nextHtml);
+    setAssistantActionId(action);
+    setAssistantError(null);
+    try {
+      const response = await apiRequest<EiaAuthoringAssistResponse>(`/eia-documents/subsections/${subsectionId}/assistant`, {
+        method: "POST",
+        body: JSON.stringify({
+          action,
+          tenant_id: user.tenant_id
+        })
+      });
+      mergeAssistantContent(action, response.generated_html);
+      setAssistantSummary(response.summary);
+      setAssistantGuidance(response.guidance_points);
+      setAssistantEngine(`${response.engine} · ${response.model_version}`);
+    } catch (err) {
+      setAssistantError(err instanceof Error ? err.message : "Assistant guidance could not be generated");
+    } finally {
+      setAssistantActionId(null);
+    }
   }
 
   async function applySuggestedDraft(mapping: EiaSourceMapping) {
@@ -558,6 +578,21 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               {assistantError ? (
                 <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{assistantError}</Alert>
               ) : null}
+              {assistantSummary ? (
+                <div className="rounded-2xl border border-[#67E8F9]/18 bg-[#67E8F9]/10 p-3">
+                  <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#B6F7FF]">
+                    {assistantEngine ?? "Assistant"}
+                  </div>
+                  <p className="mt-2 text-sm text-white">{assistantSummary}</p>
+                  {assistantGuidance.length ? (
+                    <ul className="mt-3 grid gap-2 text-xs text-white/72">
+                      {assistantGuidance.map((point) => (
+                        <li key={point}>{point}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="grid grid-cols-3 gap-2">
                 <AssistantStat label="Checklist" value={String(assistantChecklistItems.length)} />
@@ -576,13 +611,45 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                 </p>
                 {canEdit ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button size="sm" type="button" variant="secondary" onClick={insertDraftingOutline}>
-                      <Bot className="size-4" />
-                      {hasDraftContent ? "Append outline" : "Insert outline"}
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="secondary"
+                      disabled={assistantActionId !== null}
+                      onClick={() => void runAssistantAction("OUTLINE")}
+                    >
+                      {assistantActionId === "OUTLINE" ? <Loader2 className="animate-spin size-4" /> : <Bot className="size-4" />}
+                      {hasDraftContent ? "Append AI outline" : "Insert AI outline"}
                     </Button>
-                    <Button size="sm" type="button" variant="secondary" onClick={insertEvidencePrompts}>
-                      <FileText className="size-4" />
-                      Add evidence prompts
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="secondary"
+                      disabled={assistantActionId !== null}
+                      onClick={() => void runAssistantAction("EVIDENCE_GAPS")}
+                    >
+                      {assistantActionId === "EVIDENCE_GAPS" ? <Loader2 className="animate-spin size-4" /> : <FileText className="size-4" />}
+                      Add AI evidence prompts
+                    </Button>
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="secondary"
+                      disabled={assistantActionId !== null}
+                      onClick={() => void runAssistantAction("GENERATE_DRAFT")}
+                    >
+                      {assistantActionId === "GENERATE_DRAFT" ? <Loader2 className="animate-spin size-4" /> : <Bot className="size-4" />}
+                      Generate draft
+                    </Button>
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="secondary"
+                      disabled={assistantActionId !== null || !hasDraftContent}
+                      onClick={() => void runAssistantAction("IMPROVE_DRAFT")}
+                    >
+                      {assistantActionId === "IMPROVE_DRAFT" ? <Loader2 className="animate-spin size-4" /> : <Bot className="size-4" />}
+                      Improve draft
                     </Button>
                   </div>
                 ) : null}

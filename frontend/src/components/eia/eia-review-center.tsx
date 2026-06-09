@@ -25,7 +25,7 @@ import {
 
 import { getAccessToken } from "@/lib/auth";
 import { API_URL, apiRequest } from "@/lib/api-client";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type {
   EiaDocumentStructure,
@@ -34,6 +34,7 @@ import type {
   EiaEvaluationFindingComment,
   EiaEvaluationRun,
   EiaEvaluationRunDetail,
+  EiaReviewApproval,
   ProjectDocument,
   User
 } from "@/lib/types";
@@ -70,24 +71,38 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
   const [selectedStatus, setSelectedStatus] = useState<string>("ALL");
   const [selectedSection, setSelectedSection] = useState<string>("ALL");
   const [selectedSourceDocumentId, setSelectedSourceDocumentId] = useState<string>("NONE");
+  const [approvals, setApprovals] = useState<EiaReviewApproval[]>([]);
+  const [approvalNote, setApprovalNote] = useState("");
+  const [decisionNote, setDecisionNote] = useState("");
+  const [approvalBusy, setApprovalBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canRunReview =
     hasPermission(user, PERMISSIONS.REVIEW_MANAGE) || hasPermission(user, PERMISSIONS.PROJECT_UPDATE);
+  const canRequestApproval =
+    hasPermission(user, PERMISSIONS.PROJECT_UPDATE) ||
+    hasPermission(user, PERMISSIONS.PROJECT_CREATE) ||
+    hasPermission(user, PERMISSIONS.TENANT_MANAGE);
+  const canDecideApproval =
+    hasAnyRole(user, ["reviewer", "regulator", "admin", "owner"]) || hasPermission(user, PERMISSIONS.REVIEW_MANAGE);
+  const canAccessRegulatorInsights =
+    hasAnyRole(user, ["reviewer", "regulator", "admin", "owner"]) || hasPermission(user, PERMISSIONS.REVIEW_READ);
 
   const loadBaseData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [documentData, runData, projectDocuments] = await Promise.all([
+      const [documentData, runData, projectDocuments, reviewApprovals] = await Promise.all([
         apiRequest<EiaDocumentStructure>(`/eia-documents/${documentId}`),
         apiRequest<EiaEvaluationRun[]>(`/eia-documents/${documentId}/evaluation-runs`),
-        apiRequest<ProjectDocument[]>(`/projects/${projectId}/documents`)
+        apiRequest<ProjectDocument[]>(`/projects/${projectId}/documents`),
+        apiRequest<EiaReviewApproval[]>(`/eia-documents/${documentId}/review-approvals`)
       ]);
       setDocument(documentData);
       setRuns(runData);
       setDocuments(projectDocuments);
+      setApprovals(reviewApprovals);
       const nextRunId = runData[0]?.id ?? null;
       setSelectedRunId((current) => current ?? nextRunId);
       if (!nextRunId) {
@@ -188,6 +203,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
   const latestAppraisal = getRunMetadataString(activeRun, "overall_appraisal", "-");
   const warnings = getRunMetadataStringList(activeRun, "warnings");
   const reviewReport = getRunMetadataObject(activeRun, "review_report");
+  const activeApproval = approvals.find((item) => item.status === "REQUESTED") ?? approvals[0] ?? null;
   const priorityActions = Array.isArray(reviewReport.priority_actions)
     ? reviewReport.priority_actions.filter((item): item is string => typeof item === "string")
     : [];
@@ -211,6 +227,58 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
       setError(err instanceof Error ? err.message : "Evaluation run failed");
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function requestFormalReview() {
+    if (!selectedRunId) {
+      return;
+    }
+    setApprovalBusy(true);
+    setError(null);
+    try {
+      const approval = await apiRequest<EiaReviewApproval>(`/eia-documents/${documentId}/review-approvals`, {
+        method: "POST",
+        body: JSON.stringify({
+          evaluation_run_id: selectedRunId,
+          request_note: approvalNote || null
+        })
+      });
+      setApprovals((current) => [approval, ...current]);
+      setApprovalNote("");
+      void loadBaseData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Formal review request could not be created");
+    } finally {
+      setApprovalBusy(false);
+    }
+  }
+
+  async function decideFormalReview(decision: "APPROVED" | "CHANGES_REQUESTED") {
+    const pendingApproval = approvals.find((item) => item.status === "REQUESTED");
+    if (!pendingApproval) {
+      return;
+    }
+    setApprovalBusy(true);
+    setError(null);
+    try {
+      const updated = await apiRequest<EiaReviewApproval>(
+        `/eia-documents/${documentId}/review-approvals/${pendingApproval.id}/decision`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            decision,
+            decision_note: decisionNote || null
+          })
+        }
+      );
+      setApprovals((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setDecisionNote("");
+      void loadBaseData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Formal review decision could not be saved");
+    } finally {
+      setApprovalBusy(false);
     }
   }
 
@@ -298,6 +366,14 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                   Builder
                 </Link>
               </Button>
+              {canAccessRegulatorInsights ? (
+                <Button asChild type="button" variant="outline">
+                  <Link href={`/projects/${projectId}/regulator`}>
+                    <GitCompareArrows />
+                    Regulator Insights
+                  </Link>
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -498,6 +574,89 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
         </div>
 
         <aside className="grid content-start gap-5">
+          <Card>
+            <CardHeader>
+              <CardTitle>Formal Review Workflow</CardTitle>
+              <CardDescription>
+                Submit a completed run for sign-off and capture a reviewer approval or requested changes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="text-xs font-bold uppercase text-white/46">Current status</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge className={cn(runStatusClass(activeApproval?.status ?? "NO_REQUEST"))}>
+                    {activeApproval?.status ?? "NO_REQUEST"}
+                  </Badge>
+                  {activeApproval?.requested_at ? (
+                    <span className="text-xs text-white/56">{new Date(activeApproval.requested_at).toLocaleString()}</span>
+                  ) : null}
+                </div>
+                {activeApproval?.request_note ? (
+                  <p className="mt-3 text-sm leading-6 text-white/68">{activeApproval.request_note}</p>
+                ) : null}
+                {activeApproval?.decision_note ? (
+                  <p className="mt-3 text-sm leading-6 text-white/68">{activeApproval.decision_note}</p>
+                ) : null}
+              </div>
+
+              {canRequestApproval && activeRun?.status === "COMPLETED" && !approvals.some((item) => item.status === "REQUESTED") ? (
+                <div className="grid gap-3">
+                  <Textarea
+                    className="min-h-24"
+                    placeholder="Add optional reviewer context before submitting this run for sign-off."
+                    value={approvalNote}
+                    onChange={(event) => setApprovalNote(event.target.value)}
+                  />
+                  <Button type="button" disabled={approvalBusy || !selectedRunId} onClick={() => void requestFormalReview()}>
+                    {approvalBusy ? <Loader2 className="animate-spin" /> : <ClipboardCheck />}
+                    Submit for Review
+                  </Button>
+                </div>
+              ) : null}
+
+              {canDecideApproval && approvals.some((item) => item.status === "REQUESTED") ? (
+                <div className="grid gap-3">
+                  <Textarea
+                    className="min-h-24"
+                    placeholder="Record the approval decision or the specific changes required."
+                    value={decisionNote}
+                    onChange={(event) => setDecisionNote(event.target.value)}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" disabled={approvalBusy} onClick={() => void decideFormalReview("APPROVED")}>
+                      {approvalBusy ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                      Approve
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={approvalBusy}
+                      onClick={() => void decideFormalReview("CHANGES_REQUESTED")}
+                    >
+                      {approvalBusy ? <Loader2 className="animate-spin" /> : <AlertTriangle />}
+                      Request Changes
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {!!approvals.length ? (
+                <div className="grid gap-2">
+                  {approvals.slice(0, 5).map((approval) => (
+                    <div key={approval.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm text-white/68">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Badge className={cn(runStatusClass(approval.status))}>{approval.status}</Badge>
+                        <span>{new Date(approval.requested_at).toLocaleString()}</span>
+                      </div>
+                      {approval.decision_note ? <p className="mt-2">{approval.decision_note}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Run Summary</CardTitle>
@@ -780,13 +939,13 @@ function findingStatusClass(status: string) {
 }
 
 function runStatusClass(status: string) {
-  if (status === "COMPLETED") {
+  if (status === "COMPLETED" || status === "APPROVED") {
     return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
   }
-  if (status === "FAILED") {
+  if (status === "FAILED" || status === "CHANGES_REQUESTED") {
     return "border-red-400/25 bg-red-500/10 text-red-100";
   }
-  if (status === "RUNNING" || status === "PENDING") {
+  if (status === "RUNNING" || status === "PENDING" || status === "REQUESTED") {
     return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
   }
   return "border-white/12 bg-white/[0.05] text-white/68";

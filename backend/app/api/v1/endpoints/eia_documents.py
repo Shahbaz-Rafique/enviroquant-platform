@@ -16,6 +16,10 @@ from app.models.user import User
 from app.schemas.eia import (
     EiaActivityItemRead,
     EiaAttachmentRead,
+    EiaAuthoringAssistRequest,
+    EiaAuthoringAssistResponse,
+    EiaAutoStructureRequest,
+    EiaDocumentCrossComparisonRead,
     EiaDocumentCreate,
     EiaDocumentMemberCreate,
     EiaDocumentMemberInvitationRead,
@@ -29,6 +33,10 @@ from app.schemas.eia import (
     EiaEvaluationRunCreate,
     EiaEvaluationRunDetailRead,
     EiaEvaluationRunRead,
+    EiaRegulatorOverviewRead,
+    EiaReviewApprovalCreate,
+    EiaReviewApprovalDecision,
+    EiaReviewApprovalRead,
     EiaSourceDocumentAttachmentCreate,
     EiaSourceMappingConfirmRequest,
     EiaSourceMappingDetectRequest,
@@ -43,6 +51,7 @@ from app.schemas.eia import (
     SubSectionCommentRead,
     SubSectionCommentUpdate,
 )
+from app.services.authoring_assistant_service import generate_authoring_guidance
 from app.services.content_service import (
     get_subsection_workspace,
     link_source_document_attachment,
@@ -77,8 +86,17 @@ from app.services.eia_document_export_service import (
     build_compiled_eia_json_bytes,
     build_compiled_eia_pdf_bytes,
 )
+from app.services.eia_auto_structure_service import auto_structure_eia_document
+from app.services.eia_regulator_service import compare_project_eia_documents, get_regulator_overview
+from app.services.eia_review_approval_service import (
+    create_review_approval_request,
+    decide_review_approval,
+    list_review_approvals,
+)
 from app.services.eia_service import (
+    DOCUMENT_EDIT_ROLES,
     create_eia_document,
+    get_eia_document_for_tenant,
     get_eia_document_progress,
     get_eia_document_structure,
     get_subsection_for_document,
@@ -120,12 +138,58 @@ def create_project_eia_document(
     return create_eia_document(db, current_user, project_id, payload)
 
 
+@router.get("/project/{project_id}/regulator-insights", response_model=EiaRegulatorOverviewRead)
+def read_project_regulator_insights(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return get_regulator_overview(db, current_user, project_id)
+
+
+@router.get("/project/{project_id}/regulator-compare", response_model=EiaDocumentCrossComparisonRead)
+def read_project_regulator_comparison(
+    project_id: UUID,
+    left_document_id: UUID = Query(...),
+    right_document_id: UUID = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return compare_project_eia_documents(
+        db,
+        current_user,
+        project_id,
+        left_document_id=left_document_id,
+        right_document_id=right_document_id,
+    )
+
+
 @router.get("/{document_id}", response_model=EiaDocumentStructureRead)
 def read_eia_document_structure(
     document_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> EiaDocument:
+    return get_eia_document_structure(db, current_user, document_id)
+
+
+@router.post("/{document_id}/auto-structure", response_model=EiaDocumentStructureRead)
+def post_eia_document_auto_structure(
+    document_id: UUID,
+    payload: EiaAutoStructureRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> EiaDocument:
+    get_eia_document_for_tenant(db, current_user, document_id, DOCUMENT_EDIT_ROLES, "auto-structure")
+    auto_structure_eia_document(
+        db,
+        current_user,
+        document_id,
+        payload.source_document_id,
+        source_version_id=payload.source_version_id,
+        apply_detected_content=payload.apply_detected_content,
+    )
+    db.commit()
     return get_eia_document_structure(db, current_user, document_id)
 
 
@@ -215,6 +279,43 @@ def read_eia_evaluation_report(
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> object:
     return get_eia_evaluation_run(db, current_user, document_id, run_id)
+
+
+@router.get("/{document_id}/review-approvals", response_model=list[EiaReviewApprovalRead])
+def read_eia_review_approvals(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> list[object]:
+    return list_review_approvals(db, current_user, document_id)
+
+
+@router.post(
+    "/{document_id}/review-approvals",
+    response_model=EiaReviewApprovalRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def post_eia_review_approval(
+    document_id: UUID,
+    payload: EiaReviewApprovalCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> object:
+    return create_review_approval_request(db, current_user, document_id, payload)
+
+
+@router.post(
+    "/{document_id}/review-approvals/{approval_id}/decision",
+    response_model=EiaReviewApprovalRead,
+)
+def post_eia_review_approval_decision(
+    document_id: UUID,
+    approval_id: UUID,
+    payload: EiaReviewApprovalDecision,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> object:
+    return decide_review_approval(db, current_user, document_id, approval_id, payload)
 
 
 @router.get(
@@ -412,6 +513,16 @@ def read_subsection_workspace(
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> dict[str, object]:
     return get_subsection_workspace(db, current_user, subsection_id, tenant_id)
+
+
+@router.post("/subsections/{subsection_id}/assistant", response_model=EiaAuthoringAssistResponse)
+def post_subsection_authoring_assistant(
+    subsection_id: UUID,
+    payload: EiaAuthoringAssistRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> EiaAuthoringAssistResponse:
+    return generate_authoring_guidance(db, current_user, subsection_id, payload)
 
 
 @router.put("/subsections/{subsection_id}/content", response_model=EiaSubSectionWorkspaceRead)

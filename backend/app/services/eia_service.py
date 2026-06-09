@@ -11,6 +11,7 @@ from app.models.eia import EiaDocument, EiaSection, EiaSubSection
 from app.models.user import User
 from app.schemas.eia import EiaDocumentCreate, EiaDocumentProgressRead, EiaSectionProgressRead, EiaSubSectionUpdate
 from app.seeds.eia_checklist_seed import seed_eia_structure
+from app.services.eia_auto_structure_service import auto_structure_eia_document
 from app.services.audit_service import record_audit_event
 from app.services.project_service import get_project_for_tenant
 
@@ -91,8 +92,21 @@ def create_eia_document(
         entity_type="eia_document",
         entity_id=document.id,
         summary=f"EIA document created for project {project.name}",
-        metadata={"project_id": str(project.id)},
+        metadata={
+            "project_id": str(project.id),
+            "source_document_id": str(payload.source_document_id) if payload.source_document_id else None,
+            "auto_generate_sections": payload.auto_generate_sections,
+        },
     )
+    if payload.source_document_id and payload.auto_generate_sections:
+        auto_structure_eia_document(
+            db,
+            current_user,
+            document.id,
+            payload.source_document_id,
+            source_version_id=payload.source_version_id,
+            apply_detected_content=True,
+        )
     db.commit()
     return get_eia_document_structure(db, current_user, document.id)
 

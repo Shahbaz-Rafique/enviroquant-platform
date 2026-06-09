@@ -10,6 +10,9 @@ from app.schemas.common import ORMModel
 class EiaDocumentCreate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=220)
     metadata: dict = Field(default_factory=dict)
+    source_document_id: UUID | None = None
+    source_version_id: UUID | None = None
+    auto_generate_sections: bool = False
 
 
 class EiaSubSectionUpdate(BaseModel):
@@ -419,6 +422,97 @@ class EiaEvaluationComparisonRead(BaseModel):
     delta: float
     sections: list[EiaEvaluationSectionComparisonRead] = Field(default_factory=list)
     changed_findings: list[EiaEvaluationFindingComparisonRead] = Field(default_factory=list)
+
+
+class EiaAuthoringAssistRequest(BaseModel):
+    action: Literal["OUTLINE", "EVIDENCE_GAPS", "GENERATE_DRAFT", "IMPROVE_DRAFT"]
+    instructions: str | None = Field(default=None, max_length=4_000)
+    tenant_id: UUID | None = None
+
+
+class EiaAuthoringAssistResponse(BaseModel):
+    action: str
+    engine: str
+    model_version: str
+    summary: str
+    generated_html: str
+    guidance_points: list[str] = Field(default_factory=list)
+    metadata: dict = Field(default_factory=dict)
+
+
+class EiaAutoStructureRequest(BaseModel):
+    source_document_id: UUID
+    source_version_id: UUID | None = None
+    apply_detected_content: bool = True
+
+
+class EiaReviewApprovalCreate(BaseModel):
+    evaluation_run_id: UUID
+    request_note: str | None = Field(default=None, max_length=10_000)
+
+
+class EiaReviewApprovalDecision(BaseModel):
+    decision: Literal["APPROVED", "CHANGES_REQUESTED"]
+    decision_note: str | None = Field(default=None, max_length=10_000)
+
+
+class EiaReviewApprovalRead(ORMModel):
+    id: UUID
+    tenant_id: UUID
+    project_id: UUID
+    eia_document_id: UUID
+    evaluation_run_id: UUID
+    requested_by_id: UUID
+    decided_by_id: UUID | None
+    status: str
+    request_note: str | None
+    decision_note: str | None
+    requested_at: datetime
+    decided_at: datetime | None
+    approval_metadata: dict = Field(default_factory=dict)
+    created_at: datetime
+    updated_at: datetime
+
+
+class EiaRegulatorBenchmarkItemRead(BaseModel):
+    eia_document_id: UUID
+    title: str
+    document_status: str
+    latest_run_id: UUID | None = None
+    latest_score: float = 0.0
+    latest_appraisal: str | None = None
+    latest_run_completed_at: datetime | None = None
+    approval_status: str | None = None
+
+
+class EiaRegulatorTrendPointRead(BaseModel):
+    run_id: UUID
+    eia_document_id: UUID
+    eia_document_title: str
+    created_at: datetime
+    completed_at: datetime | None = None
+    overall_score: float = 0.0
+    overall_appraisal: str | None = None
+
+
+class EiaDocumentCrossComparisonRead(BaseModel):
+    left_document_id: UUID
+    right_document_id: UUID
+    left_title: str
+    right_title: str
+    left_score: float
+    right_score: float
+    delta: float
+    left_status_counts: dict = Field(default_factory=dict)
+    right_status_counts: dict = Field(default_factory=dict)
+    section_deltas: list[EiaEvaluationSectionComparisonRead] = Field(default_factory=list)
+
+
+class EiaRegulatorOverviewRead(BaseModel):
+    project_id: UUID
+    benchmark_documents: list[EiaRegulatorBenchmarkItemRead] = Field(default_factory=list)
+    trend_points: list[EiaRegulatorTrendPointRead] = Field(default_factory=list)
+    recent_decisions: list[EiaReviewApprovalRead] = Field(default_factory=list)
 
 
 SubSectionCommentRead.model_rebuild()

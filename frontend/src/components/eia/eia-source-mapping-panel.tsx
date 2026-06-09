@@ -109,6 +109,28 @@ export function EiaSourceMappingPanel({
     }
   }
 
+  async function autoStructureDocument() {
+    if (!selectedDocumentId || !canManage) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await apiRequest(`/eia-documents/${documentId}/auto-structure`, {
+        method: "POST",
+        body: JSON.stringify({
+          source_document_id: selectedDocumentId,
+          apply_detected_content: true
+        })
+      });
+      await Promise.all([loadPanel(), onApplied()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Auto-structure could not be completed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function updateMapping(mapping: EiaSourceMapping, action: "confirm" | "apply" | "reject") {
     setActiveMappingId(mapping.id);
     setError(null);
@@ -210,6 +232,10 @@ export function EiaSourceMappingPanel({
             <Button disabled={saving || !selectedDocumentId} type="submit">
               {saving ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
               Create Suggestions
+            </Button>
+            <Button disabled={saving || !selectedDocumentId} type="button" variant="secondary" onClick={() => void autoStructureDocument()}>
+              {saving ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
+              Auto-Structure EIA
             </Button>
           </form>
         ) : null}

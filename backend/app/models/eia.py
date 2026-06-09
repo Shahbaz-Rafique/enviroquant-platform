@@ -74,6 +74,12 @@ class EiaDocument(TimestampMixin, Base):
         cascade="all, delete-orphan",
         order_by="EiaEvaluationRun.created_at.desc()",
     )
+    review_approvals = relationship(
+        "EiaReviewApproval",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="EiaReviewApproval.created_at.desc()",
+    )
 
 
 class EiaSection(TimestampMixin, Base):

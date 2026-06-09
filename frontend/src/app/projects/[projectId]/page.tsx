@@ -14,8 +14,10 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
 import type { EiaDocument, EiaDocumentStructure, Project, ProjectDocument } from "@/lib/types";
 
 export default function ProjectWorkspacePage() {
@@ -28,11 +30,15 @@ export default function ProjectWorkspacePage() {
   const [eiaDocuments, setEiaDocuments] = useState<EiaDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingEia, setCreatingEia] = useState(false);
+  const [selectedSourceDocumentId, setSelectedSourceDocumentId] = useState("NONE");
+  const [autoGenerateSections, setAutoGenerateSections] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const canUpload = hasPermission(user, PERMISSIONS.DOCUMENT_UPLOAD);
   const canManageEia =
     hasPermission(user, PERMISSIONS.PROJECT_CREATE) || hasPermission(user, PERMISSIONS.PROJECT_UPDATE);
+  const canAccessRegulatorInsights =
+    hasAnyRole(user, ["regulator", "reviewer", "admin", "owner"]) || hasPermission(user, PERMISSIONS.REVIEW_READ);
 
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
@@ -60,7 +66,9 @@ export default function ProjectWorkspacePage() {
       const eiaDocument = await apiRequest<EiaDocumentStructure>(`/eia-documents/project/${projectId}`, {
         method: "POST",
         body: JSON.stringify({
-          title: project?.name ? `${project.name} EIA Document` : "New EIA Document"
+          title: project?.name ? `${project.name} EIA Document` : "New EIA Document",
+          source_document_id: selectedSourceDocumentId !== "NONE" ? selectedSourceDocumentId : null,
+          auto_generate_sections: selectedSourceDocumentId !== "NONE" ? autoGenerateSections : false
         })
       });
       setEiaDocuments((current) => [eiaDocument, ...current]);
@@ -77,6 +85,12 @@ export default function ProjectWorkspacePage() {
       loadWorkspace();
     }
   }, [loadWorkspace, projectId, user]);
+
+  const sourceDocuments = documents.filter((document) =>
+    ["eia_report", "previous_eia", "legacy_report", "supporting_document", "baseline_study"].includes(
+      document.document_type
+    )
+  );
 
   if (userLoading || !user) {
     return null;
@@ -126,16 +140,47 @@ export default function ProjectWorkspacePage() {
                       Structured EIA Documents
                     </div>
                     <p className="mt-1 text-sm text-white/66">
-                      Create checklist-aligned EIA drafts with seeded sections and subsections.
+                      Create a checklist-aligned EIA and optionally auto-apply parsed source sections from an uploaded report.
                     </p>
                   </div>
-                  {canManageEia ? (
-                    <Button type="button" disabled={creatingEia} onClick={createStructuredEia}>
-                      {creatingEia ? <RefreshCcw className="animate-spin" /> : <FilePlus2 />}
-                      New EIA
-                    </Button>
-                  ) : null}
                 </div>
+
+                {canManageEia ? (
+                  <div className="mb-4 grid gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <div className="grid gap-3">
+                      <label className="grid gap-2 text-sm font-semibold text-white/78">
+                        Source document
+                        <Select value={selectedSourceDocumentId} onValueChange={setSelectedSourceDocumentId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Create empty checklist EIA" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NONE">Create empty checklist EIA</SelectItem>
+                            {sourceDocuments.map((document) => (
+                              <SelectItem key={document.id} value={document.id}>
+                                {document.original_filename}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </label>
+                      <label className="flex items-center gap-3 text-sm text-white/72">
+                        <Checkbox
+                          checked={autoGenerateSections && selectedSourceDocumentId !== "NONE"}
+                          disabled={selectedSourceDocumentId === "NONE"}
+                          onCheckedChange={(checked) => setAutoGenerateSections(Boolean(checked))}
+                        />
+                        Auto-apply parsed sections into the seeded EIA structure
+                      </label>
+                    </div>
+                    <div className="grid content-end">
+                      <Button type="button" disabled={creatingEia} onClick={createStructuredEia}>
+                        {creatingEia ? <RefreshCcw className="animate-spin" /> : <FilePlus2 />}
+                        New EIA
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="grid gap-3">
                   {!eiaDocuments.length ? (
@@ -150,7 +195,9 @@ export default function ProjectWorkspacePage() {
                         <div className="min-w-0">
                           <strong className="block truncate text-sm text-white">{eiaDocument.title}</strong>
                           <span className="mt-1 block text-sm text-white/52">
-                            Standard 8-section EIA checklist structure
+                            {typeof eiaDocument.document_metadata?.auto_structure === "object"
+                              ? "Seeded checklist plus parsed source auto-structure"
+                              : "Standard 8-section EIA checklist structure"}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -239,6 +286,14 @@ export default function ProjectWorkspacePage() {
                   Open Documents
                 </Link>
               </Button>
+              {canAccessRegulatorInsights ? (
+                <Button asChild variant="outline">
+                  <Link href={`/projects/${projectId}/regulator`}>
+                    <FileSearch />
+                    Regulator Insights
+                  </Link>
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
         </aside>
