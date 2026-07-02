@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.eia import EiaDocument
@@ -22,6 +22,8 @@ from app.services.eia_service import (
     require_eia_document_permission,
 )
 
+REVIEW_APPROVALS_MIGRATION = "0010_eia_review_approvals"
+
 
 def list_review_approvals(
     db: Session,
@@ -29,6 +31,8 @@ def list_review_approvals(
     document_id: UUID,
 ) -> list[EiaReviewApproval]:
     document = get_eia_document_for_tenant(db, current_user, document_id)
+    if not review_approval_table_exists(db):
+        return []
     statement = (
         select(EiaReviewApproval)
         .where(
@@ -47,6 +51,7 @@ def create_review_approval_request(
     payload: EiaReviewApprovalCreate,
 ) -> EiaReviewApproval:
     document = get_eia_document_for_tenant(db, current_user, document_id)
+    require_review_approval_schema(db)
     require_eia_document_permission(document, current_user, DOCUMENT_EDIT_ROLES, "submit for review")
     run = _get_completed_run(db, current_user, document, payload.evaluation_run_id)
     active_request = db.scalar(
@@ -99,6 +104,7 @@ def decide_review_approval(
     payload: EiaReviewApprovalDecision,
 ) -> EiaReviewApproval:
     document = get_eia_document_for_tenant(db, current_user, document_id)
+    require_review_approval_schema(db)
     _require_formal_reviewer(document, current_user)
     approval = db.scalar(
         select(EiaReviewApproval).where(
@@ -169,4 +175,20 @@ def _require_formal_reviewer(document: EiaDocument, current_user: User) -> None:
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="A reviewer role is required to approve or reject a formal review request",
+    )
+
+
+def review_approval_table_exists(db: Session) -> bool:
+    return inspect(db.get_bind()).has_table(EiaReviewApproval.__tablename__)
+
+
+def require_review_approval_schema(db: Session) -> None:
+    if review_approval_table_exists(db):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            "Formal review approvals are unavailable until database migration "
+            f"{REVIEW_APPROVALS_MIGRATION} is applied"
+        ),
     )

@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_evaluation_model: str = "gpt-4.1-mini"
     openai_evaluation_timeout_seconds: int = 90
+    openai_evaluation_max_concurrency: int = 6
 
 
 @lru_cache

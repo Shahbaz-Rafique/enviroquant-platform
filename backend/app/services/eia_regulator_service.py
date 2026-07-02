@@ -12,6 +12,7 @@ from app.models.eia_evaluation import EiaEvaluationRun, EiaEvaluationSectionSumm
 from app.models.eia_review_approval import EiaReviewApproval
 from app.models.project import Project
 from app.models.user import User
+from app.services.eia_review_approval_service import review_approval_table_exists
 
 
 def get_regulator_overview(
@@ -20,14 +21,15 @@ def get_regulator_overview(
     project_id: UUID,
 ) -> dict[str, object]:
     project = _get_project_for_insights(db, current_user, project_id)
+    document_query = select(EiaDocument).options(
+        selectinload(EiaDocument.evaluation_runs).selectinload(EiaEvaluationRun.section_summaries)
+    )
+    approvals_available = review_approval_table_exists(db)
+    if approvals_available:
+        document_query = document_query.options(selectinload(EiaDocument.review_approvals))
     documents = list(
         db.scalars(
-            select(EiaDocument)
-            .options(
-                selectinload(EiaDocument.evaluation_runs).selectinload(EiaEvaluationRun.section_summaries),
-                selectinload(EiaDocument.review_approvals),
-            )
-            .where(EiaDocument.tenant_id == current_user.tenant_id, EiaDocument.project_id == project.id)
+            document_query.where(EiaDocument.tenant_id == current_user.tenant_id, EiaDocument.project_id == project.id)
         ).unique().all()
     )
     benchmark_documents = []
@@ -36,7 +38,8 @@ def get_regulator_overview(
 
     for document in documents:
         latest_completed = _latest_completed_run(document.evaluation_runs)
-        latest_decision = next((item for item in document.review_approvals if item.decided_at is not None), None)
+        review_approvals = list(document.review_approvals) if approvals_available else []
+        latest_decision = next((item for item in review_approvals if item.decided_at is not None), None)
         benchmark_documents.append(
             {
                 "eia_document_id": document.id,
@@ -63,7 +66,7 @@ def get_regulator_overview(
                     "overall_appraisal": _run_appraisal(run),
                 }
             )
-        recent_decisions.extend(document.review_approvals)
+        recent_decisions.extend(review_approvals)
 
     benchmark_documents.sort(
         key=lambda item: (

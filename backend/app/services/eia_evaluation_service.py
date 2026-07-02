@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 import json
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
 from io import BytesIO
 from typing import Any
@@ -52,6 +53,15 @@ STATUS_WEIGHTS = {
     STATUS_NEEDS_REVIEW: 0.2,
 }
 
+ACTIVE_EVALUATION_RUN_STATUSES = {"PENDING", "RUNNING"}
+EVALUATION_STALE_AFTER = timedelta(minutes=10)
+NO_SUBSECTIONS_DETAIL = "Add at least one EIA subsection in the builder before queueing a review"
+ACTIVE_RUN_DETAIL = "An evaluation run is already queued or running for this EIA document"
+STALE_RUN_DETAIL = (
+    "This evaluation run did not finish within the expected processing window and was marked as failed. "
+    "Queue a new review to try again."
+)
+
 
 @dataclass
 class EvaluationResult:
@@ -80,12 +90,37 @@ class RoutedChunk:
     content_metadata: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class SectionEvaluationSnapshot:
+    section_number: str
+    title: str
+
+
+@dataclass(frozen=True)
+class SubsectionEvaluationSnapshot:
+    id: UUID
+    subsection_number: str
+    title: str
+    content: str
+
+
+@dataclass
+class EvaluationTask:
+    index: int
+    section: SectionEvaluationSnapshot
+    subsection: SubsectionEvaluationSnapshot
+    routed_chunks: list[RoutedChunk]
+    source_notes: list[str]
+    source_mappings: list[EiaSourceMapping]
+
+
 def list_eia_evaluation_runs(
     db: Session,
     current_user: User,
     document_id: UUID,
 ) -> list[EiaEvaluationRun]:
     document = get_eia_document_for_tenant(db, current_user, document_id, DOCUMENT_READ_ROLES, "view evaluations")
+    _reconcile_stale_runs(db, current_user.tenant_id, document.id)
     statement = (
         select(EiaEvaluationRun)
         .where(
@@ -104,6 +139,7 @@ def get_eia_evaluation_run(
     run_id: UUID,
 ) -> EiaEvaluationRun:
     document = get_eia_document_for_tenant(db, current_user, document_id, DOCUMENT_READ_ROLES, "view evaluations")
+    _reconcile_stale_runs(db, current_user.tenant_id, document.id)
     run = db.scalar(
         select(EiaEvaluationRun)
         .options(
@@ -128,8 +164,13 @@ def enqueue_eia_evaluation_run(
     payload: EiaEvaluationRunCreate,
 ) -> EiaEvaluationRun:
     document = _get_document_for_evaluation(db, current_user, document_id)
+    _reconcile_stale_runs(db, current_user.tenant_id, document.id)
+    _require_document_has_subsections(document)
+    if _get_active_evaluation_run(db, current_user.tenant_id, document.id) is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=ACTIVE_RUN_DETAIL)
     source_document, source_version = _resolve_source_scope(db, current_user, document, payload)
     settings = get_settings()
+    total_subsections = len(_document_subsections(document))
 
     run = EiaEvaluationRun(
         tenant_id=current_user.tenant_id,
@@ -149,6 +190,10 @@ def enqueue_eia_evaluation_run(
             "used_openai": False,
             "fallback_count": 0,
             "queued_at": datetime.now(UTC).isoformat(),
+            "processed_subsections": 0,
+            "total_subsections": total_subsections,
+            "progress_percentage": 0.0,
+            "status_message": f"Review queued. 0/{total_subsections} subsections processed.",
         },
     )
     db.add(run)
@@ -188,6 +233,14 @@ def process_eia_evaluation_run_background(run_id: UUID) -> None:
         run.status = "RUNNING"
         run.started_at = datetime.now(UTC)
         run.completed_at = None
+        total_subsections = _metadata_int(run.run_metadata, "total_subsections")
+        run.run_metadata = {
+            **(run.run_metadata or {}),
+            "processed_subsections": 0,
+            "progress_percentage": 0.0,
+            "status_message": f"Review started. 0/{total_subsections} subsections processed.",
+            "last_heartbeat_at": datetime.now(UTC).isoformat(),
+        }
         db.commit()
 
         _execute_evaluation_run(db, run)
@@ -195,13 +248,7 @@ def process_eia_evaluation_run_background(run_id: UUID) -> None:
         failed_db = db
         run = failed_db.get(EiaEvaluationRun, run_id)
         if run is not None:
-            run.status = "FAILED"
-            run.completed_at = datetime.now(UTC)
-            run.run_metadata = {
-                **(run.run_metadata or {}),
-                "error": str(exc),
-                "warnings": list({*(run.run_metadata or {}).get("warnings", []), str(exc)}),
-            }
+            _mark_run_failed(failed_db, run, str(exc), code="execution_error")
             failed_db.commit()
     finally:
         db.close()
@@ -351,6 +398,7 @@ def _execute_evaluation_run(db: Session, run: EiaEvaluationRun) -> None:
     )
     if document is None:
         raise RuntimeError("EIA document missing for evaluation run")
+    _require_document_has_subsections_for_execution(document)
 
     db.query(EiaEvaluationFinding).filter(EiaEvaluationFinding.evaluation_run_id == run.id).delete()
     db.query(EiaEvaluationSectionSummary).filter(EiaEvaluationSectionSummary.evaluation_run_id == run.id).delete()
@@ -358,6 +406,19 @@ def _execute_evaluation_run(db: Session, run: EiaEvaluationRun) -> None:
 
     routing_chunks = _load_candidate_chunks(db, run, document.project_id)
     source_mappings_by_subsection = _group_source_mappings(document.source_mappings)
+    total_subsections = len(_document_subsections(document))
+    evaluation_tasks = _build_evaluation_tasks(
+        document=document,
+        candidate_chunks=routing_chunks,
+        source_mappings_by_subsection=source_mappings_by_subsection,
+    )
+    task_results = _evaluate_tasks(
+        db,
+        run,
+        settings=settings,
+        tasks=evaluation_tasks,
+        total_subsections=total_subsections,
+    )
 
     warnings: list[str] = []
     used_openai = False
@@ -365,52 +426,18 @@ def _execute_evaluation_run(db: Session, run: EiaEvaluationRun) -> None:
     findings_to_add: list[EiaEvaluationFinding] = []
     section_findings: dict[str, list[EiaEvaluationFinding]] = defaultdict(list)
 
-    for section in document.sections:
-        for subsection in section.subsections:
-            routed_chunks = _route_chunks_for_subsection(
-                subsection=subsection,
-                section=section,
-                candidate_chunks=routing_chunks,
-                source_mappings=source_mappings_by_subsection.get(subsection.id, []),
-            )
-            result = _evaluate_subsection(
-                subsection=subsection,
-                section=section,
-                source_mappings=source_mappings_by_subsection.get(subsection.id, []),
-                routed_chunks=routed_chunks,
-                settings=settings,
-            )
-            if result.engine == "openai":
-                used_openai = True
-            else:
-                fallback_count += 1
-                if result.metadata.get("warning"):
-                    warnings.append(str(result.metadata["warning"]))
+    for task in evaluation_tasks:
+        result = task_results[task.index]
+        if result.engine == "openai":
+            used_openai = True
+        else:
+            fallback_count += 1
+            if result.metadata.get("warning"):
+                warnings.append(str(result.metadata["warning"]))
 
-            finding = EiaEvaluationFinding(
-                tenant_id=run.tenant_id,
-                evaluation_run_id=run.id,
-                subsection_id=subsection.id,
-                checklist_section=subsection.subsection_number,
-                checklist_title=subsection.title,
-                subsection_number=subsection.subsection_number,
-                subsection_title=subsection.title,
-                status=_classify_result(result),
-                adequacy=result.adequacy,
-                confidence_score=result.confidence,
-                evidence_summary=result.evidence_summary,
-                ai_analysis=result.ai_analysis,
-                recommendation=result.recommendation,
-                missing_elements=result.missing_elements,
-                evidence_references=_build_evidence_references(
-                    subsection=subsection,
-                    routed_chunks=routed_chunks,
-                    source_mappings=source_mappings_by_subsection.get(subsection.id, []),
-                ),
-                finding_metadata=result.metadata,
-            )
-            findings_to_add.append(finding)
-            section_findings[section.section_number].append(finding)
+        finding = _build_finding_from_task(run, task, result)
+        findings_to_add.append(finding)
+        section_findings[task.section.section_number].append(finding)
 
     db.add_all(findings_to_add)
     db.flush()
@@ -426,6 +453,7 @@ def _execute_evaluation_run(db: Session, run: EiaEvaluationRun) -> None:
         used_openai=used_openai,
         fallback_count=fallback_count,
         routed_chunk_count=len(routing_chunks),
+        total_subsections=total_subsections,
     )
     record_audit_event(
         db,
@@ -443,13 +471,290 @@ def _execute_evaluation_run(db: Session, run: EiaEvaluationRun) -> None:
 def _get_document_for_evaluation(db: Session, current_user: User, document_id: UUID) -> EiaDocument:
     document = db.scalar(
         select(EiaDocument)
-        .options(selectinload(EiaDocument.members))
+        .options(
+            selectinload(EiaDocument.members),
+            selectinload(EiaDocument.sections).selectinload(EiaSection.subsections),
+        )
         .where(EiaDocument.id == document_id, EiaDocument.tenant_id == current_user.tenant_id)
     )
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIA document not found")
     require_eia_document_permission(document, current_user, DOCUMENT_REVIEW_ROLES, "run evaluations")
     return document
+
+
+def _build_evaluation_tasks(
+    *,
+    document: EiaDocument,
+    candidate_chunks: list[RoutedChunk],
+    source_mappings_by_subsection: dict[UUID, list[EiaSourceMapping]],
+) -> list[EvaluationTask]:
+    tasks: list[EvaluationTask] = []
+    index = 0
+    for section in document.sections:
+        for subsection in section.subsections:
+            source_mappings = source_mappings_by_subsection.get(subsection.id, [])
+            tasks.append(
+                EvaluationTask(
+                    index=index,
+                    section=SectionEvaluationSnapshot(
+                        section_number=section.section_number,
+                        title=section.title,
+                    ),
+                    subsection=SubsectionEvaluationSnapshot(
+                        id=subsection.id,
+                        subsection_number=subsection.subsection_number,
+                        title=subsection.title,
+                        content=subsection.content or "",
+                    ),
+                    routed_chunks=_route_chunks_for_subsection(
+                        subsection=subsection,
+                        section=section,
+                        candidate_chunks=candidate_chunks,
+                        source_mappings=source_mappings,
+                    ),
+                    source_notes=[
+                        f"{mapping.detected_section_number or 'Source'} - "
+                        f"{mapping.detected_title or mapping.source_document.original_filename}"
+                        for mapping in source_mappings
+                    ],
+                    source_mappings=source_mappings,
+                )
+            )
+            index += 1
+    return tasks
+
+
+def _evaluate_tasks(
+    db: Session,
+    run: EiaEvaluationRun,
+    *,
+    settings,
+    tasks: list[EvaluationTask],
+    total_subsections: int,
+) -> dict[int, EvaluationResult]:
+    if not tasks:
+        return {}
+
+    max_workers = _get_evaluation_worker_count(settings, len(tasks))
+    if max_workers == 1:
+        results: dict[int, EvaluationResult] = {}
+        for processed_subsections, task in enumerate(tasks, start=1):
+            result = _evaluate_task_payload(task, settings)
+            results[task.index] = result
+            _update_run_progress(
+                db,
+                run,
+                processed_subsections=processed_subsections,
+                total_subsections=total_subsections,
+                section=task.section,
+                subsection=task.subsection,
+            )
+        return results
+
+    results = {}
+    processed_subsections = 0
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="eia-eval") as executor:
+        future_map: dict[Future[EvaluationResult], EvaluationTask] = {
+            executor.submit(_evaluate_task_payload, task, settings): task for task in tasks
+        }
+        for future in as_completed(future_map):
+            task = future_map[future]
+            try:
+                result = future.result()
+            except Exception as exc:
+                result = _result_for_task_exception(task.subsection.subsection_number, exc)
+            results[task.index] = result
+            processed_subsections += 1
+            _update_run_progress(
+                db,
+                run,
+                processed_subsections=processed_subsections,
+                total_subsections=total_subsections,
+                section=task.section,
+                subsection=task.subsection,
+            )
+    return results
+
+
+def _get_evaluation_worker_count(settings, task_count: int) -> int:
+    if task_count <= 1:
+        return 1
+    if not settings.openai_api_key:
+        return 1
+    configured = settings.openai_evaluation_max_concurrency
+    if not isinstance(configured, int) or configured < 1:
+        return 1
+    return min(task_count, configured)
+
+
+def _evaluate_task_payload(task: EvaluationTask, settings) -> EvaluationResult:
+    return _evaluate_subsection(
+        subsection=task.subsection,
+        section=task.section,
+        source_notes=task.source_notes,
+        routed_chunks=task.routed_chunks,
+        settings=settings,
+    )
+
+
+def _build_finding_from_task(
+    run: EiaEvaluationRun,
+    task: EvaluationTask,
+    result: EvaluationResult,
+) -> EiaEvaluationFinding:
+    return EiaEvaluationFinding(
+        tenant_id=run.tenant_id,
+        evaluation_run_id=run.id,
+        subsection_id=task.subsection.id,
+        checklist_section=task.subsection.subsection_number,
+        checklist_title=task.subsection.title,
+        subsection_number=task.subsection.subsection_number,
+        subsection_title=task.subsection.title,
+        status=_classify_result(result),
+        adequacy=result.adequacy,
+        confidence_score=result.confidence,
+        evidence_summary=result.evidence_summary,
+        ai_analysis=result.ai_analysis,
+        recommendation=result.recommendation,
+        missing_elements=result.missing_elements,
+        evidence_references=_build_evidence_references(
+            subsection=task.subsection,
+            routed_chunks=task.routed_chunks,
+            source_mappings=task.source_mappings,
+        ),
+        finding_metadata=result.metadata,
+    )
+
+
+def _result_for_task_exception(subsection_number: str, exc: Exception) -> EvaluationResult:
+    return EvaluationResult(
+        adequacy=ADEQUACY_NEEDS_REVIEW,
+        evidence_summary="This subsection could not be evaluated automatically in the current run.",
+        ai_analysis="An unexpected processing error occurred while evaluating this subsection.",
+        missing_elements=[],
+        recommendation="Review this subsection manually or rerun the evaluation.",
+        confidence=0.2,
+        engine="rules",
+        metadata={"warning": f"Unexpected evaluation error for {subsection_number}: {exc}"},
+    )
+
+
+def _reconcile_stale_runs(
+    db: Session,
+    tenant_id: UUID,
+    document_id: UUID,
+    *,
+    run_id: UUID | None = None,
+) -> None:
+    statement = (
+        select(EiaEvaluationRun)
+        .where(
+            EiaEvaluationRun.tenant_id == tenant_id,
+            EiaEvaluationRun.eia_document_id == document_id,
+            EiaEvaluationRun.status.in_(ACTIVE_EVALUATION_RUN_STATUSES),
+        )
+        .order_by(EiaEvaluationRun.created_at.desc())
+    )
+    if run_id is not None:
+        statement = statement.where(EiaEvaluationRun.id == run_id)
+
+    now = datetime.now(UTC)
+    changed = False
+    for run in db.scalars(statement).all():
+        if _is_stale_active_run(run, now):
+            _mark_run_failed(db, run, STALE_RUN_DETAIL, code="stale_run")
+            changed = True
+
+    if changed:
+        db.commit()
+
+
+def _get_active_evaluation_run(db: Session, tenant_id: UUID, document_id: UUID) -> EiaEvaluationRun | None:
+    return db.scalar(
+        select(EiaEvaluationRun)
+        .where(
+            EiaEvaluationRun.tenant_id == tenant_id,
+            EiaEvaluationRun.eia_document_id == document_id,
+            EiaEvaluationRun.status.in_(ACTIVE_EVALUATION_RUN_STATUSES),
+        )
+        .order_by(EiaEvaluationRun.created_at.desc())
+    )
+
+
+def _is_stale_active_run(run: EiaEvaluationRun, now: datetime) -> bool:
+    if run.status not in ACTIVE_EVALUATION_RUN_STATUSES:
+        return False
+    reference_time = run.updated_at or run.started_at or run.created_at
+    return (now - reference_time) > EVALUATION_STALE_AFTER
+
+
+def _document_subsections(document: EiaDocument) -> list[EiaSubSection]:
+    return [subsection for section in document.sections for subsection in section.subsections]
+
+
+def _require_document_has_subsections(document: EiaDocument) -> None:
+    if _document_subsections(document):
+        return
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=NO_SUBSECTIONS_DETAIL)
+
+
+def _require_document_has_subsections_for_execution(document: EiaDocument) -> None:
+    if _document_subsections(document):
+        return
+    raise RuntimeError(NO_SUBSECTIONS_DETAIL)
+
+
+def _mark_run_failed(
+    db: Session,
+    run: EiaEvaluationRun,
+    message: str,
+    *,
+    code: str,
+) -> None:
+    warnings = [
+        item
+        for item in (run.run_metadata or {}).get("warnings", [])
+        if isinstance(item, str)
+    ]
+    if message not in warnings:
+        warnings.append(message)
+    run.status = "FAILED"
+    run.completed_at = datetime.now(UTC)
+    run.run_metadata = {
+        **(run.run_metadata or {}),
+        "error": message,
+        "status_message": message,
+        "failure_code": code,
+        "warnings": warnings[:20],
+    }
+
+
+def _update_run_progress(
+    db: Session,
+    run: EiaEvaluationRun,
+    *,
+    processed_subsections: int,
+    total_subsections: int,
+    section: SectionEvaluationSnapshot | EiaSection,
+    subsection: SubsectionEvaluationSnapshot | EiaSubSection,
+) -> None:
+    progress_percentage = round((processed_subsections / total_subsections) * 100, 2) if total_subsections else 0.0
+    run.run_metadata = {
+        **(run.run_metadata or {}),
+        "processed_subsections": processed_subsections,
+        "total_subsections": total_subsections,
+        "progress_percentage": progress_percentage,
+        "current_section_number": section.section_number,
+        "current_subsection_number": subsection.subsection_number,
+        "current_subsection_title": subsection.title,
+        "status_message": (
+            f"Review is running. {processed_subsections}/{total_subsections} subsections processed. "
+            f"Currently on {subsection.subsection_number}."
+        ),
+        "last_heartbeat_at": datetime.now(UTC).isoformat(),
+    }
+    db.commit()
 
 
 def _resolve_source_scope(
@@ -609,17 +914,13 @@ def _route_chunks_for_subsection(
 
 def _evaluate_subsection(
     *,
-    subsection: EiaSubSection,
-    section: EiaSection,
-    source_mappings: list[EiaSourceMapping],
+    subsection: SubsectionEvaluationSnapshot | EiaSubSection,
+    section: SectionEvaluationSnapshot | EiaSection,
+    source_notes: list[str],
     routed_chunks: list[RoutedChunk],
     settings,
 ) -> EvaluationResult:
     draft_content = (subsection.content or "").strip()
-    source_notes = [
-        f"{mapping.detected_section_number or 'Source'} - {mapping.detected_title or mapping.source_document.original_filename}"
-        for mapping in source_mappings
-    ]
     if not draft_content and not routed_chunks and not source_notes:
         return EvaluationResult(
             adequacy=ADEQUACY_MISSING,
@@ -655,8 +956,8 @@ def _evaluate_subsection(
 def _evaluate_with_openai(
     *,
     settings,
-    section: EiaSection,
-    subsection: EiaSubSection,
+    section: SectionEvaluationSnapshot | EiaSection,
+    subsection: SubsectionEvaluationSnapshot | EiaSubSection,
     draft_content: str,
     source_notes: list[str],
     routed_chunks: list[RoutedChunk],
@@ -769,7 +1070,7 @@ def _evaluate_with_openai(
 
 def _deterministic_content_evaluation(
     *,
-    subsection: EiaSubSection,
+    subsection: SubsectionEvaluationSnapshot | EiaSubSection,
     draft_content: str,
     routed_chunks: list[RoutedChunk],
     source_notes: list[str],
@@ -874,7 +1175,7 @@ def _classify_result(result: EvaluationResult) -> str:
 
 def _build_evidence_references(
     *,
-    subsection: EiaSubSection,
+    subsection: SubsectionEvaluationSnapshot | EiaSubSection,
     routed_chunks: list[RoutedChunk],
     source_mappings: list[EiaSourceMapping],
 ) -> list[dict[str, Any]]:
@@ -980,6 +1281,7 @@ def _build_run_metadata(
     used_openai: bool,
     fallback_count: int,
     routed_chunk_count: int,
+    total_subsections: int,
 ) -> dict[str, Any]:
     counter = Counter(finding.status for finding in findings)
     overall_score = round(sum(summary.score for summary in section_summaries) / len(section_summaries), 2) if section_summaries else 0.0
@@ -988,10 +1290,14 @@ def _build_run_metadata(
         "used_openai": used_openai,
         "fallback_count": fallback_count,
         "routed_chunk_count": routed_chunk_count,
+        "processed_subsections": len(findings),
+        "total_subsections": total_subsections,
+        "progress_percentage": 100.0 if total_subsections else 0.0,
         "total_findings": len(findings),
         "status_counts": dict(counter),
         "overall_score": overall_score,
         "overall_appraisal": _overall_appraisal(overall_score),
+        "status_message": "Review completed successfully.",
         "review_report": {
             "summary": _overall_summary(counter, overall_score),
             "priority_actions": _priority_actions(findings),
@@ -1066,6 +1372,13 @@ def _metadata_number(metadata: dict[str, Any] | None, key: str) -> float:
         return 0.0
     value = metadata.get(key)
     return float(value) if isinstance(value, (int, float)) else 0.0
+
+
+def _metadata_int(metadata: dict[str, Any] | None, key: str) -> int:
+    if not metadata:
+        return 0
+    value = metadata.get(key)
+    return int(value) if isinstance(value, int) else 0
 
 
 def _excerpt(value: str | None, limit: int = 220) -> str | None:

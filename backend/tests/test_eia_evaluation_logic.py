@@ -7,6 +7,7 @@ from app.services.eia_evaluation_service import (
     STATUS_COMPLIANT,
     STATUS_MISSING,
     RoutedChunk,
+    _get_evaluation_worker_count,
     _classify_result,
     _deterministic_content_evaluation,
     _route_chunks_for_subsection,
@@ -120,3 +121,19 @@ def test_chunk_routing_prefers_exact_section_matches() -> None:
 
     assert routed
     assert routed[0].chunk_key == "exact"
+
+
+def test_evaluation_worker_count_is_bounded_when_openai_is_enabled() -> None:
+    settings = SimpleNamespace(openai_api_key="test-key", openai_evaluation_max_concurrency=6)
+
+    worker_count = _get_evaluation_worker_count(settings, 20)
+
+    assert worker_count == 6
+
+
+def test_evaluation_worker_count_stays_single_without_openai() -> None:
+    settings = SimpleNamespace(openai_api_key=None, openai_evaluation_max_concurrency=6)
+
+    worker_count = _get_evaluation_worker_count(settings, 20)
+
+    assert worker_count == 1

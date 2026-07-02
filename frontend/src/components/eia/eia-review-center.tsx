@@ -121,11 +121,14 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
         const detail = await apiRequest<EiaEvaluationRunDetail>(`/eia-documents/${documentId}/evaluation-runs/${runId}`);
         setActiveRun(detail);
         setRuns((current) => current.map((run) => (run.id === detail.id ? { ...run, ...detail } : run)));
+        if (!isEvaluationRunActive(detail)) {
+          void loadBaseData();
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Evaluation run could not be loaded");
       }
     },
-    [documentId]
+    [documentId, loadBaseData]
   );
 
   const loadComparison = useCallback(
@@ -198,6 +201,25 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
   const sectionOptions = useMemo(() => {
     return activeRun?.section_summaries.map((summary) => summary.section_number) ?? [];
   }, [activeRun?.section_summaries]);
+  const subsectionCount = useMemo(
+    () => document?.sections.reduce((count, section) => count + section.subsections.length, 0) ?? 0,
+    [document?.sections]
+  );
+  const activeProcessingRun = useMemo(() => {
+    const listRun = runs.find(
+      (run) => isEvaluationRunActive(run) && (run.id !== activeRun?.id || isEvaluationRunActive(activeRun))
+    );
+    if (listRun) {
+      return listRun;
+    }
+    return isEvaluationRunActive(activeRun) ? activeRun : null;
+  }, [activeRun, runs]);
+  const queueBlockedReason =
+    subsectionCount === 0
+      ? "Add at least one EIA subsection in the builder before queueing a review."
+      : activeProcessingRun
+        ? `A review is already ${activeProcessingRun.status.toLowerCase()}. Wait for it to finish before queueing another run.`
+        : null;
 
   const latestScore = getRunMetadataNumber(activeRun, "overall_score");
   const latestAppraisal = getRunMetadataString(activeRun, "overall_appraisal", "-");
@@ -208,6 +230,9 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
     ? reviewReport.priority_actions.filter((item): item is string => typeof item === "string")
     : [];
   const reviewSummary = typeof reviewReport.summary === "string" ? reviewReport.summary : "No review summary yet.";
+  const selectedRunStatusMessage = getEvaluationRunStatusMessage(activeRun);
+  const showEmptyCompletedRunMessage =
+    activeRun?.status === "COMPLETED" && getRunMetadataNumber(activeRun, "total_findings") === 0;
 
   async function runEvaluation() {
     setRunning(true);
@@ -351,9 +376,9 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
             ) : null}
             <div className="flex flex-wrap gap-2">
               {canRunReview ? (
-                <Button type="button" disabled={running} onClick={runEvaluation}>
-                  {running ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                  Queue review
+                <Button type="button" disabled={running || !!queueBlockedReason} onClick={runEvaluation}>
+                  {running || activeProcessingRun ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                  {running ? "Queueing Review..." : activeProcessingRun ? "Review In Progress" : "Queue Review"}
                 </Button>
               ) : null}
               <Button type="button" variant="secondary" onClick={() => void loadBaseData()}>
@@ -388,6 +413,14 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
 
       {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
       {loading ? <Alert>Loading review center...</Alert> : null}
+      {!loading && !error && queueBlockedReason ? (
+        <Alert className="border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#D9FBFF]">{queueBlockedReason}</Alert>
+      ) : null}
+      {!loading && !error && activeProcessingRun ? (
+        <Alert className="border-white/12 bg-white/[0.05] text-white/78">
+          {getEvaluationRunStatusMessage(activeProcessingRun)}
+        </Alert>
+      ) : null}
 
       <section className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <aside className="builder-panel sticky top-20 self-start overflow-hidden">
@@ -419,13 +452,11 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                       </span>
                       <Badge className={cn(runStatusClass(run.status))}>{run.status}</Badge>
                     </div>
-                    <div className="mt-2 text-xs text-white/58">
-                      Score {getRunMetadataNumber(run, "overall_score")}/10 · Appraisal{" "}
-                      {getRunMetadataString(run, "overall_appraisal", "-")}
-                    </div>
+                    <div className="mt-2 text-xs text-white/58">{getEvaluationRunMetricLine(run)}</div>
                     <div className="mt-1 text-xs text-white/42">
                       Routed chunks {getRunMetadataNumber(run, "routed_chunk_count")}
                     </div>
+                    <div className="mt-2 text-xs leading-5 text-white/50">{getEvaluationRunStatusMessage(run)}</div>
                   </button>
                 ))}
               </div>
@@ -492,7 +523,22 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                 </Select>
               </label>
             </CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <CardContent className="grid gap-3 md:grid-cols-2 3xl:grid-cols-4">
+              {isEvaluationRunActive(activeRun) ? (
+                <Alert className="md:col-span-2 xl:col-span-4">
+                  {selectedRunStatusMessage || "Review is still running. Findings and section scores will appear when processing finishes."}
+                </Alert>
+              ) : null}
+              {activeRun?.status === "FAILED" && selectedRunStatusMessage ? (
+                <Alert className="md:col-span-2 xl:col-span-4 border-red-400/30 bg-red-500/10 text-red-100">
+                  {selectedRunStatusMessage}
+                </Alert>
+              ) : null}
+              {showEmptyCompletedRunMessage ? (
+                <Alert className="md:col-span-2 xl:col-span-4 border-amber-400/25 bg-amber-500/10 text-amber-100">
+                  This run completed without checklist findings. Add subsections in the builder, then queue a new review.
+                </Alert>
+              ) : null}
               {(activeRun?.section_summaries ?? []).map((summary) => (
                 <div key={summary.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -505,7 +551,9 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                   <p className="mt-3 text-sm leading-6 text-white/62">{summary.summary_comment}</p>
                 </div>
               ))}
-              {!activeRun?.section_summaries.length ? <Alert>No section summary available.</Alert> : null}
+              {activeRun && !isEvaluationRunActive(activeRun) && activeRun.status !== "FAILED" && !activeRun.section_summaries.length ? (
+                <Alert>No section summary available.</Alert>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -559,7 +607,17 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
             </CardHeader>
             <CardContent className="grid gap-4">
               {!activeRun ? <Alert>Select or queue an evaluation to inspect findings.</Alert> : null}
-              {activeRun && !filteredFindings.length ? <Alert>No findings match the current filters.</Alert> : null}
+              {isEvaluationRunActive(activeRun) ? (
+                <Alert>Review is still processing. Findings will populate here automatically when the run completes.</Alert>
+              ) : null}
+              {activeRun?.status === "FAILED" ? (
+                <Alert className="border-red-400/30 bg-red-500/10 text-red-100">
+                  {selectedRunStatusMessage || "This evaluation run did not complete."}
+                </Alert>
+              ) : null}
+              {activeRun && !isEvaluationRunActive(activeRun) && activeRun.status !== "FAILED" && !filteredFindings.length ? (
+                <Alert>No findings match the current filters.</Alert>
+              ) : null}
               {filteredFindings.map((finding) => (
                 <FindingCard
                   key={finding.id}
@@ -949,6 +1007,52 @@ function runStatusClass(status: string) {
     return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
   }
   return "border-white/12 bg-white/[0.05] text-white/68";
+}
+
+function isEvaluationRunActive(run: EiaEvaluationRun | EiaEvaluationRunDetail | null | undefined) {
+  return !!run && ["PENDING", "RUNNING"].includes(run.status);
+}
+
+function getEvaluationRunMetricLine(run: EiaEvaluationRun | EiaEvaluationRunDetail) {
+  if (isEvaluationRunActive(run)) {
+    return "Processing review output. Findings and score appear after completion.";
+  }
+  if (run.status === "FAILED") {
+    return "Run stopped before a score could be produced.";
+  }
+  return `Score ${getRunMetadataNumber(run, "overall_score")}/10 · Appraisal ${getRunMetadataString(run, "overall_appraisal", "-")}`;
+}
+
+function getEvaluationRunStatusMessage(run: EiaEvaluationRun | EiaEvaluationRunDetail | null | undefined) {
+  if (!run) {
+    return "";
+  }
+
+  const statusMessage = getRunMetadataString(run, "status_message");
+  if (statusMessage) {
+    return statusMessage;
+  }
+
+  const processedSubsections = getRunMetadataNumber(run, "processed_subsections");
+  const totalSubsections = getRunMetadataNumber(run, "total_subsections");
+
+  if (run.status === "PENDING") {
+    return totalSubsections
+      ? `Review queued. ${processedSubsections}/${totalSubsections} subsections processed.`
+      : "Review queued. Processing starts automatically after the request is accepted.";
+  }
+  if (run.status === "RUNNING") {
+    return totalSubsections
+      ? `Review is running. ${processedSubsections}/${totalSubsections} subsections processed.`
+      : "Review is running. Findings, section summaries, and the overall score will appear when processing finishes.";
+  }
+  if (run.status === "FAILED") {
+    return getRunMetadataString(run, "error", "This evaluation run did not complete.");
+  }
+  if (run.status === "COMPLETED" && getRunMetadataNumber(run, "total_findings") === 0) {
+    return "Review completed without checklist findings. Add subsections before queueing another run.";
+  }
+  return "";
 }
 
 function countProblemFindings(findings: EiaEvaluationFinding[]) {
