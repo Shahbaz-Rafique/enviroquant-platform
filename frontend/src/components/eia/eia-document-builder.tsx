@@ -329,12 +329,6 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline">
-                  <Link href={`/projects/${projectId}/eia/${documentId}/review`}>
-                    <FileSearch />
-                    Review Center
-                  </Link>
-                </Button>
                 {selectedSubsection ? (
                   <Button asChild variant="secondary">
                     <Link href={`/projects/${projectId}/eia/${documentId}/subsection/${selectedSubsection.id}`}>
@@ -343,63 +337,43 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                     </Link>
                   </Button>
                 ) : null}
-                {canEdit ? (
-                  <Button type="submit" disabled={!selectedSubsection || saving}>
-                    {saving ? <Loader2 className="animate-spin" /> : <Save />}
-                    Save Draft
-                  </Button>
-                ) : null}
+                <Button type="submit" disabled={!canEdit || !selectedSubsection || saving}>
+                  {saving ? <Loader2 className="animate-spin" /> : <Save />}
+                  Save Draft
+                </Button>
               </div>
             </div>
           </div>
 
           <div className="grid gap-5 border-b border-white/10 bg-white/[0.04] p-5 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
-            {canEdit ? (
-              <>
-                <label className="grid gap-2 text-sm font-semibold text-white/78">
-                  Completion status
-                  <Select value={completionStatus} onValueChange={setCompletionStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label className="grid gap-2 text-sm font-semibold text-white/78">
-                  Progress
-                  <NumberStepper
-                    max={100}
-                    min={0}
-                    value={progressPercentage}
-                    onChange={setProgressPercentage}
-                  />
-                </label>
-              </>
-            ) : (
-              <>
-                <div className="grid gap-2 text-sm font-semibold text-white/78">
-                  <span>Completion status</span>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">
-                    {statusLabel(completionStatus)}
-                  </div>
-                </div>
-                <div className="grid gap-2 text-sm font-semibold text-white/78">
-                  <span>Progress</span>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">
-                    {progressPercentage}%
-                  </div>
-                </div>
-              </>
-            )}
+            <label className="grid gap-2 text-sm font-semibold text-white/78">
+              Completion status
+              <Select disabled={!canEdit} value={completionStatus} onValueChange={setCompletionStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-white/78">
+              Progress
+              <NumberStepper
+                disabled={!canEdit}
+                max={100}
+                min={0}
+                value={progressPercentage}
+                onChange={setProgressPercentage}
+              />
+            </label>
             <div className="grid content-end">
               <div className="h-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white/52">
-                {canEdit ? (savedAt ? `Saved ${savedAt}` : "Not saved this session") : "Read-only access"}
+                {savedAt ? `Saved ${savedAt}` : "Not saved this session"}
               </div>
             </div>
           </div>
@@ -407,9 +381,8 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
           <div className="p-5">
             <Textarea
               className="min-h-[560px] resize-y rounded-2xl border-white/12 bg-white/[0.03] text-base leading-7 text-white"
-              disabled={!selectedSubsection}
+              disabled={!canEdit || !selectedSubsection}
               placeholder="Draft structured EIA content for this checklist item. Include evidence references, quantified details, assumptions, and source notes."
-              readOnly={!canEdit}
               value={content}
               onChange={(event) => setContent(event.target.value)}
             />

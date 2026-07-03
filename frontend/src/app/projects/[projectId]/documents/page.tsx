@@ -90,23 +90,21 @@ export default function ProjectDocumentsPage() {
         {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
         {loading ? <Alert>Loading documents...</Alert> : null}
 
-        {canUpload ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="size-5 text-[#B6F7FF]" />
-                Attach Files & Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DocumentUpload
-                canUpload={canUpload}
-                projectId={projectId}
-                onUploaded={(document) => setDocuments((current) => [document, ...current])}
-              />
-            </CardContent>
-          </Card>
-        ) : null}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="size-5 text-[#B6F7FF]" />
+              Attach Files & Documents
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DocumentUpload
+              canUpload={canUpload}
+              projectId={projectId}
+              onUploaded={(document) => setDocuments((current) => [document, ...current])}
+            />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

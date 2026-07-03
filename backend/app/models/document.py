@@ -48,12 +48,6 @@ class Document(TimestampMixin, Base):
         foreign_keys="DocumentVersion.document_id",
         order_by="DocumentVersion.version_number.desc()",
     )
-    chunks = relationship(
-        "DocumentChunk",
-        back_populates="document",
-        cascade="all, delete-orphan",
-        order_by="DocumentChunk.chunk_index.asc()",
-    )
     current_version = relationship(
         "DocumentVersion",
         foreign_keys=[current_version_id],
@@ -95,9 +89,3 @@ class DocumentVersion(TimestampMixin, Base):
     uploaded_at: Mapped[datetime] = mapped_column(nullable=True)
 
     document = relationship("Document", back_populates="versions", foreign_keys=[document_id])
-    chunks = relationship(
-        "DocumentChunk",
-        back_populates="document_version",
-        cascade="all, delete-orphan",
-        order_by="DocumentChunk.chunk_index.asc()",
-    )

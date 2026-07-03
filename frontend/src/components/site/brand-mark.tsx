@@ -8,35 +8,27 @@ export function BrandMark ({
   className,
   imageClassName
 }: Readonly<{
-  href?: string | null
+  href?: string
   className?: string
   imageClassName?: string
 }>) {
-  const content = (
-    <Image
-      src='/images/logo-1.png'
-      alt='EnviroQuant Logo'
-      width={250}
-      height={50}
-      className={cn(
-        '  transition-transform duration-300 group-hover:scale-[1.01]',
-        imageClassName
-      )}
-      priority
-    />
-  )
-
-  if (!href) {
-    return <span className={cn('group inline-flex items-center', className)}>{content}</span>
-  }
-
   return (
     <Link
       href={href}
       aria-label='EnviroQuant home'
       className={cn('group inline-flex items-center', className)}
     >
-      {content}
+      <Image
+        src='/images/logo-1.png'
+        alt='EnviroQuant Logo'
+        width={250}
+        height={50}
+        className={cn(
+          '  transition-transform duration-300 group-hover:scale-[1.01]',
+          imageClassName
+        )}
+        priority
+      />
     </Link>
   )
 }

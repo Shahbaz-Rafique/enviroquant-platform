@@ -1,10 +1,10 @@
 "use client";
 
-import { Bot, CheckCircle2, FileText, Loader2, RefreshCcw, Save, ShieldCheck } from "lucide-react";
+import { Bot, CheckCircle2, Loader2, Save, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { TipTapEditor, type TipTapEditorHandle } from "@/components/Editor/TipTapEditor";
+import { TipTapEditor } from "@/components/Editor/TipTapEditor";
 import { AttachmentsPanel } from "@/components/Sidebar/AttachmentsPanel";
 import { ChecklistPanel } from "@/components/Sidebar/ChecklistPanel";
 import { CommentsPanel } from "@/components/Workspace/CommentsPanel";
@@ -27,7 +27,6 @@ import type {
   EiaAttachment,
   EiaChecklistItem,
   EiaDocumentMember,
-  EiaSourceMapping,
   EiaSubSectionWorkspace as EiaSubSectionWorkspaceType,
   User
 } from "@/lib/types";
@@ -67,7 +66,6 @@ const statusOptions = [
 export function SubsectionWorkspace({ documentId, projectId, subsectionId, user }: SubsectionWorkspaceProps) {
   const router = useRouter();
   const editorRegionRef = useRef<HTMLDivElement | null>(null);
-  const editorRef = useRef<TipTapEditorHandle | null>(null);
   const [workspace, setWorkspace] = useState<EiaSubSectionWorkspaceType | null>(null);
   const [editorContent, setEditorContent] = useState<EditorContent>(emptyEditorContent);
   const [completionStatus, setCompletionStatus] = useState("NOT_STARTED");
@@ -81,10 +79,6 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [documentRole, setDocumentRole] = useState<string | null>(null);
-  const [assistantError, setAssistantError] = useState<string | null>(null);
-  const [assistantLoading, setAssistantLoading] = useState(false);
-  const [assistantActionId, setAssistantActionId] = useState<string | null>(null);
-  const [sourceMappings, setSourceMappings] = useState<EiaSourceMapping[]>([]);
 
   const effectiveDocumentRole = documentRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
   const canEdit = canEditEiaDocument(effectiveDocumentRole);
@@ -134,27 +128,6 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   useEffect(() => {
     loadDocumentRole();
   }, [loadDocumentRole]);
-
-  const loadAssistantContext = useCallback(async () => {
-    setAssistantLoading(true);
-    setAssistantError(null);
-    try {
-      const mappings = await apiRequest<EiaSourceMapping[]>(`/eia-documents/${documentId}/source-mappings`);
-      setSourceMappings(
-        mappings
-          .filter((mapping) => mapping.subsection_id === subsectionId && mapping.status !== "REJECTED")
-          .sort((left, right) => right.confidence_score - left.confidence_score)
-      );
-    } catch (err) {
-      setAssistantError(err instanceof Error ? err.message : "Assistant context could not be loaded");
-    } finally {
-      setAssistantLoading(false);
-    }
-  }, [documentId, subsectionId]);
-
-  useEffect(() => {
-    void loadAssistantContext();
-  }, [loadAssistantContext]);
 
   const saveContent = useCallback(
     async (options: SaveOptions = {}) => {
@@ -263,21 +236,6 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
     setLastSavedAt(new Date().toLocaleTimeString());
   }
 
-  const assistantChecklistItems = useMemo(
-    () =>
-      [...(workspace?.checklist_items ?? [])].sort(
-        (left, right) => importanceRank(right.importance) - importanceRank(left.importance)
-      ),
-    [workspace?.checklist_items]
-  );
-
-  const coverageGaps = useMemo(
-    () => assistantChecklistItems.filter((item) => item.compliance_status !== "Compliant"),
-    [assistantChecklistItems]
-  );
-
-  const hasDraftContent = useMemo(() => hasMeaningfulHtml(editorContent.html), [editorContent.html]);
-
   const uploadAttachment = useCallback(
     async (file: File, attachmentType = "supporting_evidence"): Promise<EiaAttachment> => {
       if (!workspace) {
@@ -342,60 +300,6 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
     router.push(`/projects/${projectId}/eia/${documentId}/subsection/${item.subsection_id}`);
   }
 
-  function applyAssistantContent(nextHtml: string) {
-    const normalized = nextHtml.trim() || "<p></p>";
-    if (editorRef.current) {
-      editorRef.current.setContent(normalized);
-      return;
-    }
-    updateEditorContent({
-      html: normalized,
-      json: emptyEditorContent.json
-    });
-  }
-
-  function insertDraftingOutline() {
-    if (!workspace || !canEdit) {
-      return;
-    }
-    const generated = buildDraftingOutlineHtml(workspace, coverageGaps);
-    const nextHtml = hasDraftContent ? `${editorContent.html}${generated}` : generated;
-    applyAssistantContent(nextHtml);
-  }
-
-  function insertEvidencePrompts() {
-    if (!workspace || !canEdit) {
-      return;
-    }
-    const generated = buildEvidencePromptHtml(workspace.attachments);
-    const nextHtml = hasDraftContent ? `${editorContent.html}${generated}` : generated;
-    applyAssistantContent(nextHtml);
-  }
-
-  async function applySuggestedDraft(mapping: EiaSourceMapping) {
-    if (!canEdit) {
-      return;
-    }
-
-    setAssistantActionId(mapping.id);
-    setAssistantError(null);
-    try {
-      await apiRequest<EiaSourceMapping>(`/eia-documents/${documentId}/source-mappings/${mapping.id}/confirm`, {
-        method: "POST",
-        body: JSON.stringify({
-          apply_content: true,
-          completion_status: completionStatus === "NOT_STARTED" ? "IN_PROGRESS" : completionStatus,
-          progress_percentage: Math.max(progressPercentage, Math.round(mapping.confidence_score * 100), 50)
-        })
-      });
-      await Promise.all([loadWorkspace(), loadAssistantContext()]);
-    } catch (err) {
-      setAssistantError(err instanceof Error ? err.message : "Suggested draft could not be applied");
-    } finally {
-      setAssistantActionId(null);
-    }
-  }
-
   if (loading) {
     return <Alert>Loading subsection workspace...</Alert>;
   }
@@ -423,25 +327,19 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             <p className="mt-2 text-sm font-medium text-white/52">{workspace.eia_document_title}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="min-w-32 text-sm font-semibold text-white/52">
-              {canEdit ? saveStatusText : "Read-only access"}
-            </span>
-            {canEdit ? (
-              <>
-                <Button disabled={saving} type="button" variant="secondary" onClick={() => void saveContent()}>
-                  {saving ? <Loader2 className="animate-spin" /> : <Save />}
-                  Save
-                </Button>
-                <Button
-                  disabled={saving}
-                  type="button"
-                  onClick={() => void saveContent({ completionStatus: "COMPLETE", progressPercentage: 100 })}
-                >
-                  <CheckCircle2 />
-                  Mark Complete
-                </Button>
-              </>
-            ) : null}
+            <span className="min-w-32 text-sm font-semibold text-white/52">{saveStatusText}</span>
+            <Button disabled={!canEdit || saving} type="button" variant="secondary" onClick={() => void saveContent()}>
+              {saving ? <Loader2 className="animate-spin" /> : <Save />}
+              Save
+            </Button>
+            <Button
+              disabled={!canEdit || saving}
+              type="button"
+              onClick={() => void saveContent({ completionStatus: "COMPLETE", progressPercentage: 100 })}
+            >
+              <CheckCircle2 />
+              Mark Complete
+            </Button>
           </div>
         </div>
       </header>
@@ -450,49 +348,31 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
         <main className="grid gap-5" ref={editorRegionRef}>
           <div className="builder-panel overflow-hidden">
             <div className="grid gap-4 border-b border-white/10 p-4 lg:grid-cols-[minmax(0,1fr)_180px_170px]">
-              {canEdit ? (
-                <>
-                  <label className="grid gap-2 text-sm font-semibold text-white/78">
-                    Completion status
-                    <Select value={completionStatus} onValueChange={updateCompletionStatus}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </label>
-                  <label className="grid gap-2 text-sm font-semibold text-white/78">
-                    Progress
-                    <NumberStepper
-                      max={100}
-                      min={0}
-                      value={Math.round(progressPercentage)}
-                      onChange={updateProgressPercentage}
-                    />
-                  </label>
-                </>
-              ) : (
-                <>
-                  <div className="grid gap-2 text-sm font-semibold text-white/78">
-                    <span>Completion status</span>
-                    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">
-                      {statusLabel(completionStatus)}
-                    </div>
-                  </div>
-                  <div className="grid gap-2 text-sm font-semibold text-white/78">
-                    <span>Progress</span>
-                    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">
-                      {Math.round(progressPercentage)}%
-                    </div>
-                  </div>
-                </>
-              )}
+              <label className="grid gap-2 text-sm font-semibold text-white/78">
+                Completion status
+                <Select disabled={!canEdit} value={completionStatus} onValueChange={updateCompletionStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-white/78">
+                Progress
+                <NumberStepper
+                  disabled={!canEdit}
+                  max={100}
+                  min={0}
+                  value={Math.round(progressPercentage)}
+                  onChange={updateProgressPercentage}
+                />
+              </label>
               <div className="grid content-end">
                 <div className="h-10 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-100">
                   {Math.round(progressPercentage)}% complete
@@ -501,7 +381,6 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             </div>
             <div className="p-4">
               <TipTapEditor
-                ref={editorRef}
                 content={editorContent.html}
                 editable={canEdit}
                 onChange={updateEditorContent}
@@ -537,131 +416,17 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             onRestored={applyWorkspaceUpdate}
           />
           <section className="builder-panel overflow-hidden">
-            <div className="builder-section-title flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2">
-                <Bot className="size-5 text-[#B6F7FF]" />
-                AI Assistant
-              </span>
-              {canEdit ? (
-                <Button
-                  aria-label="Refresh drafting assistant"
-                  size="icon"
-                  type="button"
-                  variant="secondary"
-                  onClick={() => void loadAssistantContext()}
-                >
-                  <RefreshCcw className={assistantLoading ? "animate-spin" : undefined} />
-                </Button>
-              ) : null}
+            <div className="builder-section-title flex items-center gap-2">
+              <Bot className="size-5 text-[#B6F7FF]" />
+              AI Assistant
             </div>
             <div className="grid gap-3 p-4 text-sm text-white/66">
-              {assistantError ? (
-                <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{assistantError}</Alert>
-              ) : null}
-
-              <div className="grid grid-cols-3 gap-2">
-                <AssistantStat label="Checklist" value={String(assistantChecklistItems.length)} />
-                <AssistantStat label="Outstanding" value={String(coverageGaps.length)} />
-                <AssistantStat label="Evidence" value={String(workspace.attachments.length)} />
-              </div>
-
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                 <div className="mb-1 flex items-center gap-2 font-bold text-white">
                   <ShieldCheck className="size-4 text-[#8BD15F]" />
-                  Checklist-aware drafting
+                  Draft review placeholder
                 </div>
-                <p>
-                  Build directly against the active checklist items for this subsection, then anchor the draft with
-                  evidence and quantified statements before review.
-                </p>
-                {canEdit ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button size="sm" type="button" variant="secondary" onClick={insertDraftingOutline}>
-                      <Bot className="size-4" />
-                      {hasDraftContent ? "Append outline" : "Insert outline"}
-                    </Button>
-                    <Button size="sm" type="button" variant="secondary" onClick={insertEvidencePrompts}>
-                      <FileText className="size-4" />
-                      Add evidence prompts
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-white/46">
-                  Coverage priorities
-                </div>
-                <div className="grid gap-2">
-                  {assistantChecklistItems.map((item) => (
-                    <article className="rounded-xl border border-white/10 bg-white/[0.04] p-3" key={item.mapping_id ?? item.id}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold uppercase text-[#B6F7FF]">{item.checklist_section}</span>
-                        <Badge className={cn(statusBadgeClass(item.completion_status))}>{item.compliance_status}</Badge>
-                        <Badge className="border-white/12 bg-white/[0.06] text-white/72">
-                          {formatImportance(item.importance)}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-sm font-semibold leading-5 text-white">{item.checklist_title}</p>
-                      <p className="mt-2 text-xs font-medium text-white/52">
-                        {item.progress_percentage >= 100
-                          ? "Checklist item is covered. Tighten evidence references and commitments before sign-off."
-                          : item.progress_percentage > 0
-                            ? "Coverage exists, but the draft still needs clearer evidence, quantified statements, or commitments."
-                            : "No meaningful subsection draft is recorded for this checklist item yet."}
-                      </p>
-                    </article>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                <div className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-white/46">
-                  Source-backed suggestions
-                </div>
-                {assistantLoading ? <Alert>Loading drafting suggestions...</Alert> : null}
-                {!assistantLoading && !sourceMappings.length ? (
-                  <div className="rounded-xl border border-dashed border-white/12 bg-white/[0.02] p-3 text-sm text-white/56">
-                    No mapped source suggestions are available for this subsection yet.
-                  </div>
-                ) : null}
-                <div className="grid gap-2">
-                  {sourceMappings.map((mapping) => (
-                    <article className="rounded-xl border border-white/10 bg-white/[0.04] p-3" key={mapping.id}>
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white">
-                            {mapping.detected_section_number ? `${mapping.detected_section_number} - ` : ""}
-                            {mapping.detected_title ?? "Legacy draft suggestion"}
-                          </p>
-                          <p className="mt-1 text-xs font-medium text-white/52">{mapping.source_document_filename}</p>
-                        </div>
-                        <Badge className={cn(sourceMappingStatusClass(mapping.status))}>
-                          {mapping.status.replaceAll("_", " ")}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 text-xs font-medium text-white/60">
-                        {mapping.assistant_notes ?? "Suggested subsection match is ready for review."}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-white/46">
-                          Confidence {Math.round(mapping.confidence_score * 100)}%
-                        </span>
-                        {canEdit && mapping.suggested_content_html ? (
-                          <Button
-                            disabled={assistantActionId === mapping.id || mapping.status === "APPLIED"}
-                            size="sm"
-                            type="button"
-                            onClick={() => void applySuggestedDraft(mapping)}
-                          >
-                            {assistantActionId === mapping.id ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-                            {mapping.status === "APPLIED" ? "Applied" : "Use suggested draft"}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                <p>Checklist-aware drafting support will be connected here.</p>
               </div>
             </div>
           </section>
@@ -686,120 +451,4 @@ function statusBadgeClass(status: string) {
     return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
   }
   return "border-white/12 bg-white/[0.05] text-white/68";
-}
-
-function AssistantStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-      <div className="text-lg font-black text-white">{value}</div>
-      <div className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-white/42">{label}</div>
-    </div>
-  );
-}
-
-function importanceRank(importance: string) {
-  const normalized = importance.toUpperCase();
-  if (normalized === "HIGH") {
-    return 3;
-  }
-  if (normalized === "MEDIUM") {
-    return 2;
-  }
-  return 1;
-}
-
-function formatImportance(importance: string) {
-  const normalized = importance.toUpperCase();
-  if (normalized === "HIGH") {
-    return "High priority";
-  }
-  if (normalized === "MEDIUM") {
-    return "Medium priority";
-  }
-  if (normalized === "LOW") {
-    return "Low priority";
-  }
-  return importance.replaceAll("_", " ");
-}
-
-function hasMeaningfulHtml(content: string) {
-  return Boolean(content.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim());
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function buildDraftingOutlineHtml(
-  workspace: EiaSubSectionWorkspaceType,
-  coverageGaps: EiaChecklistItem[]
-) {
-  const checklistCoverage = workspace.checklist_items
-    .map(
-      (item) =>
-        `<li><strong>${escapeHtml(item.checklist_section)}</strong> - ${escapeHtml(item.checklist_title)} (${escapeHtml(
-          formatImportance(item.importance)
-        )}, ${escapeHtml(item.compliance_status)})</li>`
-    )
-    .join("");
-
-  const gapPrompts = coverageGaps.length
-    ? coverageGaps
-        .map(
-          (item) =>
-            `<li>Explain how the subsection addresses <strong>${escapeHtml(item.checklist_title)}</strong> with project-specific evidence, quantified values, and implementation detail.</li>`
-        )
-        .join("")
-    : "<li>Confirm the existing draft still cites evidence, quantified assumptions, and monitoring commitments before sign-off.</li>";
-
-  return [
-    `<h2>${escapeHtml(workspace.subsection.subsection_number)} Drafting Outline</h2>`,
-    `<p>Use this structure to cover the checklist expectations for ${escapeHtml(workspace.subsection.title)}.</p>`,
-    "<h3>Checklist Coverage Targets</h3>",
-    `<ul>${checklistCoverage}</ul>`,
-    "<h3>Priority Gaps To Close</h3>",
-    `<ul>${gapPrompts}</ul>`,
-    "<h3>Baseline Conditions</h3>",
-    "<p>Describe the existing environmental conditions, sensitive receptors, spatial boundary, and current constraints relevant to this subsection.</p>",
-    "<h3>Impact Assessment</h3>",
-    "<p>Explain the impact pathway, magnitude, duration, reversibility, and affected receptors. Include quantified values and assumptions where the evidence supports them.</p>",
-    "<h3>Mitigation and Management</h3>",
-    "<p>State the specific mitigation measures, implementation owner, trigger, and performance expectations.</p>",
-    "<h3>Residual Effects and Monitoring</h3>",
-    "<p>Summarize residual effects, monitoring indicators, thresholds, reporting cadence, and follow-up commitments.</p>",
-    buildEvidencePromptHtml(workspace.attachments)
-  ].join("");
-}
-
-function buildEvidencePromptHtml(attachments: EiaAttachment[]) {
-  const evidenceLines = attachments.length
-    ? attachments
-        .slice(0, 5)
-        .map(
-          (attachment) =>
-            `<li>Reference supporting evidence from <strong>${escapeHtml(attachment.original_filename)}</strong> and cite the specific observation, figure, table, or page that supports the claim.</li>`
-        )
-        .join("")
-    : [
-        "<li>Add the source document, baseline study, survey output, permit condition, or model result that supports this subsection.</li>",
-        "<li>Use quantified values, units, thresholds, and assumptions rather than broad qualitative claims.</li>",
-        "<li>Note any remaining evidence gaps that still need field data, stakeholder input, or regulator confirmation.</li>"
-      ].join("");
-
-  return [`<h3>Evidence and Source Notes</h3>`, `<ul>${evidenceLines}</ul>`].join("");
-}
-
-function sourceMappingStatusClass(status: string) {
-  if (status === "APPLIED" || status === "CONFIRMED") {
-    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
-  }
-  if (status === "NEEDS_REVIEW") {
-    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
-  }
-  return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
 }

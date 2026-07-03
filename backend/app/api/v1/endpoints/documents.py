@@ -8,12 +8,11 @@ from app.core.permissions import DOCUMENT_UPLOAD_ROLES, Permissions
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.user import User
-from app.schemas.document import DocumentChunkRead, DocumentRead
+from app.schemas.document import DocumentRead
 from app.services.document_service import (
     add_document_version,
     create_project_document,
     get_document_for_tenant,
-    list_document_version_chunks,
     list_project_documents,
 )
 from app.services.project_service import get_project_for_tenant
@@ -66,13 +65,3 @@ async def upload_document_version(
 ) -> Document:
     document = get_document_for_tenant(db, current_user, document_id)
     return await add_document_version(db, current_user, document, file)
-
-
-@router.get("/{document_id}/versions/{version_id}/chunks", response_model=list[DocumentChunkRead])
-def read_document_version_chunks(
-    document_id: UUID,
-    version_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(Permissions.DOCUMENT_READ)),
-) -> list[object]:
-    return list_document_version_chunks(db, current_user, document_id, version_id)

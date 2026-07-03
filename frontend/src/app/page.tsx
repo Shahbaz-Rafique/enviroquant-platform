@@ -2,17 +2,9 @@ import type { Metadata } from "next";
 
 import { HomeMarketingPage } from "@/components/site/marketing-pages";
 
-export const generateMetadata = (): Metadata => {
-  return {
-    title: 'Home',
-    description:
-      'Revolutionize Environmental Impact Assessments with EnviroQuant — the AI-powered platform for faster, smarter, and globally compliant EIA processes.',
-    openGraph: {
-      title: 'EnviroQuant - The Future of EIA Management',
-      description:
-        'AI-assisted tools for EIA creation, compliance checking, and regulatory review.',
-    },
-  };
+export const metadata: Metadata = {
+  title: "CompanyName | Home",
+  description: "A regenerative brand system for living technologies and restorative design."
 };
 
 export default function HomePage() {

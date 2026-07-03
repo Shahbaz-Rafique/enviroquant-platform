@@ -8,208 +8,299 @@ EIA_STRUCTURE = {
     "1": {
         "title": "DESCRIPTION OF THE PROJECT",
         "subsections": [
+            {"number": "1.1", "title": "The Objectives and Physical Characteristics of the Project"},
             {"number": "1.1.1", "title": "Are the need and objectives of the project explained?"},
             {
                 "number": "1.1.2",
                 "title": (
-                    "Is the programme for implementation described (timeline, start/finish dates for construction, "
-                    "operation, commissioning, including phases)?"
+                    "Is the programme for implementation of the Project described, detailing the "
+                    "estimated length of time and start and finish dates for construction, "
+                    "operation and Commissioning?"
                 ),
             },
-            {"number": "1.1.3", "title": "Are all main components of the project described?"},
-            {"number": "1.1.4", "title": "Is the location of each project component identified (maps, plans, diagrams)?"},
+            {"number": "1.1.3", "title": "Are all of the main components of the project described?"},
             {
-                "number": "1.1.5",
+                "number": "1.1.4",
                 "title": (
-                    "Is the layout of the site(s) described (ground levels, buildings, structures, underground works, "
-                    "storage, water features, planting, access, boundaries)?"
+                    "Is the location of each Project component identified, using maps, plans and "
+                    "diagrams as necessary?"
                 ),
             },
-            {"number": "1.1.6", "title": "For tunneling and earthworks - are activities properly described?"},
-            {"number": "1.1.7", "title": "Are all construction activities described?"},
-            {"number": "1.1.8", "title": "Are all operation activities described?"},
+            {"number": "1.1.5", "title": "Is the layout of the site (or sites) occupied by the project described?"},
             {
-                "number": "1.1.10",
-                "title": (
-                    "Are additional services required described (transport, water, sewerage, waste, electricity, "
-                    "telecoms, roads, harbors, power-lines, etc.)?"
-                ),
+                "number": "1.1.6",
+                "title": "For projects involving tunneling and earthworks, are these activities properly described?",
             },
-            {"number": "1.1.11", "title": "Are any developments likely to occur as a consequence of the project identified?"},
-            {"number": "1.1.12", "title": "Are existing activities which will alter or cease identified?"},
+            {"number": "1.1.7", "title": "Are the activities involved in construction of the project all described?"},
+            {"number": "1.1.8", "title": "Are the activities involved in operation of the project all described?"},
+            {"number": "1.1.10", "title": "Are additional services required for the project described?"},
+            {
+                "number": "1.1.11",
+                "title": "Are any developments likely to occur as a consequence of the Project identified?",
+            },
+            {
+                "number": "1.1.12",
+                "title": "Are existing activities which will alter or cease as a consequence of the Project identified?",
+            },
             {
                 "number": "1.1.13",
-                "title": "Are other existing or planned developments with potential cumulative effects identified?",
+                "title": (
+                    "Are there other existing or planned developments with which the Project could "
+                    "have cumulative effects identified?"
+                ),
             },
-            {"number": "1.2.1", "title": "Is the area of land occupied by permanent components quantified and shown on scaled maps?"},
-            {"number": "1.3.1", "title": "Is the area of land required temporarily for construction quantified and mapped?"},
-            {"number": "1.3.2", "title": "Is restoration and after-use of temporarily occupied land described?"},
+            {"number": "1.2", "title": "The Size of the Project"},
+            {
+                "number": "1.2.1",
+                "title": (
+                    "Is the area of land occupied by each of the permanent project components "
+                    "quantified and shown on a scaled map?"
+                ),
+            },
+            {"number": "1.3", "title": "The Size of the Project (Continued)"},
+            {
+                "number": "1.3.1",
+                "title": "Is the area of land required temporarily for construction quantified and mapped?",
+            },
+            {
+                "number": "1.3.2",
+                "title": (
+                    "Is the restoration and after use of land occupied temporarily for operation "
+                    "of the Project described?"
+                ),
+            },
             {
                 "number": "1.3.4",
-                "title": "Is the size of structures/works identified (floor area, height, excavations, embankments, stacks, water depth, etc.)?",
+                "title": "Is the size of structures or other works developed as part of the Project identified?",
             },
             {
                 "number": "1.3.5",
-                "title": "Is the form and appearance of structures described (materials, colors, design, plant species, etc.)?",
+                "title": "Is the form and appearance of structures or other works developed as part of the Project described?",
             },
-            {"number": "1.3.6", "title": "For urban projects - numbers and characteristics of new populations/businesses described?"},
-            {"number": "1.3.7", "title": "For displacement projects - numbers and characteristics of displaced people/businesses described?"},
             {
-                "number": "1.3.8",
-                "title": "For transport projects - type, volume, temporal pattern, and distribution of traffic described?",
-            },
-            {"number": "1.4.1", "title": "Are all operating processes described (manufacturing, extraction, etc.)?"},
-            {"number": "1.4.2", "title": "Are types and quantities of outputs described?"},
-            {"number": "1.4.3", "title": "Are types and quantities of raw materials and energy needed discussed?"},
-            {"number": "1.4.4", "title": "Are environmental implications of sourcing raw materials discussed?"},
-            {"number": "1.4.5", "title": "Is efficiency in use of energy and raw materials discussed?"},
-            {"number": "1.5.1", "title": "Are hazardous materials identified and quantified (construction, operation, commissioning)?"},
-            {"number": "1.5.2", "title": "Is transport of raw materials and traffic movements discussed?"},
-            {"number": "1.5.3", "title": "Is employment created or lost discussed (by phase)?"},
-            {"number": "1.5.4", "title": "Are access arrangements and worker/visitor traffic movements estimated?"},
-            {"number": "1.5.5", "title": "Is housing and services for employees discussed (if relevant)?"},
-            {"number": "1.5.6", "title": "Are types and quantities of solid waste identified (by phase)?"},
-            {"number": "1.6.1", "title": "Composition and hazards of solid wastes discussed?"},
-            {"number": "1.6.2", "title": "Methods for collecting, storing, treating, transporting, and disposing of solid wastes described?"},
-            {"number": "1.6.3", "title": "Locations for final disposal of solid wastes discussed?"},
-            {"number": "1.6.4", "title": "Types and quantities of liquid effluents identified (by phase)?"},
-            {"number": "1.6.5", "title": "Composition and hazards of liquid effluents discussed?"},
-            {"number": "1.6.6", "title": "Methods for collecting, storing, treating, transporting, and disposing of liquid effluents described?"},
-            {"number": "1.6.7", "title": "Locations for final disposal of liquid effluents discussed?"},
-            {"number": "1.6.8", "title": "Types and quantities of gaseous and particulate emissions identified (by phase)?"},
-            {"number": "1.6.9", "title": "Composition and hazards of air emissions discussed?"},
-            {"number": "1.6.10", "title": "Methods for collecting, treating, and discharging air emissions described?"},
-            {"number": "1.6.11", "title": "Locations and characteristics of air discharges identified (stack height, velocity, temperature)?"},
-            {"number": "1.6.12", "title": "Potential for resource recovery from wastes discussed?"},
-            {"number": "1.6.13", "title": "Sources of noise, heat, light, or electromagnetic radiation identified and quantified?"},
-            {"number": "1.6.14", "title": "Methods for estimating residues/emissions and difficulties discussed?"},
-            {"number": "1.6.15", "title": "Uncertainty attached to estimates discussed?"},
-            {
-                "number": "1.7.1",
+                "number": "1.3.6",
                 "title": (
-                    "Are risks associated with the project discussed (hazardous materials, spills, fire, explosion, "
-                    "traffic, process failure, natural disasters)?"
+                    "For urban or similar development projects, are the numbers and other "
+                    "characteristics of new populations or business communities described?"
                 ),
             },
             {
+                "number": "1.3.7",
+                "title": (
+                    "For projects involving the displacement of people or businesses, are the "
+                    "numbers and other characteristics of those displaced described?"
+                ),
+            },
+            {
+                "number": "1.3.8",
+                "title": (
+                    "For new transport infrastructure or projects generating substantial traffic "
+                    "flows, is the type, volume, temporal pattern and geographical distribution "
+                    "of new traffic generated or diverted described?"
+                ),
+            },
+            {"number": "1.4", "title": "Production Processes and Resources Used"},
+            {"number": "1.4.1", "title": "Are all the processes involved in operating the Project described?"},
+            {"number": "1.4.2", "title": "Are the types and quantities of outputs produced by the Project described?"},
+            {
+                "number": "1.4.3",
+                "title": "Are the types and quantities of raw materials and energy needed for construction and operation discussed?",
+            },
+            {
+                "number": "1.4.4",
+                "title": "Are the environmental implications of the sourcing of raw materials discussed?",
+            },
+            {"number": "1.4.5", "title": "Is efficiency in use of energy and raw materials discussed?"},
+            {"number": "1.5", "title": "Production Processes and Resources Used (Continued)"},
+            {
+                "number": "1.5.1",
+                "title": "Are hazardous materials used, stored, handled or produced by the Project identified and quantified?",
+            },
+            {
+                "number": "1.5.2",
+                "title": (
+                    "Is the transport of raw materials to the Project and the number of traffic "
+                    "movements involved discussed?"
+                ),
+            },
+            {"number": "1.5.3", "title": "Is employment created or lost as a result of the Project discussed?"},
+            {
+                "number": "1.5.4",
+                "title": (
+                    "Are the access arrangements and the number of traffic movements involved in "
+                    "bringing workers and visitors estimated?"
+                ),
+            },
+            {
+                "number": "1.5.5",
+                "title": "Is the housing and provision of services for any temporary or permanent employees discussed?",
+            },
+            {"number": "1.5.6", "title": "Are the types and quantities of solid waste generated by the Project identified?"},
+            {"number": "1.6", "title": "Residues and Emissions"},
+            {"number": "1.6.1", "title": "Is the composition and toxicity or other hazards of all solid wastes produced discussed?"},
+            {
+                "number": "1.6.2",
+                "title": (
+                    "Are the methods for collecting, storing, treating, transporting and finally "
+                    "disposing of these solid wastes described?"
+                ),
+            },
+            {"number": "1.6.4", "title": "Are the types and quantities of liquid effluents generated identified?"},
+            {
+                "number": "1.6.8",
+                "title": "Are the types and quantities of gaseous and particulate emissions generated identified?",
+            },
+            {
+                "number": "1.6.13",
+                "title": "Are any sources of noise, heat, light or electromagnetic radiation identified and quantified?",
+            },
+            {
+                "number": "1.6.14",
+                "title": (
+                    "Are the methods for estimating the quantities and composition of all residues "
+                    "and emissions identified?"
+                ),
+            },
+            {"number": "1.7", "title": "Risk of Accidents and Hazards"},
+            {"number": "1.7.1", "title": "Are any risks associated with the Project discussed?"},
+            {
                 "number": "1.7.2",
-                "title": "Are measures to prevent and respond to accidents described (prevention, training, contingency, emergency plans)?",
+                "title": "Are measures to prevent and respond to accidents and abnormal events described?",
             },
         ],
     },
     "2": {
         "title": "CONSIDERATION OF ALTERNATIVES",
         "subsections": [
-            {"number": "2.1", "title": "Is the process by which the project was developed described, and are alternatives considered?"},
-            {"number": "2.2", "title": "Are the alternatives realistic and genuine?"},
-            {"number": "2.3", "title": "Are the main reasons for choice of the proposed project explained (including environmental reasons)?"},
-            {"number": "2.4", "title": "Are the main environmental effects of the alternatives compared with the proposed project?"},
+            {
+                "number": "2.1",
+                "title": (
+                    "Is the process by which the Project will be developed described, and are "
+                    "alternatives considered during this process?"
+                ),
+            },
+            {"number": "2.2", "title": "Are the alternatives realistic and genuine alternatives to the Project?"},
+            {
+                "number": "2.3",
+                "title": (
+                    "Are the main reasons for choice of the proposed Project explained, "
+                    "including any environmental reasons?"
+                ),
+            },
+            {
+                "number": "2.4",
+                "title": (
+                    "Are the main environmental effects of the alternatives compared with those "
+                    "of the proposed Project?"
+                ),
+            },
         ],
     },
     "3": {
-        "title": "DESCRIPTION OF THE ENVIRONMENT LIKELY TO BE AFFECTED",
+        "title": "DESCRIPTION OF ENVIRONMENT LIKELY TO BE AFFECTED BY THE PROJECT",
         "subsections": [
-            {"number": "3.1.1", "title": "Existing land uses and people using the land described?"},
-            {"number": "3.1.2", "title": "Topography, geology, and soils described?"},
-            {"number": "3.1.3", "title": "Significant topographic/geological features and soil conditions (quality, stability, erosion, contamination) described?"},
-            {"number": "3.1.4", "title": "Fauna, flora, and habitats described and mapped?"},
-            {"number": "3.1.5", "title": "Species populations and protected areas/species defined?"},
-            {"number": "3.1.6", "title": "Water environment described?"},
-            {"number": "3.1.7", "title": "Hydrology, water quality, and water uses described?"},
-            {"number": "3.1.8", "title": "Local climate, meteorology, and air quality described?"},
-            {"number": "3.1.9", "title": "Existing noise climate described?"},
-            {"number": "3.1.10", "title": "Existing light, heat, and electromagnetic radiation described?"},
-            {"number": "3.1.11", "title": "Material assets (buildings, minerals, water resources) described?"},
-            {"number": "3.2.1", "title": "Archaeological, historic, architectural, or cultural features described (including protected sites)?"},
-            {"number": "3.2.2", "title": "Demographic, social, and socio-economic conditions described?"},
-            {"number": "3.2.3", "title": "Future changes in the environment without the project (No Project / Moving Baseline) described?"},
-            {"number": "3.3.1", "title": "Study area defined widely enough?"},
-            {"number": "3.3.2", "title": "All relevant agencies contacted?"},
-            {"number": "3.3.3", "title": "Sources of data adequately referenced?"},
-            {"number": "3.3.4", "title": "Survey methods, difficulties, and uncertainties described?"},
-            {"number": "3.3.5", "title": "Methods appropriate for the purpose?"},
-            {"number": "3.3.6", "title": "Important data gaps identified and how they were handled explained?"},
+            {"number": "3.1", "title": "Aspects of the Environment"},
+            {"number": "3.1.1", "title": "Are the existing land uses and people living on or using the land identified?"},
+            {"number": "3.1.2", "title": "Are the topography, geology and soils described?"},
+            {"number": "3.1.4", "title": "Are the fauna and flora and habitats described and illustrated on maps?"},
+            {"number": "3.1.6", "title": "Is the water environment of the area described?"},
+            {
+                "number": "3.1.8",
+                "title": "Are local climatic and meteorological conditions and existing air quality described?",
+            },
+            {
+                "number": "3.2.1",
+                "title": (
+                    "Are any locations or features of archaeological, historic, architectural or "
+                    "cultural importance described?"
+                ),
+            },
+            {"number": "3.2.2", "title": "Are demographic, social and socio-economic conditions described?"},
+            {"number": "3.3.1", "title": "Has the study area been defined widely enough?"},
         ],
     },
     "4": {
-        "title": "DESCRIPTION OF THE LIKELY SIGNIFICANT EFFECTS",
+        "title": "DESCRIPTION OF THE LIKELY SIGNIFICANT EFFECTS OF THE PROJECT",
         "subsections": [
-            {"number": "4.1.1", "title": "Scoping process described?"},
-            {"number": "4.1.2", "title": "Systematic approach to scoping evident?"},
-            {"number": "4.1.3", "title": "Full consultation carried out during scoping?"},
-            {"number": "4.1.4", "title": "Comments and views of consultees presented?"},
-            {"number": "4.4.1", "title": "Secondary effects described?"},
-            {"number": "4.4.2", "title": "Temporary/short-term effects described?"},
-            {"number": "4.4.3", "title": "Permanent effects described?"},
-            {"number": "4.4.4", "title": "Long-term effects described?"},
-            {"number": "4.4.5", "title": "Ancillary activities effects described?"},
-            {"number": "4.4.6", "title": "Indirect/consequential development effects described?"},
-            {"number": "4.4.7", "title": "Cumulative effects with other developments described (including worst-case)?"},
-            {"number": "4.4.8", "title": "Geographic extent, duration, frequency, reversibility, probability described?"},
-            {"number": "4.5.1", "title": "Primary and secondary effects on human health and welfare described/quantified?"},
-            {"number": "4.5.2", "title": "Impacts on biodiversity, climate change, and sustainable development discussed?"},
-            {"number": "4.6.1", "title": "Significance discussed in terms of legal compliance and sensitivity of receptors?"},
-            {"number": "4.6.2", "title": "Appropriate standards and guidance used?"},
-            {"number": "4.6.3", "title": "Positive effects described as well as negative?"},
-            {"number": "4.6.4", "title": "Significance of each effect clearly explained?"},
-            {"number": "4.7.1", "title": "Methods used to predict effects described and justified?"},
-            {"number": "4.7.2", "title": "Worst-case predictions used where uncertain?"},
-            {"number": "4.7.3", "title": "Difficulties in data compilation acknowledged?"},
-            {"number": "4.7.4", "title": "Level of treatment appropriate to importance?"},
-            {"number": "4.7.5", "title": "Emphasis given to most severe effects?"},
+            {"number": "4.1", "title": "Scoping of Effects"},
+            {"number": "4.2", "title": "Prediction of Direct Effects"},
+            {"number": "4.4", "title": "Prediction of Secondary, Temporary, Permanent, Indirect, Cumulative Effects"},
+            {"number": "4.5", "title": "Prediction of Effects on Human Health and Sustainable Development Issues"},
+            {"number": "4.6", "title": "Evaluation of the Significance of Effects"},
+            {"number": "4.7", "title": "Impact Assessment Methods"},
         ],
     },
     "5": {
         "title": "DESCRIPTION OF MITIGATION",
         "subsections": [
-            {"number": "5.1", "title": "Significant adverse effects and potential for mitigation discussed?"},
-            {"number": "5.2", "title": "Effect of mitigation on magnitude and significance explained?"},
-            {"number": "5.3", "title": "Reasons for choosing proposed mitigation explained?"},
-            {"number": "5.4", "title": "Full range of mitigation approaches considered (avoid, reduce, remedy, compensate, etc.)?"},
-            {"number": "5.5", "title": "Arrangements to monitor and manage residual impacts proposed?"},
-            {"number": "5.6", "title": "Any negative effects of the proposed mitigation described?"},
+            {
+                "number": "5.1",
+                "title": "Where there are significant adverse effects, is the potential for mitigation discussed?",
+            },
+            {"number": "5.4", "title": "Are reasons for choosing the proposed mitigation explained?"},
+            {
+                "number": "5.5",
+                "title": "Is it evident that a full range of possible approaches to mitigation is considered?",
+            },
+            {
+                "number": "5.6",
+                "title": "Are there arrangements proposed to monitor and manage residual impacts?",
+            },
         ],
     },
     "6": {
         "title": "NON-TECHNICAL SUMMARY",
         "subsections": [
             {"number": "6.1", "title": "Does the EIA include a Non-Technical Summary?"},
-            {"number": "6.2", "title": "Is it concise but comprehensive (project, environment, effects, mitigation)?"},
-            {"number": "6.3", "title": "Does it explain the development consent process and role of EIA?"},
-            {"number": "6.4", "title": "Does it provide an overview of the assessment approach?"},
-            {"number": "6.5", "title": "Is it written in non-technical language?"},
+            {
+                "number": "6.2",
+                "title": (
+                    "Does the Summary provide a concise but comprehensive description of the "
+                    "Project, its environment, effects and mitigation?"
+                ),
+            },
+            {"number": "6.5", "title": "Is the Summary written in non-technical language?"},
         ],
     },
     "7": {
         "title": "REGULATORY FRAMEWORK",
         "subsections": [
-            {"number": "7.1", "title": "Relevant Kuwait regulations (KEPA, Ministry of Oil, etc.) provided?"},
-            {"number": "7.2", "title": "Applicable environmental standards discussed (Noise, Air, Effluent, Waste, Soil, Biodiversity, etc.)?"},
-            {"number": "7.3", "title": "KOC HSE MS Policy, Vision & Mission clearly described?"},
-            {"number": "7.4", "title": "Applicable features of KOC EIA Procedure implemented?"},
-            {"number": "7.5", "title": "Relevant HSE MS Procedures utilized or referenced?"},
+            {
+                "number": "7.1",
+                "title": "Are relevant & applicable Regulations in State of Kuwait (KEPA, Ministry of Oil etc.) provided?",
+            },
+            {"number": "7.2", "title": "Are applicable Environmental Standards discussed?"},
+            {"number": "7.3", "title": "Are KOC HSE MS Policy, Vision & Mission clearly described?"},
+            {"number": "7.4", "title": "Are applicable features of KOC EIA Procedure implemented?"},
         ],
     },
     "8": {
         "title": "QUALITY OF PRESENTATION",
         "subsections": [
-            {"number": "8.1", "title": "Information available in clearly defined document(s)?"},
-            {"number": "8.2", "title": "Logically organized and clearly structured?"},
-            {"number": "8.3", "title": "Table of contents present?"},
-            {"number": "8.4", "title": "Clear description of process followed?"},
-            {"number": "8.5", "title": "Comprehensive but concise?"},
-            {"number": "8.6", "title": "Effective use of tables, figures, maps, photos?"},
-            {"number": "8.7", "title": "Effective use of annexes/appendices?"},
-            {"number": "8.8", "title": "All analyses and conclusions supported by evidence?"},
-            {"number": "8.9", "title": "Consistent terminology used?"},
-            {"number": "8.10", "title": "Reads as a single document with good cross-referencing?"},
-            {"number": "8.11", "title": "Presentation fair, impartial, and objective?"},
+            {
+                "number": "8.1",
+                "title": "Is the Environmental Information available in one or more clearly defined documents?",
+            },
+            {"number": "8.2", "title": "Is the document(s) logically organized and clearly structured?"},
+            {"number": "8.3", "title": "Is there a table of contents at the beginning of the document(s)?"},
+            {
+                "number": "8.6",
+                "title": (
+                    "Does the presentation make effective use of tables, figures, maps, "
+                    "photographs and other graphics?"
+                ),
+            },
+            {
+                "number": "8.11",
+                "title": "Is the presentation demonstrably fair and as far as possible impartial and objective?",
+            },
         ],
     },
 }
 
 
 def seed_eia_structure(db: Session, document: EiaDocument) -> None:
+    """Seed the standard 8-section EIA checklist structure for one document."""
     subsection_order = 1
     for section_order, (section_number, section_data) in enumerate(EIA_STRUCTURE.items(), start=1):
         section = EiaSection(

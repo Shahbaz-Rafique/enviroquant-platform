@@ -47,21 +47,19 @@ export function AttachmentsPanel({
       <div className="grid gap-4 p-4">
         {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
-        {canUpload ? (
-          <form className="grid gap-3" onSubmit={submit}>
-            <FileDropzone
-              accept={acceptedFiles}
-              description="PDF, Word, spreadsheet, text, or image"
-              disabled={uploading}
-              file={selectedFile}
-              onFileChange={setSelectedFile}
-            />
-            <Button disabled={uploading || !selectedFile} type="submit">
-              {uploading ? <Loader2 className="animate-spin" /> : <UploadCloud />}
-              Upload
-            </Button>
-          </form>
-        ) : null}
+        <form className="grid gap-3" onSubmit={submit}>
+          <FileDropzone
+            accept={acceptedFiles}
+            description="PDF, Word, spreadsheet, text, or image"
+            disabled={!canUpload || uploading}
+            file={selectedFile}
+            onFileChange={setSelectedFile}
+          />
+          <Button disabled={!canUpload || uploading || !selectedFile} type="submit">
+            {uploading ? <Loader2 className="animate-spin" /> : <UploadCloud />}
+            Upload
+          </Button>
+        </form>
 
         <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
           {!attachments.length ? (

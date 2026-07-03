@@ -59,7 +59,7 @@ export function AppShell ({ children, user }: AppShellProps) {
       <header className='builder-topbar sticky top-0 z-30'>
         <div className='flex h-20 items-center justify-between px-5 lg:px-7'>
           <Link href='/dashboard' className='flex min-w-0 items-center gap-4'>
-            <BrandMark href={null} />
+            <BrandMark  />
             <span className='hidden h-8 border-l border-white/12 lg:block' />
             <span className='hidden truncate text-sm font-semibold uppercase tracking-[0.18em] text-white/54 lg:block'>
               Workspace
@@ -86,9 +86,9 @@ export function AppShell ({ children, user }: AppShellProps) {
         </div>
       </header>
 
-      <div className='min-h-[calc(100vh-5rem)]'>
-        <aside className='fixed bottom-0 left-0 top-20 z-20 hidden w-64 border-r border-white/10 bg-[rgba(255,255,255,0.03)] backdrop-blur-xl lg:block'>
-          <nav className='h-full overflow-y-auto px-0 pt-5 space-y-2' aria-label='Workspace navigation'>
+      <div className='flex min-h-[calc(100vh-5rem)]'>
+        <aside className='hidden w-64 shrink-0 border-r border-white/10 bg-[rgba(255,255,255,0.03)] backdrop-blur-xl lg:block'>
+          <nav className='pt-5 space-y-2' aria-label='Workspace navigation'>
             {sectionLinks
               .filter(
                 item => !item.permission || hasPermission(user, item.permission)
@@ -111,7 +111,7 @@ export function AppShell ({ children, user }: AppShellProps) {
           </nav>
         </aside>
 
-        <main className='min-w-0 px-4 pb-24 pt-5 md:px-6 lg:ml-64 lg:px-7 lg:pb-7'>
+        <main className='min-w-0 flex-1 px-4 pb-24 pt-5 md:px-6 lg:px-7 lg:pb-7'>
           {children}
         </main>
       </div>
