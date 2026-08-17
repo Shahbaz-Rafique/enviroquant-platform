@@ -4,16 +4,21 @@ import {
   BarChart3,
   BookOpenCheck,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CircleDashed,
   Clock3,
   Download,
   ExternalLink,
+  FileCheck2,
   FileSearch,
-  FileText,
+  FolderOpen,
+  LayoutList,
   Loader2,
   MessageSquare,
+  PenLine,
   Save,
-  ShieldCheck,
+  SlidersHorizontal,
   Users
 } from "lucide-react";
 import Link from "next/link";
@@ -40,6 +45,7 @@ import type {
   EiaDocumentMember,
   EiaDocumentProgress,
   EiaDocumentStructure,
+  EiaSection,
   EiaSubSection,
   User
 } from "@/lib/types";
@@ -65,6 +71,7 @@ const insightTabs = [
 ] as const;
 
 type InsightTab = (typeof insightTabs)[number]["value"];
+type WorkspaceView = "overview" | "editor";
 
 export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentBuilderProps) {
   const [document, setDocument] = useState<EiaDocumentStructure | null>(null);
@@ -80,6 +87,8 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [activeInsight, setActiveInsight] = useState<InsightTab>("progress");
+  const [showWorkspaceTools, setShowWorkspaceTools] = useState(false);
+  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("overview");
   const [exportingFormat, setExportingFormat] = useState<"json" | "docx" | "pdf" | null>(null);
   const currentMemberRole = members.find((member) => member.user_id === user.id)?.role ?? null;
   const effectiveDocumentRole = currentMemberRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
@@ -97,6 +106,14 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
     ) ?? null;
   }, [document, selectedSubsectionId]);
 
+  const orderedSubsections = useMemo(
+    () => document?.sections.flatMap((section) => section.subsections) ?? [],
+    [document]
+  );
+  const selectedSubsectionIndex = orderedSubsections.findIndex((item) => item.id === selectedSubsectionId);
+  const previousSubsection = selectedSubsectionIndex > 0 ? orderedSubsections[selectedSubsectionIndex - 1] : null;
+  const nextSubsection = selectedSubsectionIndex >= 0 ? orderedSubsections[selectedSubsectionIndex + 1] ?? null : null;
+
   const progress = useMemo(() => {
     const subsections = document?.sections.flatMap((section) => section.subsections) ?? [];
     if (progressSummary) {
@@ -113,19 +130,6 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
       complete: subsections.filter((subsection) => subsection.completion_status === "COMPLETE").length
     };
   }, [document, progressSummary]);
-
-  const documentStats = useMemo(() => {
-    const sections = document?.sections ?? [];
-    const subsections = sections.flatMap((section) => section.subsections);
-    return {
-      sections: sections.length,
-      subsections: subsections.length,
-      readyForReview: subsections.filter((subsection) => subsection.completion_status === "READY_FOR_REVIEW").length,
-      inProgress: subsections.filter((subsection) => subsection.completion_status === "IN_PROGRESS").length
-    };
-  }, [document]);
-
-  const activeInsightLabel = insightTabs.find((tab) => tab.value === activeInsight)?.label ?? "Insights";
 
   const refreshActivity = useCallback(async () => {
     setActivity(await apiRequest<EiaActivityItem[]>(`/eia-documents/${documentId}/activity`));
@@ -241,108 +245,146 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   }
 
   return (
-    <div className="grid gap-5">
-      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl">
-        <div className="grid gap-5 border-b border-white/10 p-5 xl:grid-cols-[minmax(0,1fr)_auto]">
+    <div className="grid gap-4">
+      <header className="builder-panel px-5 py-5">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <Badge className="border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]">Structured EIA</Badge>
               <Badge className={cn(statusBadgeClass(document?.status ?? "draft"))}>
                 {document?.status ?? "draft"}
               </Badge>
-              <span className="text-xs font-semibold uppercase text-white/46">
-                {progress.complete}/{progress.total} complete
+              <span className="text-xs font-semibold text-[#72827b]">
+                {progress.complete} of {progress.total} checklist items complete
               </span>
             </div>
-            <h1 className="truncate text-2xl font-bold leading-tight text-white">
+            <h1 className="truncate text-2xl font-bold tracking-[-0.02em] text-[#18372c]">
               {document?.title ?? "Loading EIA document"}
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/66">
-              Work through  checklist method section by section, keep draft changes traceable,
-              and promote detailed editing to the focused subsection workspace.
-            </p>
           </div>
-
-          <div className="grid min-w-72 gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-bold text-white/74">Overall Progress</span>
-              <span className="text-2xl font-black text-white">
-                {Math.round(progressSummary?.progress_percentage ?? 0)}%
-              </span>
+          <div className="w-full max-w-sm">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-semibold text-[#52675e]">Document progress</span>
+              <strong className="text-[#18372c]">{Math.round(progressSummary?.progress_percentage ?? 0)}%</strong>
             </div>
             <Progress value={progressSummary?.progress_percentage ?? 0} />
           </div>
         </div>
+      </header>
 
-        <div className="grid divide-y divide-white/10 md:grid-cols-4 md:divide-x md:divide-y-0">
-          <MetricTile icon={<BookOpenCheck />} label="Sections" value={documentStats.sections || 8} />
-          <MetricTile icon={<FileText />} label="Checklist Items" value={documentStats.subsections || progress.total} />
-          <MetricTile icon={<Clock3 />} label="In Progress" value={documentStats.inProgress} />
-          <MetricTile icon={<ShieldCheck />} label="Ready for Review" value={documentStats.readyForReview} />
+      <nav className="builder-panel flex flex-col gap-2 p-2 lg:flex-row lg:items-center lg:justify-between" aria-label="EIA workflow">
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+          <WorkflowLink
+            active={workspaceView === "overview"}
+            icon={<LayoutList />}
+            label="Structure"
+            meta={`${document?.sections.length ?? 0} sections`}
+            onClick={() => setWorkspaceView("overview")}
+          />
+          <WorkflowAnchor
+            href={`/projects/${projectId}/documents`}
+            icon={<FolderOpen />}
+            label="Evidence"
+            meta="Project files"
+          />
+          <WorkflowAnchor
+            href={`/projects/${projectId}/eia/${documentId}/review`}
+            icon={<FileSearch />}
+            label="Review"
+            meta="Quality checks"
+          />
+          <WorkflowAnchor
+            href={`/projects/${projectId}/eia/${documentId}/review#approval`}
+            icon={<FileCheck2 />}
+            label="Approval"
+            meta={approvalLabel(document?.status)}
+          />
         </div>
-      </section>
+        <Button
+          className="w-full lg:w-auto"
+          type="button"
+          variant={workspaceView === "editor" ? "default" : "secondary"}
+          onClick={() => setWorkspaceView("editor")}
+        >
+          <PenLine /> Continue authoring
+        </Button>
+      </nav>
 
       {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
-      <section className="grid min-h-[calc(100vh-11rem)] gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_380px]">
-        <aside className="builder-panel sticky top-20 self-start overflow-hidden">
+      {workspaceView === "overview" ? (
+        <EiaStructureOverview
+          document={document}
+          loading={loading}
+          onOpenSubsection={(subsectionId) => {
+            setSelectedSubsectionId(subsectionId);
+            setWorkspaceView("editor");
+          }}
+        />
+      ) : null}
+
+      {workspaceView === "editor" ? (
+      <section className="grid min-h-[calc(100vh-11rem)] gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="builder-panel self-start overflow-hidden xl:sticky xl:top-20">
           <div className="border-b border-white/10 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-2 text-base font-bold text-white">
                 <BookOpenCheck className="size-5 text-[#B6F7FF]" />
-                Checklist
+                EIA sections
               </span>
               <Badge>{progress.complete}/{progress.total}</Badge>
             </div>
-            <p className="mt-1 text-xs font-medium text-white/52">Select a subsection to draft or review.</p>
           </div>
 
-          <div className="max-h-[calc(100vh-13rem)] overflow-y-auto p-3">
+          <div className="max-h-[calc(100vh-11rem)] overflow-y-auto p-2">
             {loading ? <Alert>Loading checklist...</Alert> : null}
             {document?.sections.map((section) => (
-              <div className="mb-4" key={section.id}>
-                <div className="sticky top-0 z-10 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black uppercase text-white/68 backdrop-blur-sm">
-                  {section.section_number}. {section.title}
-                </div>
-                <div className="mt-2 grid gap-1">
+              <div key={section.id}>
+                <button
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#52675e] transition-colors hover:bg-[#f2f7f4]",
+                    selectedSection?.id === section.id && "bg-[#e8f3ed] text-[#1f6848]"
+                  )}
+                  onClick={() => setSelectedSubsectionId(section.subsections[0]?.id ?? null)}
+                  type="button"
+                >
+                  <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[#cfe0d7] bg-white text-xs font-bold text-[#287451]">
+                    {section.section_number}
+                  </span>
+                  <span className="line-clamp-2 leading-5">{formatSectionTitle(section.title)}</span>
+                </button>
+                {selectedSection?.id === section.id ? (
+                  <div className="mb-2 ml-5 mt-1 grid gap-0.5 border-l border-[#d9e5df] pl-3">
                   {section.subsections.map((subsection) => {
                     const active = selectedSubsectionId === subsection.id;
                     const StatusIcon = iconForCompletionStatus(subsection.completion_status);
                     return (
                       <button
                         className={cn(
-                          "group grid gap-1 rounded-xl border border-transparent px-3 py-2 text-left transition-colors hover:border-[#67E8F9]/20 hover:bg-white/[0.05]",
-                          active && "border-[#67E8F9]/28 bg-[#67E8F9]/10"
+                          "flex items-start gap-2 rounded-md px-2 py-2 text-left text-xs text-[#697a73] transition-colors hover:bg-[#f4f7f5]",
+                          active && "eia-section-menu-active bg-[#287451] hover:bg-[#287451]"
                         )}
                         key={subsection.id}
                         onClick={() => setSelectedSubsectionId(subsection.id)}
                         type="button"
                       >
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-black uppercase text-[#B6F7FF]">
-                            {subsection.subsection_number}
-                          </span>
-                          <StatusIcon
-                            className={cn("size-4 shrink-0", statusIconClass(subsection.completion_status))}
-                          />
-                        </span>
-                        <span className="line-clamp-2 text-sm font-semibold leading-5 text-white">
-                          {subsection.title}
-                        </span>
-                        <span className="text-xs font-medium text-white/52">
-                          {Math.round(subsection.progress_percentage)}% complete
+                        <StatusIcon className={cn("mt-0.5 size-3.5 shrink-0", active ? "text-white/80" : statusIconClass(subsection.completion_status))} />
+                        <span className="min-w-0">
+                          <span className={cn("block font-bold", active ? "text-white" : "text-[#52675e]")}>{subsection.subsection_number}</span>
+                          <span className="mt-0.5 line-clamp-2 block leading-4">{subsection.title}</span>
                         </span>
                       </button>
                     );
                   })}
-                </div>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
         </aside>
 
+        <div className="grid min-w-0 content-start gap-4">
         <form className="builder-panel min-w-0 self-start overflow-hidden" onSubmit={submit}>
-          <div className="border-b border-white/10 bg-white/[0.03] px-5 py-4">
+          <div className="border-b border-[#e3eae6] px-5 py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -357,62 +399,37 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button asChild variant="outline">
-                  <Link href={`/projects/${projectId}/eia/${documentId}/review`}>
-                    <FileSearch />
-                    Review Center
-                  </Link>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowWorkspaceTools((current) => !current)}
+                >
+                  <SlidersHorizontal />
+                  {showWorkspaceTools ? "Hide tools" : "Workspace tools"}
                 </Button>
                 {selectedSubsection ? (
                   <Button asChild variant="secondary">
                     <Link href={`/projects/${projectId}/eia/${documentId}/subsection/${selectedSubsection.id}`}>
                       <ExternalLink />
-                      Focus Workspace
+                      Open subsection
                     </Link>
                   </Button>
                 ) : null}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={exportingFormat !== null}
-                  onClick={() => void downloadCompiledDocument("pdf")}
-                >
-                  {exportingFormat === "pdf" ? <Loader2 className="animate-spin" /> : <Download />}
-                  Export PDF
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={exportingFormat !== null}
-                  onClick={() => void downloadCompiledDocument("docx")}
-                >
-                  {exportingFormat === "docx" ? <Loader2 className="animate-spin" /> : <Download />}
-                  Export DOCX
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={exportingFormat !== null}
-                  onClick={() => void downloadCompiledDocument("json")}
-                >
-                  {exportingFormat === "json" ? <Loader2 className="animate-spin" /> : <Download />}
-                  Export JSON
-                </Button>
                 {canEdit ? (
                   <Button type="submit" disabled={!selectedSubsection || saving}>
                     {saving ? <Loader2 className="animate-spin" /> : <Save />}
-                    Save Draft
+                    Save draft
                   </Button>
                 ) : null}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-5 border-b border-white/10 bg-white/[0.04] p-5 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
+          <div className="flex flex-col gap-4 border-b border-[#e3eae6] bg-[#f8faf9] px-5 py-3 md:flex-row md:items-end">
             {canEdit ? (
               <>
-                <label className="grid gap-2 text-sm font-semibold text-white/78">
-                  Completion status
+                <label className="grid min-w-52 gap-1.5 text-xs font-semibold text-[#52675e]">
+                  Status
                   <Select value={completionStatus} onValueChange={setCompletionStatus}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
@@ -426,7 +443,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                     </SelectContent>
                   </Select>
                 </label>
-                <label className="grid gap-2 text-sm font-semibold text-white/78">
+                <label className="grid w-36 gap-1.5 text-xs font-semibold text-[#52675e]">
                   Progress
                   <NumberStepper
                     max={100}
@@ -438,30 +455,30 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
               </>
             ) : (
               <>
-                <div className="grid gap-2 text-sm font-semibold text-white/78">
+                <div className="grid gap-1.5 text-xs font-semibold text-[#52675e]">
                   <span>Completion status</span>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">
+                  <div className="rounded-lg border border-[#dce6e1] bg-white px-3 py-2 text-sm font-semibold text-[#29483c]">
                     {statusLabel(completionStatus)}
                   </div>
                 </div>
-                <div className="grid gap-2 text-sm font-semibold text-white/78">
+                <div className="grid gap-1.5 text-xs font-semibold text-[#52675e]">
                   <span>Progress</span>
-                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">
+                  <div className="rounded-lg border border-[#dce6e1] bg-white px-3 py-2 text-sm font-semibold text-[#29483c]">
                     {progressPercentage}%
                   </div>
                 </div>
               </>
             )}
-            <div className="grid content-end">
-              <div className="h-10 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white/52">
-                {canEdit ? (savedAt ? `Saved ${savedAt}` : "Not saved this session") : "Read-only access"}
-              </div>
-            </div>
+            <p className="pb-2 text-xs font-medium text-[#74847d] md:ml-auto">
+              {canEdit ? (savedAt ? `Saved at ${savedAt}` : "Changes are saved when you select Save draft") : "Read-only access"}
+            </p>
           </div>
 
           <div className="p-5">
+            <label className="mb-2 block text-sm font-semibold text-[#344f44]" htmlFor="eia-draft-content">Assessment response</label>
             <Textarea
-              className="min-h-[560px] resize-y rounded-2xl border-white/12 bg-white/[0.03] text-base leading-7 text-white"
+              id="eia-draft-content"
+              className="min-h-[420px] resize-y rounded-lg border-[#cfdcd6] bg-white text-base leading-7 text-[#18372c]"
               disabled={!selectedSubsection}
               placeholder="Draft structured EIA content for this checklist item. Include evidence references, quantified details, assumptions, and source notes."
               readOnly={!canEdit}
@@ -469,24 +486,53 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
               onChange={(event) => setContent(event.target.value)}
             />
           </div>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-[#e3eae6] bg-[#f8faf9] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              disabled={!previousSubsection}
+              type="button"
+              variant="secondary"
+              onClick={() => previousSubsection && setSelectedSubsectionId(previousSubsection.id)}
+            >
+              <ChevronLeft /> Previous
+            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={exportingFormat !== null}
+                onClick={() => void downloadCompiledDocument("pdf")}
+              >
+                {exportingFormat === "pdf" ? <Loader2 className="animate-spin" /> : <Download />}
+                Export PDF
+              </Button>
+              <Button
+                disabled={!nextSubsection}
+                type="button"
+                onClick={() => nextSubsection && setSelectedSubsectionId(nextSubsection.id)}
+              >
+                Next checklist item <ChevronRight />
+              </Button>
+            </div>
+          </div>
         </form>
 
-        <aside className="xl:col-span-2 2xl:col-span-1">
-          <div className="sticky top-20 grid content-start gap-4">
-            <section className="builder-panel overflow-hidden">
-              <div className="border-b border-white/10 px-4 py-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-base font-bold text-white">Workspace Insights</span>
-                  <Badge>{activeInsightLabel}</Badge>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
+        {showWorkspaceTools ? (
+          <section className="builder-panel overflow-hidden">
+              <div className="border-b border-[#e3eae6] px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#18372c]">Workspace tools</h3>
+                    <p className="mt-0.5 text-xs text-[#74847d]">Progress, collaborators, source mappings and activity.</p>
+                  </div>
+                <div className="flex flex-wrap gap-1 rounded-lg bg-[#f2f6f4] p-1">
                   {insightTabs.map((tab) => {
                     const Icon = tab.icon;
                     return (
                       <button
                         className={cn(
-                          "flex h-9 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-xs font-bold uppercase text-white/62 transition-colors hover:bg-white/[0.07] hover:text-white",
-                          activeInsight === tab.value && "border-[#67E8F9]/28 bg-[#67E8F9]/10 text-[#B6F7FF]"
+                          "flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-semibold text-[#66776f] transition-colors hover:bg-white",
+                          activeInsight === tab.value && "bg-white text-[#236c4a] shadow-sm"
                         )}
                         key={tab.value}
                         type="button"
@@ -499,7 +545,8 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                   })}
                 </div>
               </div>
-            </section>
+              </div>
+            <div className="p-4">
             {activeInsight === "progress" ? <EiaProgressOverview progress={progressSummary} /> : null}
             {activeInsight === "team" ? (
               <EiaTeamPanel
@@ -524,25 +571,219 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
               />
             ) : null}
             {activeInsight === "activity" ? <EiaActivityFeed activity={activity} /> : null}
-          </div>
-        </aside>
+            </div>
+          </section>
+        ) : null}
+        </div>
       </section>
+      ) : null}
     </div>
   );
 }
 
-function MetricTile({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
+function EiaStructureOverview({
+  document,
+  loading,
+  onOpenSubsection
+}: {
+  document: EiaDocumentStructure | null;
+  loading: boolean;
+  onOpenSubsection: (subsectionId: string) => void;
+}) {
+  const sections = document?.sections ?? [];
+  const subsections = sections.flatMap((section) => section.subsections);
+  const completed = subsections.filter((item) => item.completion_status === "COMPLETE").length;
+  const inProgress = subsections.filter((item) => item.completion_status === "IN_PROGRESS").length;
+  const ready = subsections.filter((item) => item.completion_status === "READY_FOR_REVIEW").length;
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? sections[0] ?? null;
+
   return (
-    <div className="flex items-center gap-3 px-5 py-4">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#67E8F9]/18 bg-[#67E8F9]/10 text-[#B6F7FF] [&_svg]:size-5">
-        {icon}
-      </span>
-      <div>
-        <div className="text-2xl font-black leading-none text-white">{value}</div>
-        <div className="mt-1 text-xs font-bold uppercase text-white/46">{label}</div>
+    <section className="builder-panel overflow-hidden">
+      <header className="flex flex-col gap-4 border-b border-[#e3eae6] px-5 py-5 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#287451]">EIA overview</p>
+          <h2 className="mt-1 text-xl font-bold text-[#18372c]">Complete assessment structure</h2>
+          <p className="mt-1 text-sm text-[#697a73]">Review every section and open any subsection in the focused editor.</p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+          <OverviewCount label="Complete" value={completed} tone="green" />
+          <OverviewCount label="In progress" value={inProgress} tone="blue" />
+          <OverviewCount label="Ready for review" value={ready} tone="amber" />
+          <OverviewCount label="Total" value={subsections.length} tone="slate" />
+        </div>
+      </header>
+
+      <div className="grid lg:grid-cols-[250px_minmax(0,1fr)]">
+        {loading ? <Alert>Loading complete EIA structure...</Alert> : null}
+        {!loading && !sections.length ? <Alert>No EIA sections are available.</Alert> : null}
+
+        {sections.length ? (
+          <aside className="border-b border-[#dce6e1] bg-[#f7f9f8] p-2 lg:border-b-0 lg:border-r" aria-label="EIA sections">
+            <p className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#809088]">Sections</p>
+            <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
+              {sections.map((section) => {
+                const stats = sectionProgress(section);
+                const active = selectedSection?.id === section.id;
+                return (
+                  <button
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "group rounded-lg px-3 py-3 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#287451]/30 focus-visible:ring-offset-1",
+                      active ? "eia-section-menu-active bg-[#287451] shadow-sm" : "text-[#52675e] hover:bg-white"
+                    )}
+                    key={section.id}
+                    onClick={() => setSelectedSectionId(section.id)}
+                    type="button"
+                  >
+                    <span className="flex items-start gap-2.5">
+                      <span className={cn(
+                        "grid size-7 shrink-0 place-items-center rounded-md border text-xs font-bold",
+                        active ? "border-white/30 bg-white/10" : "border-[#cfe0d7] bg-white text-[#287451]"
+                      )}>
+                        {section.section_number}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <strong className="line-clamp-2 block text-xs leading-4">{formatSectionTitle(section.title)}</strong>
+                        <span className={cn("mt-1 block text-[10px]", active ? "opacity-75" : "text-[#7b8a83]")}>
+                          {stats.complete}/{stats.total} complete · {stats.percentage}%
+                        </span>
+                      </span>
+                    </span>
+                    <span className={cn("mt-2 block h-1 overflow-hidden rounded-full", active ? "bg-white/20" : "bg-[#dce9e2]")}>
+                      <span className={cn("block h-full rounded-full", active ? "eia-active-progress" : "bg-[#287451]")} style={{ width: `${stats.percentage}%` }} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+        ) : null}
+
+        {selectedSection ? (
+          <SectionDetailPanel onOpenSubsection={onOpenSubsection} section={selectedSection} />
+        ) : null}
       </div>
-    </div>
+    </section>
   );
+}
+
+function SectionDetailPanel({
+  section,
+  onOpenSubsection
+}: {
+  section: EiaSection;
+  onOpenSubsection: (subsectionId: string) => void;
+}) {
+  const stats = sectionProgress(section);
+
+  return (
+    <article className="min-w-0 bg-white">
+      <div className="border-b border-[#e3eae6] p-5 md:p-6">
+        <div className="flex items-start gap-3">
+          <span className="eia-section-menu-active grid size-10 shrink-0 place-items-center rounded-lg bg-[#287451] text-sm font-bold">
+            {section.section_number}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#287451]">Section {section.section_number}</p>
+            <h3 className="mt-1 text-xl font-bold leading-6 text-[#18372c]">{formatSectionTitle(section.title)}</h3>
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[#697a73]">
+              <span>{stats.complete} of {stats.total} subsections complete</span>
+              <strong className="text-[#29483c]">{stats.percentage}%</strong>
+            </div>
+            <Progress className="mt-2 h-1.5" value={stats.percentage} />
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-[#edf1ef] bg-[#f8faf9] px-5 py-3 md:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-[#29483c]">Subsections</h4>
+            <p className="mt-0.5 text-xs text-[#74847d]">Select an item to open it in the focused authoring workspace.</p>
+          </div>
+          {section.subsections[0] ? (
+            <Button size="sm" type="button" onClick={() => onOpenSubsection(section.subsections[0].id)}>
+              {stats.percentage > 0 ? "Continue section" : "Begin section"} <ChevronRight />
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="divide-y divide-[#edf1ef]">
+        {section.subsections.map((subsection) => (
+          <button
+            className="group flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-[#f6faf7] md:px-6"
+            key={subsection.id}
+            onClick={() => onOpenSubsection(subsection.id)}
+            type="button"
+          >
+            <StatusDot status={subsection.completion_status} />
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-[#287451]">{subsection.subsection_number}</span>
+                <Badge className={statusBadgeClass(subsection.completion_status)}>{statusLabel(subsection.completion_status)}</Badge>
+              </span>
+              <span className="mt-1 block text-sm font-medium leading-5 text-[#52675e]">{subsection.title}</span>
+            </span>
+            <span className="hidden w-28 shrink-0 sm:block">
+              <span className="mb-1 flex justify-between text-[10px] font-semibold text-[#7b8a83]"><span>Progress</span><span>{Math.round(subsection.progress_percentage)}%</span></span>
+              <Progress className="h-1.5" value={subsection.progress_percentage} />
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-[#9aaaa2] transition-transform group-hover:translate-x-0.5" />
+          </button>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function sectionProgress(section: EiaSection) {
+  const total = section.subsections.length;
+  const complete = section.subsections.filter((item) => item.completion_status === "COMPLETE").length;
+  const percentage = total
+    ? Math.round(section.subsections.reduce((sum, item) => sum + item.progress_percentage, 0) / total)
+    : 0;
+  return { total, complete, percentage };
+}
+
+function WorkflowLink({ active, icon, label, meta, onClick }: { active: boolean; icon: ReactNode; label: string; meta: string; onClick: () => void }) {
+  return (
+    <button
+      className={cn(
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors",
+        active ? "bg-[#e8f3ed] text-[#236c4a]" : "text-[#61746b] hover:bg-[#f3f7f5]"
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="[&_svg]:size-4">{icon}</span>
+      <span><strong className="block text-xs">{label}</strong><span className="block text-[10px] opacity-70">{meta}</span></span>
+    </button>
+  );
+}
+
+function WorkflowAnchor({ href, icon, label, meta }: { href: string; icon: ReactNode; label: string; meta: string }) {
+  return (
+    <Link className="flex items-center gap-2 rounded-lg px-3 py-2 text-[#61746b] transition-colors hover:bg-[#f3f7f5]" href={href}>
+      <span className="[&_svg]:size-4">{icon}</span>
+      <span><strong className="block text-xs">{label}</strong><span className="block text-[10px] opacity-70">{meta}</span></span>
+    </Link>
+  );
+}
+
+function OverviewCount({ label, value, tone }: { label: string; value: number; tone: "green" | "blue" | "amber" | "slate" }) {
+  const tones = {
+    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    blue: "border-[#c9dfd3] bg-[#edf6f1] text-[#287451]",
+    amber: "border-amber-200 bg-amber-50 text-amber-700",
+    slate: "border-slate-200 bg-slate-50 text-slate-600"
+  };
+  return <span className={cn("rounded-full border px-2.5 py-1", tones[tone])}>{value} {label}</span>;
+}
+
+function StatusDot({ status }: { status: string }) {
+  return <span className={cn("size-2.5 shrink-0 rounded-full", status === "COMPLETE" ? "bg-emerald-500" : status === "READY_FOR_REVIEW" ? "bg-amber-500" : status === "IN_PROGRESS" ? "bg-[#287451]" : "bg-slate-300")} />;
 }
 
 function iconForCompletionStatus(status: string) {
@@ -560,12 +801,34 @@ function statusIconClass(status: string) {
     return "text-emerald-600";
   }
   if (status === "READY_FOR_REVIEW") {
-    return "text-amber-300";
+    return "text-amber-600";
   }
   if (status === "IN_PROGRESS") {
-    return "text-[#67E8F9]";
+    return "text-[#287451]";
   }
-  return "text-white/32";
+  return "text-[#9aa8a1]";
+}
+
+function formatSectionTitle(title: string) {
+  if (title !== title.toUpperCase()) {
+    return title;
+  }
+  const normalized = title.toLowerCase();
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function approvalLabel(status?: string) {
+  const normalized = status?.toUpperCase();
+  if (normalized === "APPROVED") {
+    return "Approved";
+  }
+  if (normalized === "CHANGES_REQUESTED") {
+    return "Changes requested";
+  }
+  if (normalized === "IN_REVIEW" || normalized === "READY_FOR_REVIEW") {
+    return "Awaiting decision";
+  }
+  return "Formal sign-off";
 }
 
 function statusLabel(status: string) {
@@ -575,18 +838,18 @@ function statusLabel(status: string) {
 function statusBadgeClass(status: string) {
   const normalized = status.toUpperCase();
   if (normalized === "COMPLETE" || normalized === "PUBLISHED" || normalized === "APPROVED") {
-    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (normalized === "CHANGES_REQUESTED") {
-    return "border-red-400/25 bg-red-500/10 text-red-100";
+    return "border-red-200 bg-red-50 text-red-700";
   }
   if (normalized === "READY_FOR_REVIEW" || normalized === "IN_REVIEW") {
-    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
   if (normalized === "IN_PROGRESS" || normalized === "DRAFT") {
-    return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
+    return "border-slate-200 bg-slate-100 text-slate-600";
   }
-  return "border-white/12 bg-white/[0.05] text-white/68";
+  return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
 function replaceSubsection(

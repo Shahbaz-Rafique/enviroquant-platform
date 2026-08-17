@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, Map, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Map, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ const projectComponents = [
 export function ProjectForm() {
   const router = useRouter();
   const [form, setForm] = useState(initialState);
+  const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -67,7 +69,8 @@ export function ProjectForm() {
           description: form.description || null,
           metadata: {
             capacity: form.capacity || null,
-            timeline: form.timeline || null
+            timeline: form.timeline || null,
+            project_components: selectedComponents
           }
         })
       });
@@ -86,7 +89,7 @@ export function ProjectForm() {
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="grid gap-5">
           <div className="grid gap-2">
-            <Label htmlFor="name">Project Name*</Label>
+            <Label htmlFor="name">Project name <span className="text-red-600">*</span></Label>
             <Input
               id="name"
               required
@@ -97,7 +100,7 @@ export function ProjectForm() {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="location">Project Location*</Label>
+            <Label htmlFor="location">Project location <span className="text-red-600">*</span></Label>
             <Input
               id="location"
               required
@@ -108,7 +111,7 @@ export function ProjectForm() {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="description">Project Overview*</Label>
+            <Label htmlFor="description">Project overview <span className="text-red-600">*</span></Label>
             <Textarea
               id="description"
               required
@@ -120,7 +123,7 @@ export function ProjectForm() {
 
           <div className="grid gap-5 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="sector">Project Type*</Label>
+              <Label htmlFor="sector">Project type <span className="text-red-600">*</span></Label>
               <Input
                 id="sector"
                 required
@@ -142,7 +145,7 @@ export function ProjectForm() {
 
           <div className="grid gap-5 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label htmlFor="capacity">Project Size & Capacity</Label>
+              <Label htmlFor="capacity">Project size & capacity</Label>
               <Input
                 id="capacity"
                 placeholder="e.g. 150 hectares"
@@ -151,10 +154,10 @@ export function ProjectForm() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="timeline">Project Timeline</Label>
+              <Label htmlFor="timeline">Estimated project timeline</Label>
               <Input
                 id="timeline"
-                placeholder="e.g. 2026-2028"
+                type="date"
                 value={form.timeline}
                 onChange={(event) => updateField("timeline", event.target.value)}
               />
@@ -162,12 +165,16 @@ export function ProjectForm() {
           </div>
 
           <div className="grid gap-3">
-            <Label>Key Project Components</Label>
+            <Label>Key project components</Label>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {projectComponents.map((component) => (
-                <div key={component} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                  <Checkbox id={`component-${component}`} />
-                  <Label className="cursor-pointer text-sm font-medium text-white/76" htmlFor={`component-${component}`}>
+                <div key={component} className="flex items-center gap-2 rounded-lg border border-[#dce6e1] bg-[#f8faf9] p-3">
+                  <Checkbox
+                    checked={selectedComponents.includes(component)}
+                    id={`component-${component}`}
+                    onCheckedChange={(checked) => setSelectedComponents((current) => checked ? [...current, component] : current.filter((item) => item !== component))}
+                  />
+                  <Label className="cursor-pointer text-sm font-medium text-[#52675e]" htmlFor={`component-${component}`}>
                     {component}
                   </Label>
                 </div>
@@ -176,22 +183,31 @@ export function ProjectForm() {
           </div>
         </div>
 
-        <aside className="rounded-2xl border border-dashed border-white/12 bg-white/[0.03] p-4">
-          <Label>Upload Project Map</Label>
-          <div className="mt-3 grid aspect-video place-items-center rounded-2xl border border-dashed border-[#67E8F9]/20 bg-white/[0.03]">
-            <div className="text-center text-sm text-white/56">
-              <Map className="mx-auto mb-2 size-10 text-[#B6F7FF]" />
-              Map upload comes with document evidence in this phase.
+        <aside className="rounded-xl border border-dashed border-[#cbdad3] bg-[#f8faf9] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <Label>Project area mapping</Label>
+            <Badge className="border-slate-200 bg-slate-100 text-slate-600">Roadmap</Badge>
+          </div>
+          <div className="mt-3 grid aspect-video place-items-center rounded-lg border border-dashed border-[#cbdad3] bg-white">
+            <div className="px-4 text-center text-sm text-[#74847d]">
+              <Map className="mx-auto mb-2 size-10 text-[#6f9f87]" />
+              Interactive project-area mapping is not available yet. Add maps and plans as evidence after creating the project.
             </div>
           </div>
         </aside>
       </div>
 
-      <div className="mt-8 flex justify-end border-t border-white/10 pt-5">
+      <div className="mt-8 flex flex-col-reverse justify-between gap-3 border-t border-[#e3eae6] pt-5 sm:flex-row sm:items-center">
+        <Button type="button" variant="secondary" onClick={() => router.push("/projects")}>
+          <ArrowLeft /> Back
+        </Button>
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <span className="text-xs text-[#74847d]">Next: evidence and structured EIA setup.</span>
         <Button type="submit" disabled={saving}>
           {saving ? <Loader2 className="animate-spin" /> : <Save />}
-          Save & Continue
+          Save & continue <ArrowRight />
         </Button>
+        </div>
       </div>
     </form>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpenCheck, FilePlus2, FileSearch, FileText, RefreshCcw } from "lucide-react";
+import { BookOpenCheck, CheckCircle2, ChevronRight, FilePlus2, FileSearch, FileText, RefreshCcw, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -114,9 +114,12 @@ export default function ProjectWorkspacePage() {
       />
       <header className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-start">
         <div>
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#67E8F9]">Project Workspace</p>
-          <h1 className="mt-1 text-3xl font-bold text-white">{project?.name ?? "Workspace"}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-white/66">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#287451]">Current EIA workspace</p>
+            <Badge>{project?.status ?? "DRAFT"}</Badge>
+          </div>
+          <h1 className="text-3xl font-bold tracking-[-0.025em] text-[#18372c]">{project?.name ?? "Workspace"}</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#697a73]">
             {project?.description ?? "Document foundation and project metadata."}
           </p>
         </div>
@@ -125,14 +128,28 @@ export default function ProjectWorkspacePage() {
       {error ? <Alert className="mb-5 border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
       {loading ? <Alert className="mb-5">Loading workspace...</Alert> : null}
 
+      <section className="mb-5 rounded-xl border border-[#dce6e1] bg-white p-4 shadow-[0_6px_20px_rgba(15,45,34,0.04)]">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-[#18372c]">Current EIA workflow</h2>
+            <p className="mt-1 text-xs text-[#697a73]">Start with evidence, create the structured assessment, then move it into review.</p>
+          </div>
+          <span className="hidden text-xs font-semibold text-[#287451] sm:block">Evidence Before Conclusions™</span>
+        </div>
+        <div className="grid gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
+          <WorkflowStep icon={<UploadCloud />} label="1. Add evidence" detail={`${documents.length} file${documents.length === 1 ? "" : "s"}`} />
+          <ChevronRight className="hidden size-4 text-[#9aaba3] md:block" />
+          <WorkflowStep icon={<BookOpenCheck />} label="2. Build EIA" detail={`${eiaDocuments.length} assessment${eiaDocuments.length === 1 ? "" : "s"}`} />
+          <ChevronRight className="hidden size-4 text-[#9aaba3] md:block" />
+          <WorkflowStep icon={<CheckCircle2 />} label="3. Review" detail="Traceable checks" />
+        </div>
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px]">
         <div className="builder-panel overflow-hidden">
-          {/* <div className="bg-[#2369be] px-5 py-3 text-lg font-semibold text-white">
-            Section 6 - Project Evidence Workspace
-          </div> */}
           <div className="grid">
             <div className="p-5">
-              <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="mb-5 rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-4">
                 <div className="mb-3 flex flex-col justify-between gap-3 md:flex-row md:items-center">
                   <div>
                     <div className="flex items-center gap-2 text-base font-bold text-white">
@@ -140,7 +157,7 @@ export default function ProjectWorkspacePage() {
                       Structured EIA Documents
                     </div>
                     <p className="mt-1 text-sm text-white/66">
-                      Create a checklist-aligned EIA and optionally auto-apply parsed source sections from an uploaded report.
+                      Create an eight-section assessment and optionally seed it from an uploaded source report.
                     </p>
                   </div>
                 </div>
@@ -176,7 +193,7 @@ export default function ProjectWorkspacePage() {
                     <div className="grid content-end">
                       <Button type="button" disabled={creatingEia} onClick={createStructuredEia}>
                         {creatingEia ? <RefreshCcw className="animate-spin" /> : <FilePlus2 />}
-                        New EIA
+                        Create structured EIA
                       </Button>
                     </div>
                   </div>
@@ -184,7 +201,7 @@ export default function ProjectWorkspacePage() {
 
                 <div className="grid gap-3">
                   {!eiaDocuments.length ? (
-                    <Alert>No structured EIA documents created yet.</Alert>
+                    <Alert>No structured EIA yet. Upload source evidence if needed, then create the assessment.</Alert>
                   ) : (
                     eiaDocuments.map((eiaDocument) => (
                       <Link
@@ -214,7 +231,7 @@ export default function ProjectWorkspacePage() {
               </div>
 
               {canUpload ? (
-                <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="mb-5 rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-4">
                   <div className="mb-3 flex items-center gap-2 text-base font-bold text-white">
                     <FileText className="size-5 text-[#B6F7FF]" />
                     Attach Files & Documents
@@ -273,7 +290,7 @@ export default function ProjectWorkspacePage() {
               <CardTitle>Review Controls</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm text-white/66">
-              <div className="rounded-2xl border border-[#67E8F9]/18 bg-[#67E8F9]/10 p-3">
+              <div className="rounded-lg border border-[#cbe0d5] bg-[#edf6f1] p-3">
                 <div className="mb-1 flex items-center gap-2 font-bold text-white">
                   <BookOpenCheck className="size-4" />
                   Evidence-first review
@@ -296,8 +313,32 @@ export default function ProjectWorkspacePage() {
               ) : null}
             </CardContent>
           </Card>
+
+          <Card className="border-dashed">
+            <CardHeader>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Platform roadmap</CardTitle>
+                <Badge className="border-slate-200 bg-slate-100 text-slate-600">Future</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm leading-6 text-[#697a73]">Cross-project environmental intelligence and operating-system capabilities are in development and are not available in this workspace today.</p>
+            </CardContent>
+          </Card>
         </aside>
       </section>
     </AppShell>
+  );
+}
+
+function WorkflowStep({ icon, label, detail }: { icon: React.ReactNode; label: string; detail: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-[#e0e8e4] bg-[#f8faf9] p-3">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#e6f2eb] text-[#287451] [&_svg]:size-4">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-[#29483c]">{label}</p>
+        <p className="mt-0.5 truncate text-xs text-[#74847d]">{detail}</p>
+      </div>
+    </div>
   );
 }

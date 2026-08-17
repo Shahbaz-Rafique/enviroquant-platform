@@ -203,5 +203,59 @@
   }
 }
 
+/* Authenticated product workspace: restrained, high-contrast enterprise surfaces. */
+.workspace-theme {
+  min-height: 100vh;
+  background: #f3f6f4;
+  color: #18372c;
+}
 
+.workspace-theme > .builder-topbar {
+  border: 0;
+  border-bottom: 1px solid #dce6e1;
+  background: #fff;
+  color: #173c2e;
+  box-shadow: 0 1px 3px rgba(15, 45, 34, 0.06);
+  backdrop-filter: none;
+}
 
+.workspace-main .builder-panel {
+  border: 1px solid #dce6e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 45, 34, 0.06);
+}
+
+.workspace-main .builder-section-title {
+  border-bottom: 1px solid #e5ece8;
+  color: #173c2e;
+}
+
+.workspace-main .form-line-input {
+  border: 1px solid #cfdcd6;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #173c2e;
+}
+
+.workspace-main [class~='text-white'] { color: #18372c !important; }
+.workspace-main [class*='text-white/'] { color: #697a73 !important; }
+.workspace-main [class*='border-white/'] { border-color: #dce6e1 !important; }
+.workspace-main [class*='divide-white/'] > :not([hidden]) ~ :not([hidden]) { border-color: #e3eae6 !important; }
+.workspace-main [class*='bg-white/['] { background-color: #f8faf9 !important; }
+.workspace-main [class*='text-[#B6F7FF]'],
+.workspace-main [class*='text-[#67E8F9]'] { color: #287451 !important; }
+.workspace-main [class*='border-[#67E8F9]'] { border-color: #b9d8c8 !important; }
+.workspace-main [class*='bg-[#67E8F9]'] { background-color: #eaf5ef !important; }
+.workspace-main .glowing-border::before { display: none; }
+.workspace-main .builder-panel { backdrop-filter: none; }
+.workspace-main .workspace-primary-action,
+.workspace-main .workspace-primary-action * { color: #fff !important; }
+.workspace-main .eia-section-menu-active,
+.workspace-main .eia-section-menu-active * { color: #fff !important; }
+.workspace-main .eia-section-menu-active .eia-active-progress,
+.workspace-main .eia-active-progress { background-color: #fff !important; }
+
+@media (max-width: 767px) {
+  .workspace-main { padding-inline: 1rem; }
+}

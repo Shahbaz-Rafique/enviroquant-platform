@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -66,25 +66,11 @@ export default function ProjectDocumentsPage() {
           { label: "Documents" }
         ]}
       />
-      <header className="mx-auto mb-5 max-w-5xl text-center">
-        <h1 className="text-3xl font-bold text-white">Submit Your Project</h1>
-        <p className="mt-2 text-sm text-white/66">{project?.name ?? "Project document workspace"}</p>
+      <header className="mx-auto mb-5 max-w-5xl">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#287451]">Current EIA capability</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-[-0.025em] text-[#18372c]">Evidence library</h1>
+        <p className="mt-2 text-sm leading-6 text-[#697a73]">Upload and version the source material used by {project?.name ?? "this project"}. Evidence remains connected to the assessment workspace.</p>
       </header>
-
-      <div className="mx-auto mb-4 grid max-w-5xl grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-center text-sm font-bold text-white/58 md:grid-cols-6">
-        {["Project Details", "Location Info", "Environmental Data", "Survey & Studies", "Add Information", "Review & Submit"].map(
-          (step) => (
-            <div
-              key={step}
-              className={`border-r border-white/10 px-3 py-3 last:border-r-0 ${
-                step === "Add Information" ? "bg-white/[0.08] text-white" : ""
-              }`}
-            >
-              {step}
-            </div>
-          )
-        )}
-      </div>
 
       <section className="mx-auto grid max-w-5xl gap-5">
         {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
@@ -94,8 +80,8 @@ export default function ProjectDocumentsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="size-5 text-[#B6F7FF]" />
-                Attach Files & Documents
+                <FileText className="size-5 text-[#287451]" />
+                Add evidence
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -110,22 +96,22 @@ export default function ProjectDocumentsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Document Versions</CardTitle>
+          <CardTitle>Evidence and versions</CardTitle>
           </CardHeader>
           <CardContent>
             <DocumentList documents={documents} />
           </CardContent>
         </Card>
 
-        <div className="flex justify-between border-t border-white/10 py-4">
+        <div className="flex flex-col-reverse justify-between gap-3 border-t border-[#e3eae6] py-4 sm:flex-row">
           <Button asChild variant="secondary">
             <Link href={`/projects/${projectId}`}>
               <ArrowLeft />
-              Back
+              Back to project
             </Link>
           </Button>
           <Button asChild>
-            <Link href={`/projects/${projectId}`}>Next Step</Link>
+            <Link href={`/projects/${projectId}`}>Continue to EIA workspace <ArrowRight /></Link>
           </Button>
         </div>
       </section>

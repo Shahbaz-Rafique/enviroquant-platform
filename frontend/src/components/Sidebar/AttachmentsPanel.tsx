@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, FileText, Loader2, UploadCloud } from "lucide-react";
+import { ExternalLink, FileImage, FileSpreadsheet, FileText, Loader2, Map, UploadCloud } from "lucide-react";
 import { FormEvent, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
@@ -16,7 +16,7 @@ type AttachmentsPanelProps = {
   onUpload: (file: File) => Promise<void>;
 };
 
-const acceptedFiles = ".pdf,.doc,.docx,.csv,.xls,.xlsx,.txt,.gif,.jpeg,.jpg,.png,.webp";
+const acceptedFiles = ".pdf,.doc,.docx,.csv,.xls,.xlsx,.txt,.gif,.jpeg,.jpg,.png,.webp,.kml,.kmz,.geojson,.zip";
 
 export function AttachmentsPanel({
   attachments,
@@ -40,7 +40,7 @@ export function AttachmentsPanel({
   return (
     <section className="builder-panel overflow-hidden">
       <div className="builder-section-title flex items-center justify-between gap-3">
-        <span>Attachments</span>
+        <span>Evidence & supporting files</span>
         <span className="text-sm font-semibold text-white/52">{attachments.length}</span>
       </div>
 
@@ -49,16 +49,28 @@ export function AttachmentsPanel({
 
         {canUpload ? (
           <form className="grid gap-3" onSubmit={submit}>
+            <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-[#dce6e1] sm:grid-cols-4">
+              {[
+                { icon: FileText, label: "PDF & Word" },
+                { icon: FileSpreadsheet, label: "Spreadsheets" },
+                { icon: FileImage, label: "Images & plans" },
+                { icon: Map, label: "GIS data" }
+              ].map(({ icon: Icon, label }) => (
+                <div className="flex min-h-16 items-center justify-center gap-2 border-r border-[#e3eae6] bg-[#f8faf9] px-2 text-center text-xs font-semibold text-[#52675e] last:border-r-0" key={label}>
+                  <Icon className="size-4 text-[#287451]" /> {label}
+                </div>
+              ))}
+            </div>
             <FileDropzone
               accept={acceptedFiles}
-              description="PDF, Word, spreadsheet, text, or image"
+              description="Documents, spreadsheets, images, plans or packaged GIS data"
               disabled={uploading}
               file={selectedFile}
               onFileChange={setSelectedFile}
             />
             <Button disabled={uploading || !selectedFile} type="submit">
               {uploading ? <Loader2 className="animate-spin" /> : <UploadCloud />}
-              Upload
+              Upload evidence
             </Button>
           </form>
         ) : null}

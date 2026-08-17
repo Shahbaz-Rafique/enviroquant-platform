@@ -17,14 +17,14 @@ const SelectTrigger = forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-white/12 bg-white/[0.03] px-3 text-sm font-medium text-white shadow-none outline-none transition-colors placeholder:text-white/32 focus:ring-2 focus:ring-[#67E8F9]/50 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-white/20 data-[state=open]:bg-white/[0.06]",
+      "flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-[#cfdcd6] bg-white px-3 text-sm font-medium text-[#29483c] shadow-none outline-none transition-colors placeholder:text-[#8a9993] focus:border-[#2f7d57] focus:ring-2 focus:ring-[#2f7d57]/15 disabled:cursor-not-allowed disabled:opacity-50",
       className
     )}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="size-4 shrink-0 text-white/58" />
+      <ChevronDown className="size-4 shrink-0 text-[#71827a]" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ));
@@ -38,7 +38,7 @@ const SelectContent = forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "z-50 max-h-72 min-w-[8rem] overflow-hidden rounded-2xl border border-white/12 bg-[rgba(5,25,20,0.96)] text-white shadow-[0_24px_80px_rgba(0,0,0,0.3)] backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "z-50 max-h-72 min-w-[8rem] overflow-hidden rounded-lg border border-[#d5e0da] bg-white text-[#29483c] shadow-[0_16px_40px_rgba(15,45,34,0.14)] data-[state=open]:animate-in data-[state=closed]:animate-out",
         position === "popper" && "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
         className
       )}
@@ -60,7 +60,7 @@ const SelectItem = forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex min-h-9 cursor-pointer select-none items-center rounded-xl py-2 pl-8 pr-3 text-sm font-medium outline-none transition-colors focus:bg-white/[0.08] focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex min-h-9 cursor-pointer select-none items-center rounded-md py-2 pl-8 pr-3 text-sm font-medium outline-none transition-colors focus:bg-[#edf5f0] focus:text-[#18372c] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}

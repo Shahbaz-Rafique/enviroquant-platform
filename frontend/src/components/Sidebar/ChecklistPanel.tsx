@@ -14,9 +14,12 @@ type ChecklistPanelProps = {
 };
 
 const statusStyles: Record<string, string> = {
-  Compliant: "border-emerald-400/25 bg-emerald-500/10 text-emerald-100",
-  "Partially Compliant": "border-amber-400/25 bg-amber-500/10 text-amber-100",
-  Missing: "border-red-400/30 bg-red-500/10 text-red-100"
+  Compliant: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  "Partially Compliant": "border-amber-200 bg-amber-50 text-amber-700",
+  "Needs Improvement": "border-orange-200 bg-orange-50 text-orange-700",
+  "Missing Information": "border-red-200 bg-red-50 text-red-700",
+  "Needs Review": "border-slate-200 bg-slate-100 text-slate-600",
+  Missing: "border-red-200 bg-red-50 text-red-700"
 };
 
 export function ChecklistPanel({ activeSubsectionId, items, onAddressItem }: ChecklistPanelProps) {
@@ -26,20 +29,20 @@ export function ChecklistPanel({ activeSubsectionId, items, onAddressItem }: Che
         <span>Checklist</span>
         <Badge>{items.length}</Badge>
       </div>
-      <div className="grid max-h-[34rem] gap-3 overflow-y-auto p-4">
+      <div className="max-h-[34rem] divide-y divide-[#e3eae6] overflow-y-auto">
         {items.map((item) => {
           const Icon = iconForStatus(item.compliance_status);
-          const active = item.id === activeSubsectionId;
+          const active = item.subsection_id === activeSubsectionId;
           return (
             <article
               className={cn(
-                "rounded-2xl border border-white/10 bg-white/[0.03] p-3",
-                active && "border-[#67E8F9]/28 bg-[#67E8F9]/10"
+                "p-3 transition-colors",
+                active && "bg-[#edf6f1]"
               )}
               key={item.id}
             >
               <div className="flex items-start gap-3">
-                <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.06] text-[#B6F7FF]">
+                <span className="mt-1 grid size-7 shrink-0 place-items-center rounded-md border border-[#cfe0d7] bg-white text-[#287451]">
                   <Icon className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -57,7 +60,7 @@ export function ChecklistPanel({ activeSubsectionId, items, onAddressItem }: Che
                     <span className="text-xs font-semibold text-white/52">{Math.round(item.progress_percentage)}%</span>
                     <Button size="sm" type="button" variant="secondary" onClick={() => onAddressItem(item)}>
                       <Send />
-                      Address this point
+                      Open
                     </Button>
                   </div>
                 </div>

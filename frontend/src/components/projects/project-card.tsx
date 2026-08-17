@@ -21,17 +21,17 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <Link href={`/projects/${project.id}`} className="block">
-      <Card className="group h-full overflow-hidden transition-colors hover:border-[#67E8F9]/28 hover:bg-white/[0.06]">
+      <Card className="group h-full overflow-hidden transition-all hover:-translate-y-0.5 hover:border-[#a8cbbb] hover:shadow-[0_12px_28px_rgba(15,45,34,0.1)]">
         <div className="flex h-full min-h-64 flex-col">
-          <div className="border-b border-white/10 bg-white/[0.03] p-4">
+          <div className="border-b border-[#e3eae6] bg-[#f8faf9] p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <Badge className={cn(statusBadgeClass(status))}>{formatStatus(project.status)}</Badge>
-              <span className="grid size-8 shrink-0 place-items-center rounded-xl border border-[#67E8F9]/20 bg-[#67E8F9]/10 text-[#B6F7FF] transition-colors group-hover:bg-[#67E8F9]/16">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-[#cce0d5] bg-[#edf6f1] text-[#287451] transition-colors group-hover:bg-[#dfeee6]">
                 <ArrowRight className="size-4" />
               </span>
             </div>
-            <h3 className="line-clamp-2 text-lg font-bold leading-snug text-white">{project.name}</h3>
-            <p className="mt-2 line-clamp-3 min-h-16 text-sm leading-6 text-white/66">
+            <h3 className="line-clamp-2 text-lg font-bold leading-snug text-[#18372c]">{project.name}</h3>
+            <p className="mt-2 line-clamp-3 min-h-16 text-sm leading-6 text-[#697a73]">
               {project.description || "Project description pending. Add project scope, location, and assessment notes."}
             </p>
           </div>
@@ -43,10 +43,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
               <ProjectMeta icon={<CalendarDays />} label="Updated" value={formatDate(project.updated_at)} />
             </dl>
 
-            <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
-              <span className="flex items-center gap-2 text-xs font-bold uppercase text-white/52">
-                <Clock3 className="size-4 text-[#B6F7FF]" />
-                Workspace
+            <div className="flex items-center justify-between gap-3 border-t border-[#e3eae6] pt-3">
+              <span className="flex items-center gap-2 text-xs font-bold uppercase text-[#72827b]">
+                <Clock3 className="size-4 text-[#287451]" />
+                EIA workspace
               </span>
               <Button className="pointer-events-none" size="sm" variant="secondary">
                 Open
@@ -63,24 +63,24 @@ export function ProjectCard({ project }: ProjectCardProps) {
 function ProjectMeta({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="grid grid-cols-[1rem_minmax(0,7rem)_minmax(0,1fr)] items-center gap-2">
-      <span className="text-[#B6F7FF] [&_svg]:size-4">{icon}</span>
-      <dt className="font-bold text-white/52">{label}</dt>
-      <dd className="truncate text-right font-semibold text-white/84">{value}</dd>
+      <span className="text-[#287451] [&_svg]:size-4">{icon}</span>
+      <dt className="font-bold text-[#72827b]">{label}</dt>
+      <dd className="truncate text-right font-semibold text-[#344f44]">{value}</dd>
     </div>
   );
 }
 
 function statusBadgeClass(status: string) {
   if (status === "DRAFT") {
-    return "border-[#67E8F9]/20 bg-[#67E8F9]/10 text-[#B6F7FF]";
+    return "border-slate-200 bg-slate-100 text-slate-600";
   }
   if (status === "IN_REVIEW" || status === "REVIEW") {
-    return "border-amber-400/20 bg-amber-500/10 text-amber-200";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
   if (status === "APPROVED" || status === "COMPLETE") {
-    return "border-emerald-400/20 bg-emerald-500/10 text-emerald-200";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-  return "border-white/12 bg-white/[0.05] text-white/68";
+  return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
 function formatDate(value: string) {

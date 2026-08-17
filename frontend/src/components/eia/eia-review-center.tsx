@@ -632,7 +632,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
         </div>
 
         <aside className="grid content-start gap-5">
-          <Card>
+          <Card id="approval" className="scroll-mt-24">
             <CardHeader>
               <CardTitle>Formal Review Workflow</CardTitle>
               <CardDescription>

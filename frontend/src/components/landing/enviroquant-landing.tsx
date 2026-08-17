@@ -523,7 +523,7 @@ export function EnviroQuantLanding() {
   const showAuthenticatedState = hasHydrated && Boolean(sessionUser);
   const showSessionLoading = !hasHydrated || userLoading;
   const primaryCtaHref = showAuthenticatedState ? "/dashboard" : "/register";
-  const primaryCtaLabel = showAuthenticatedState ? "Go to Dashboard" : "Start Free Trial";
+  const primaryCtaLabel = showAuthenticatedState ? "Go to Dashboard" : "Register Organisation";
 
   const fadeUp = {
     hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 22 },
@@ -597,7 +597,7 @@ export function EnviroQuantLanding() {
                 </Button>
                 <Button asChild size="sm" className="bg-[#8bd15f] text-[#104a83] hover:bg-[#a4e374]">
                   <Link href="/register">
-                    Get Started
+                    Register
                     <ArrowRight />
                   </Link>
                 </Button>
@@ -664,7 +664,7 @@ export function EnviroQuantLanding() {
                   </Button>
                   <Button asChild className="bg-[#8bd15f] text-[#104a83] hover:bg-[#a4e374]">
                     <Link href="/register" onClick={() => setIsMenuOpen(false)}>
-                      Get Started
+                      Register
                     </Link>
                   </Button>
                 </div>
@@ -679,12 +679,12 @@ export function EnviroQuantLanding() {
           <AnimatedPattern />
           <div className="relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
             <motion.div initial="hidden" animate="visible" variants={fadeUp} transition={{ duration: 0.65, ease: "easeOut" }}>
-              <SectionLabel>AI-powered EIA compliance intelligence</SectionLabel>
+              <SectionLabel>Current platform: structured EIA workflows</SectionLabel>
               <h1 className="mt-5 max-w-4xl text-5xl font-bold leading-[1.04] tracking-normal text-slate-950 sm:text-6xl lg:text-7xl">
                 Environmental Intelligence Platform
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-                Develop, analyze, and manage Environmental Impact Assessments with AI-powered compliance intelligence.
+                Create, evidence and review Environmental Impact Assessments in a secure, structured workspace built around traceability.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild className="h-12 px-5 transition-all hover:-translate-y-0.5">
@@ -703,13 +703,13 @@ export function EnviroQuantLanding() {
 
               <div className="mt-9 grid max-w-xl grid-cols-3 gap-3">
                 {[
-                  ["KEPA", "ready checks"],
-                  ["KOC", "HSEMS aligned"],
-                  ["ISO", "audit mindset"]
+                  ["Current", "Structured EIA"],
+                  ["Principle", "Evidence Before Conclusions™"],
+                  ["Roadmap", "Environmental Intelligence OS™"]
                 ].map(([label, value]) => (
                   <Card key={label} className="p-4">
-                    <p className="text-xl font-black text-slate-950">{label}</p>
-                    <p className="mt-1 text-xs font-bold uppercase text-slate-500">{value}</p>
+                    <p className="text-xs font-black uppercase tracking-[0.1em] text-[#287451]">{label}</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-700">{value}</p>
                   </Card>
                 ))}
               </div>
@@ -1162,11 +1162,11 @@ export function EnviroQuantLanding() {
               <div className="relative">
                 <Badge className="border-white/25 bg-white/15 text-blue-50">
                   <span className="mr-2 size-1.5 rounded-full bg-[#8bd15f]" />
-                  Get Started
+                  Registration & demonstrations
                 </Badge>
-                <h2 className="mt-5 max-w-3xl text-3xl font-bold text-white sm:text-5xl">Ready to modernize your EIA workflow?</h2>
+                <h2 className="mt-5 max-w-3xl text-3xl font-bold text-white sm:text-5xl">Build a more defensible EIA workflow.</h2>
                 <p className="mt-5 max-w-2xl text-lg leading-8 text-blue-50">
-                  Bring AI-powered compliance intelligence, evidence traceability, and professional reporting into your next environmental assessment.
+                  Start with today’s structured EIA workspace. EnviroQuant is developed toward an Environmental Intelligence Operating System™.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <Button asChild className="h-12 bg-[#8bd15f] px-5 text-[#104a83] hover:bg-[#a4e374]">
@@ -1255,7 +1255,7 @@ export function EnviroQuantLanding() {
           </div>
 
           <FooterColumn title="Platform" links={[["Solutions", "#solutions"], ["Knowledge Library", "#knowledge-library"], ["Book Demo", "#contact"]]} />
-          <FooterColumn title="Company" links={[["About", "#about"], ["Log in", "/login"], ["Get Started", "/register"]]} />
+          <FooterColumn title="Company" links={[["About", "#about"], ["Log in", "/login"], ["Register", "/register"], ["Contact", "/contact"]]} />
           <div>
             <h3 className="font-bold text-slate-950">Contact</h3>
             <div className="mt-4 space-y-3 text-sm text-slate-600">

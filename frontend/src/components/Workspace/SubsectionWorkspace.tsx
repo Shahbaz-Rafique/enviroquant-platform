@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, CheckCircle2, FileText, Loader2, RefreshCcw, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, CheckCircle2, FileText, Loader2, RefreshCcw, Save, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -13,6 +13,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
 import {
@@ -282,6 +283,10 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
 
   const hasDraftContent = useMemo(() => hasMeaningfulHtml(editorContent.html), [editorContent.html]);
 
+  const activeChecklistIndex = workspace?.checklist_items.findIndex((item) => item.subsection_id === subsectionId) ?? -1;
+  const previousChecklistItem = activeChecklistIndex > 0 ? workspace?.checklist_items[activeChecklistIndex - 1] ?? null : null;
+  const nextChecklistItem = activeChecklistIndex >= 0 ? workspace?.checklist_items[activeChecklistIndex + 1] ?? null : null;
+
   const uploadAttachment = useCallback(
     async (file: File, attachmentType = "supporting_evidence"): Promise<EiaAttachment> => {
       if (!workspace) {
@@ -450,7 +455,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               <>
                 <Button disabled={saving} type="button" variant="secondary" onClick={() => void saveContent()}>
                   {saving ? <Loader2 className="animate-spin" /> : <Save />}
-                  Save
+                  Save draft
                 </Button>
                 <Button
                   disabled={saving}
@@ -458,15 +463,25 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                   onClick={() => void saveContent({ completionStatus: "COMPLETE", progressPercentage: 100 })}
                 >
                   <CheckCircle2 />
-                  Mark Complete
+                  Mark subsection complete
                 </Button>
               </>
             ) : null}
           </div>
         </div>
+        <div className="grid gap-2 border-t border-[#e3eae6] bg-[#f8faf9] px-5 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-[#60736a]">
+              <span>Subsection completion</span>
+              <span>{Math.round(progressPercentage)}%</span>
+            </div>
+            <Progress value={progressPercentage} />
+          </div>
+          <span className="text-xs font-semibold text-[#60736a]">{coverageGaps.length} checklist item{coverageGaps.length === 1 ? "" : "s"} need attention</span>
+        </div>
       </header>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(320px,3fr)]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <main className="grid gap-5" ref={editorRegionRef}>
           <div className="builder-panel overflow-hidden">
             <div className="grid gap-4 border-b border-white/10 p-4 lg:grid-cols-[minmax(0,1fr)_180px_170px]">
@@ -514,12 +529,16 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                 </>
               )}
               <div className="grid content-end">
-                <div className="h-10 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-100">
+                <div className="h-10 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">
                   {Math.round(progressPercentage)}% complete
                 </div>
               </div>
             </div>
             <div className="p-4">
+              <div className="mb-3">
+                <h2 className="text-base font-bold text-[#18372c]">Add information</h2>
+                <p className="mt-1 text-sm text-[#697a73]">Enter the subsection response and cite the evidence supporting each material statement.</p>
+              </div>
               <TipTapEditor
                 ref={editorRef}
                 content={editorContent.html}
@@ -529,20 +548,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               />
             </div>
           </div>
-        </main>
 
-        <aside className="grid content-start gap-5">
-          <ChecklistPanel
-            activeSubsectionId={subsection.id}
-            items={workspace.checklist_items}
-            onAddressItem={addressChecklistItem}
-          />
-          <CommentsPanel
-            canComment={canComment}
-            canResolve={canResolve}
-            subsectionId={subsection.id}
-            user={user}
-          />
           <AttachmentsPanel
             attachments={workspace.attachments}
             canUpload={canUpload}
@@ -550,17 +556,39 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             uploading={uploadingAttachment}
             onUpload={uploadPanelAttachment}
           />
-          <RevisionPanel
-            canRestore={canEdit}
-            subsectionId={subsection.id}
-            tenantId={user.tenant_id}
-            onRestored={applyWorkspaceUpdate}
-          />
-          <section className="builder-panel overflow-hidden">
+
+          <div className="flex flex-col-reverse gap-3 rounded-xl border border-[#dce6e1] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              disabled={!previousChecklistItem}
+              type="button"
+              variant="secondary"
+              onClick={() => previousChecklistItem && addressChecklistItem(previousChecklistItem)}
+            >
+              <ArrowLeft /> Previous
+            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {canEdit ? (
+                <Button disabled={saving} type="button" variant="secondary" onClick={() => void saveContent()}>
+                  {saving ? <Loader2 className="animate-spin" /> : <Save />} Save draft
+                </Button>
+              ) : null}
+              <Button
+                disabled={!nextChecklistItem}
+                type="button"
+                onClick={() => nextChecklistItem && addressChecklistItem(nextChecklistItem)}
+              >
+                Next subsection <ArrowRight />
+              </Button>
+            </div>
+          </div>
+        </main>
+
+        <aside className="grid content-start gap-4 xl:sticky xl:top-20 xl:self-start">
+          <section className="builder-panel order-1 overflow-hidden">
             <div className="builder-section-title flex items-center justify-between gap-3">
               <span className="flex items-center gap-2">
                 <Bot className="size-5 text-[#B6F7FF]" />
-                AI Assistant
+                Intelligence panel
               </span>
               {canEdit ? (
                 <Button
@@ -603,11 +631,10 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                 <div className="mb-1 flex items-center gap-2 font-bold text-white">
                   <ShieldCheck className="size-4 text-[#8BD15F]" />
-                  Checklist-aware drafting
+                  Evidence-based assistance
                 </div>
                 <p>
-                  Build directly against the active checklist items for this subsection, then anchor the draft with
-                  evidence and quantified statements before review.
+                  Assistance identifies gaps and drafts content from available evidence. Compliance classifications remain transparent, checklist-driven and subject to human review.
                 </p>
                 {canEdit ? (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -732,6 +759,29 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               </div>
             </div>
           </section>
+          <div className="order-2">
+            <ChecklistPanel
+              activeSubsectionId={subsection.id}
+              items={workspace.checklist_items}
+              onAddressItem={addressChecklistItem}
+            />
+          </div>
+          <div className="order-3">
+            <CommentsPanel
+              canComment={canComment}
+              canResolve={canResolve}
+              subsectionId={subsection.id}
+              user={user}
+            />
+          </div>
+          <div className="order-4">
+            <RevisionPanel
+              canRestore={canEdit}
+              subsectionId={subsection.id}
+              tenantId={user.tenant_id}
+              onRestored={applyWorkspaceUpdate}
+            />
+          </div>
         </aside>
       </section>
     </div>
@@ -744,15 +794,15 @@ function statusLabel(status: string) {
 
 function statusBadgeClass(status: string) {
   if (status === "COMPLETE") {
-    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === "READY_FOR_REVIEW") {
-    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
   if (status === "IN_PROGRESS") {
-    return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
+    return "border-[#b9d8c8] bg-[#eaf5ef] text-[#236c4a]";
   }
-  return "border-white/12 bg-white/[0.05] text-white/68";
+  return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
 function AssistantStat({ label, value }: { label: string; value: string }) {
@@ -793,80 +843,12 @@ function hasMeaningfulHtml(content: string) {
   return Boolean(content.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim());
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function buildDraftingOutlineHtml(
-  workspace: EiaSubSectionWorkspaceType,
-  coverageGaps: EiaChecklistItem[]
-) {
-  const checklistCoverage = workspace.checklist_items
-    .map(
-      (item) =>
-        `<li><strong>${escapeHtml(item.checklist_section)}</strong> - ${escapeHtml(item.checklist_title)} (${escapeHtml(
-          formatImportance(item.importance)
-        )}, ${escapeHtml(item.compliance_status)})</li>`
-    )
-    .join("");
-
-  const gapPrompts = coverageGaps.length
-    ? coverageGaps
-        .map(
-          (item) =>
-            `<li>Explain how the subsection addresses <strong>${escapeHtml(item.checklist_title)}</strong> with project-specific evidence, quantified values, and implementation detail.</li>`
-        )
-        .join("")
-    : "<li>Confirm the existing draft still cites evidence, quantified assumptions, and monitoring commitments before sign-off.</li>";
-
-  return [
-    `<h2>${escapeHtml(workspace.subsection.subsection_number)} Drafting Outline</h2>`,
-    `<p>Use this structure to cover the checklist expectations for ${escapeHtml(workspace.subsection.title)}.</p>`,
-    "<h3>Checklist Coverage Targets</h3>",
-    `<ul>${checklistCoverage}</ul>`,
-    "<h3>Priority Gaps To Close</h3>",
-    `<ul>${gapPrompts}</ul>`,
-    "<h3>Baseline Conditions</h3>",
-    "<p>Describe the existing environmental conditions, sensitive receptors, spatial boundary, and current constraints relevant to this subsection.</p>",
-    "<h3>Impact Assessment</h3>",
-    "<p>Explain the impact pathway, magnitude, duration, reversibility, and affected receptors. Include quantified values and assumptions where the evidence supports them.</p>",
-    "<h3>Mitigation and Management</h3>",
-    "<p>State the specific mitigation measures, implementation owner, trigger, and performance expectations.</p>",
-    "<h3>Residual Effects and Monitoring</h3>",
-    "<p>Summarize residual effects, monitoring indicators, thresholds, reporting cadence, and follow-up commitments.</p>",
-    buildEvidencePromptHtml(workspace.attachments)
-  ].join("");
-}
-
-function buildEvidencePromptHtml(attachments: EiaAttachment[]) {
-  const evidenceLines = attachments.length
-    ? attachments
-        .slice(0, 5)
-        .map(
-          (attachment) =>
-            `<li>Reference supporting evidence from <strong>${escapeHtml(attachment.original_filename)}</strong> and cite the specific observation, figure, table, or page that supports the claim.</li>`
-        )
-        .join("")
-    : [
-        "<li>Add the source document, baseline study, survey output, permit condition, or model result that supports this subsection.</li>",
-        "<li>Use quantified values, units, thresholds, and assumptions rather than broad qualitative claims.</li>",
-        "<li>Note any remaining evidence gaps that still need field data, stakeholder input, or regulator confirmation.</li>"
-      ].join("");
-
-  return [`<h3>Evidence and Source Notes</h3>`, `<ul>${evidenceLines}</ul>`].join("");
-}
-
 function sourceMappingStatusClass(status: string) {
   if (status === "APPLIED" || status === "CONFIRMED") {
-    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === "NEEDS_REVIEW") {
-    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
+  return "border-slate-200 bg-slate-50 text-slate-600";
 }
