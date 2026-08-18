@@ -13,6 +13,7 @@ import {
   FileCheck2,
   FileSearch,
   FolderOpen,
+  Gauge,
   LayoutList,
   Loader2,
   MessageSquare,
@@ -26,6 +27,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
 import { EiaActivityFeed } from "@/components/eia/eia-activity-feed";
+import { EiaAssignmentWorkflow } from "@/components/eia/eia-assignment-workflow";
+import { EiaManagementDashboard } from "@/components/eia/eia-management-dashboard";
 import { EiaProgressOverview } from "@/components/eia/eia-progress-overview";
 import { EiaSourceMappingPanel } from "@/components/eia/eia-source-mapping-panel";
 import { EiaTeamPanel } from "@/components/eia/eia-team-panel";
@@ -38,12 +41,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { getAccessToken } from "@/lib/auth";
 import { API_URL, apiRequest } from "@/lib/api-client";
-import { canEditEiaDocument, hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { canEditEiaDocument, hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type {
   EiaActivityItem,
+  EiaDocumentAssignmentsOverview,
   EiaDocumentMember,
   EiaDocumentProgress,
+  EiaSectionAssignment,
   EiaDocumentStructure,
   EiaSection,
   EiaSubSection,
@@ -71,7 +76,7 @@ const insightTabs = [
 ] as const;
 
 type InsightTab = (typeof insightTabs)[number]["value"];
-type WorkspaceView = "overview" | "editor";
+type WorkspaceView = "dashboard" | "overview" | "assigned" | "editor";
 
 export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentBuilderProps) {
   const [document, setDocument] = useState<EiaDocumentStructure | null>(null);
@@ -80,6 +85,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const [completionStatus, setCompletionStatus] = useState("NOT_STARTED");
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [progressSummary, setProgressSummary] = useState<EiaDocumentProgress | null>(null);
+  const [assignmentOverview, setAssignmentOverview] = useState<EiaDocumentAssignmentsOverview | null>(null);
   const [members, setMembers] = useState<EiaDocumentMember[]>([]);
   const [activity, setActivity] = useState<EiaActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,11 +94,13 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [activeInsight, setActiveInsight] = useState<InsightTab>("progress");
   const [showWorkspaceTools, setShowWorkspaceTools] = useState(false);
-  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("overview");
+  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("dashboard");
   const [exportingFormat, setExportingFormat] = useState<"json" | "docx" | "pdf" | null>(null);
   const currentMemberRole = members.find((member) => member.user_id === user.id)?.role ?? null;
   const effectiveDocumentRole = currentMemberRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
   const canEdit = canEditEiaDocument(effectiveDocumentRole);
+  const canManageAssignments =
+    document?.created_by_id === user.id || hasAnyRole(user, ["owner", "admin", "project_manager"]);
 
   const selectedSubsection = useMemo(() => {
     return document?.sections.flatMap((section) => section.subsections).find(
@@ -131,6 +139,24 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
     };
   }, [document, progressSummary]);
 
+  const subsectionAssignmentsById = useMemo(() => {
+    const map = new Map<string, { currentRole: string; currentAssigneeName: string | null }>();
+    for (const section of assignmentOverview?.sections ?? []) {
+      for (const subsection of section.subsections) {
+        map.set(subsection.subsection_id, {
+          currentRole: subsection.current_role,
+          currentAssigneeName: subsection.current_assignee?.full_name ?? null
+        });
+      }
+    }
+    return map;
+  }, [assignmentOverview]);
+
+  const selectedSubsectionAssignment = selectedSubsectionId
+    ? subsectionAssignmentsById.get(selectedSubsectionId) ?? null
+    : null;
+  const myAssignedCount = assignmentOverview?.my_assigned_work.length ?? 0;
+
   const refreshActivity = useCallback(async () => {
     setActivity(await apiRequest<EiaActivityItem[]>(`/eia-documents/${documentId}/activity`));
   }, [documentId]);
@@ -142,30 +168,34 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   }, [documentId, refreshActivity]);
 
   const refreshDashboardData = useCallback(async () => {
-    const [nextProgress, nextMembers, nextActivity] = await Promise.all([
+    const [nextProgress, nextMembers, nextActivity, nextAssignments] = await Promise.all([
       apiRequest<EiaDocumentProgress>(`/eia-documents/${documentId}/progress`),
       apiRequest<EiaDocumentMember[]>(`/eia-documents/${documentId}/members`),
-      apiRequest<EiaActivityItem[]>(`/eia-documents/${documentId}/activity`)
+      apiRequest<EiaActivityItem[]>(`/eia-documents/${documentId}/activity`),
+      apiRequest<EiaDocumentAssignmentsOverview>(`/eia-documents/${documentId}/assignments`)
     ]);
     setProgressSummary(nextProgress);
     setMembers(nextMembers);
     setActivity(nextActivity);
+    setAssignmentOverview(nextAssignments);
   }, [documentId]);
 
   const loadDocument = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [data, nextProgress, nextMembers, nextActivity] = await Promise.all([
+      const [data, nextProgress, nextMembers, nextActivity, nextAssignments] = await Promise.all([
         apiRequest<EiaDocumentStructure>(`/eia-documents/${documentId}`),
         apiRequest<EiaDocumentProgress>(`/eia-documents/${documentId}/progress`),
         apiRequest<EiaDocumentMember[]>(`/eia-documents/${documentId}/members`),
-        apiRequest<EiaActivityItem[]>(`/eia-documents/${documentId}/activity`)
+        apiRequest<EiaActivityItem[]>(`/eia-documents/${documentId}/activity`),
+        apiRequest<EiaDocumentAssignmentsOverview>(`/eia-documents/${documentId}/assignments`)
       ]);
       setDocument(data);
       setProgressSummary(nextProgress);
       setMembers(nextMembers);
       setActivity(nextActivity);
+      setAssignmentOverview(nextAssignments);
       const firstSubsection = data.sections[0]?.subsections[0] ?? null;
       setSelectedSubsectionId((current) => current ?? firstSubsection?.id ?? null);
     } catch (err) {
@@ -205,7 +235,8 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
           body: JSON.stringify({
             content,
             completion_status: completionStatus,
-            progress_percentage: progressPercentage
+                progress_percentage: progressPercentage,
+                expected_updated_at: selectedSubsection.updated_at
           })
         }
       );
@@ -213,10 +244,20 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
       setSavedAt(new Date().toLocaleTimeString());
       void refreshDashboardData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Subsection could not be saved");
+      const message = err instanceof Error ? err.message : "Subsection could not be saved";
+      setError(
+        message.toLowerCase().includes("updated by another collaborator")
+          ? `${message} Your unsaved draft is still in the editor.`
+          : message
+      );
     } finally {
       setSaving(false);
     }
+  }
+
+  let saveStatusText = "Read-only access";
+  if (canEdit) {
+    saveStatusText = savedAt ? `Saved at ${savedAt}` : "Changes are saved when you select Save draft";
   }
 
   async function downloadCompiledDocument(format: "json" | "docx" | "pdf") {
@@ -272,13 +313,27 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
       </header>
 
       <nav className="builder-panel flex flex-col gap-2 p-2 lg:flex-row lg:items-center lg:justify-between" aria-label="EIA workflow">
-        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 xl:grid-cols-6">
+          <WorkflowLink
+            active={workspaceView === "dashboard"}
+            icon={<Gauge />}
+            label="Dashboard"
+            meta={`${Math.round(progressSummary?.progress_percentage ?? 0)}% complete`}
+            onClick={() => setWorkspaceView("dashboard")}
+          />
           <WorkflowLink
             active={workspaceView === "overview"}
             icon={<LayoutList />}
             label="Structure"
             meta={`${document?.sections.length ?? 0} sections`}
             onClick={() => setWorkspaceView("overview")}
+          />
+          <WorkflowLink
+            active={workspaceView === "assigned"}
+            icon={<Users />}
+            label="My work"
+            meta={`${myAssignedCount} assigned`}
+            onClick={() => setWorkspaceView("assigned")}
           />
           <WorkflowAnchor
             href={`/projects/${projectId}/documents`}
@@ -311,10 +366,40 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
 
       {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
 
-      {workspaceView === "overview" ? (
-        <EiaStructureOverview
+      {workspaceView === "dashboard" ? (
+        <EiaManagementDashboard
+          assignments={assignmentOverview}
           document={document}
           loading={loading}
+          progress={progressSummary}
+          onOpenSubsection={(subsectionId) => {
+            setSelectedSubsectionId(subsectionId);
+            setWorkspaceView("editor");
+          }}
+        />
+      ) : null}
+
+      {workspaceView === "overview" ? (
+        <EiaStructureOverview
+          assignments={assignmentOverview}
+          document={document}
+          loading={loading}
+          onOpenSubsection={(subsectionId) => {
+            setSelectedSubsectionId(subsectionId);
+            setWorkspaceView("editor");
+          }}
+        />
+      ) : null}
+
+      {workspaceView === "assigned" ? (
+        <EiaAssignmentWorkflow
+          assignments={assignmentOverview}
+          canManageAssignments={canManageAssignments}
+          currentUserId={user.id}
+          documentId={documentId}
+          loading={loading}
+          members={members}
+          onAssignmentsChange={setAssignmentOverview}
           onOpenSubsection={(subsectionId) => {
             setSelectedSubsectionId(subsectionId);
             setWorkspaceView("editor");
@@ -371,6 +456,9 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                         <span className="min-w-0">
                           <span className={cn("block font-bold", active ? "text-white" : "text-[#52675e]")}>{subsection.subsection_number}</span>
                           <span className="mt-0.5 line-clamp-2 block leading-4">{subsection.title}</span>
+                          <span className={cn("mt-1 block text-[10px]", active ? "text-white/80" : "text-[#7b8a83]")}>
+                            {subsectionAssignmentsById.get(subsection.id)?.currentAssigneeName ?? "Unassigned"}
+                          </span>
                         </span>
                       </button>
                     );
@@ -397,6 +485,9 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                   {selectedSubsection?.subsection_number ? `${selectedSubsection.subsection_number}. ` : ""}
                   {selectedSubsection?.title ?? "Select a subsection"}
                 </h2>
+                <p className="mt-2 text-xs font-semibold text-white/80">
+                  Responsibility: {selectedSubsectionAssignment?.currentAssigneeName ?? "Unassigned"} ({statusLabel(selectedSubsectionAssignment?.currentRole ?? "UNASSIGNED")})
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -469,9 +560,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                 </div>
               </>
             )}
-            <p className="pb-2 text-xs font-medium text-[#74847d] md:ml-auto">
-              {canEdit ? (savedAt ? `Saved at ${savedAt}` : "Changes are saved when you select Save draft") : "Read-only access"}
-            </p>
+            <p className="pb-2 text-xs font-medium text-[#74847d] md:ml-auto">{saveStatusText}</p>
           </div>
 
           <div className="p-5">
@@ -582,14 +671,16 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
 }
 
 function EiaStructureOverview({
+  assignments,
   document,
   loading,
   onOpenSubsection
-}: {
+}: Readonly<{
+  assignments: EiaDocumentAssignmentsOverview | null;
   document: EiaDocumentStructure | null;
   loading: boolean;
   onOpenSubsection: (subsectionId: string) => void;
-}) {
+}>) {
   const sections = document?.sections ?? [];
   const subsections = sections.flatMap((section) => section.subsections);
   const completed = subsections.filter((item) => item.completion_status === "COMPLETE").length;
@@ -597,6 +688,10 @@ function EiaStructureOverview({
   const ready = subsections.filter((item) => item.completion_status === "READY_FOR_REVIEW").length;
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? sections[0] ?? null;
+  const sectionAssignmentById = useMemo(
+    () => new Map((assignments?.sections ?? []).map((section) => [section.section_id, section])),
+    [assignments]
+  );
 
   return (
     <section className="builder-panel overflow-hidden">
@@ -625,6 +720,7 @@ function EiaStructureOverview({
               {sections.map((section) => {
                 const stats = sectionProgress(section);
                 const active = selectedSection?.id === section.id;
+                const assignment = sectionAssignmentById.get(section.id);
                 return (
                   <button
                     aria-current={active ? "page" : undefined}
@@ -648,6 +744,9 @@ function EiaStructureOverview({
                         <span className={cn("mt-1 block text-[10px]", active ? "opacity-75" : "text-[#7b8a83]")}>
                           {stats.complete}/{stats.total} complete · {stats.percentage}%
                         </span>
+                        <span className={cn("mt-1 block text-[10px]", active ? "opacity-75" : "text-[#7b8a83]")}>
+                          {assignment?.current_assignee?.full_name ?? "Unassigned"} ({statusLabel(assignment?.current_role ?? "UNASSIGNED")})
+                        </span>
                       </span>
                     </span>
                     <span className={cn("mt-2 block h-1 overflow-hidden rounded-full", active ? "bg-white/20" : "bg-[#dce9e2]")}>
@@ -661,7 +760,11 @@ function EiaStructureOverview({
         ) : null}
 
         {selectedSection ? (
-          <SectionDetailPanel onOpenSubsection={onOpenSubsection} section={selectedSection} />
+          <SectionDetailPanel
+            assignment={sectionAssignmentById.get(selectedSection.id) ?? null}
+            onOpenSubsection={onOpenSubsection}
+            section={selectedSection}
+          />
         ) : null}
       </div>
     </section>
@@ -669,13 +772,19 @@ function EiaStructureOverview({
 }
 
 function SectionDetailPanel({
+  assignment,
   section,
   onOpenSubsection
-}: {
+}: Readonly<{
+  assignment: EiaSectionAssignment | null;
   section: EiaSection;
   onOpenSubsection: (subsectionId: string) => void;
-}) {
+}>) {
   const stats = sectionProgress(section);
+  const subsectionAssignmentById = useMemo(
+    () => new Map((assignment?.subsections ?? []).map((subsection) => [subsection.subsection_id, subsection])),
+    [assignment]
+  );
 
   return (
     <article className="min-w-0 bg-white">
@@ -687,6 +796,9 @@ function SectionDetailPanel({
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#287451]">Section {section.section_number}</p>
             <h3 className="mt-1 text-xl font-bold leading-6 text-[#18372c]">{formatSectionTitle(section.title)}</h3>
+            <p className="mt-1 text-xs font-semibold text-[#5f7369]">
+              Responsible now: {assignment?.current_assignee?.full_name ?? "Unassigned"} ({statusLabel(assignment?.current_role ?? "UNASSIGNED")})
+            </p>
             <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[#697a73]">
               <span>{stats.complete} of {stats.total} subsections complete</span>
               <strong className="text-[#29483c]">{stats.percentage}%</strong>
@@ -711,28 +823,39 @@ function SectionDetailPanel({
       </div>
 
       <div className="divide-y divide-[#edf1ef]">
-        {section.subsections.map((subsection) => (
-          <button
-            className="group flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-[#f6faf7] md:px-6"
-            key={subsection.id}
-            onClick={() => onOpenSubsection(subsection.id)}
-            type="button"
-          >
-            <StatusDot status={subsection.completion_status} />
-            <span className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-[#287451]">{subsection.subsection_number}</span>
-                <Badge className={statusBadgeClass(subsection.completion_status)}>{statusLabel(subsection.completion_status)}</Badge>
+        {section.subsections.map((subsection) => {
+          const assignmentItem = subsectionAssignmentById.get(subsection.id);
+          return (
+            <button
+              className="group flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-[#f6faf7] md:px-6"
+              key={subsection.id}
+              onClick={() => onOpenSubsection(subsection.id)}
+              type="button"
+            >
+              <StatusDot status={subsection.completion_status} />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-[#287451]">{subsection.subsection_number}</span>
+                  <Badge className={statusBadgeClass(subsection.completion_status)}>{statusLabel(subsection.completion_status)}</Badge>
+                </span>
+                <span className="mt-1 block text-sm font-medium leading-5 text-[#52675e]">{subsection.title}</span>
+                <span className="mt-1 block text-[11px] font-medium text-[#73827b]">
+                  {assignmentItem?.current_assignee?.full_name ?? "Unassigned"} ({statusLabel(assignmentItem?.current_role ?? "UNASSIGNED")})
+                </span>
+                <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#73827b]">
+                  <span>Review: {statusLabel(assignmentItem?.review_status ?? "NOT_STARTED")}</span>
+                  <span>{assignmentItem?.unresolved_comment_count ?? 0} open comments</span>
+                  <span>Updated {formatDateTime(assignmentItem?.last_updated_at ?? subsection.updated_at)}</span>
+                </span>
               </span>
-              <span className="mt-1 block text-sm font-medium leading-5 text-[#52675e]">{subsection.title}</span>
-            </span>
-            <span className="hidden w-28 shrink-0 sm:block">
-              <span className="mb-1 flex justify-between text-[10px] font-semibold text-[#7b8a83]"><span>Progress</span><span>{Math.round(subsection.progress_percentage)}%</span></span>
-              <Progress className="h-1.5" value={subsection.progress_percentage} />
-            </span>
-            <ChevronRight className="size-4 shrink-0 text-[#9aaaa2] transition-transform group-hover:translate-x-0.5" />
-          </button>
-        ))}
+              <span className="hidden w-28 shrink-0 sm:block">
+                <span className="mb-1 flex justify-between text-[10px] font-semibold text-[#7b8a83]"><span>Progress</span><span>{Math.round(subsection.progress_percentage)}%</span></span>
+                <Progress className="h-1.5" value={subsection.progress_percentage} />
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-[#9aaaa2] transition-transform group-hover:translate-x-0.5" />
+            </button>
+          );
+        })}
       </div>
     </article>
   );
@@ -747,7 +870,7 @@ function sectionProgress(section: EiaSection) {
   return { total, complete, percentage };
 }
 
-function WorkflowLink({ active, icon, label, meta, onClick }: { active: boolean; icon: ReactNode; label: string; meta: string; onClick: () => void }) {
+function WorkflowLink({ active, icon, label, meta, onClick }: Readonly<{ active: boolean; icon: ReactNode; label: string; meta: string; onClick: () => void }>) {
   return (
     <button
       className={cn(
@@ -763,7 +886,7 @@ function WorkflowLink({ active, icon, label, meta, onClick }: { active: boolean;
   );
 }
 
-function WorkflowAnchor({ href, icon, label, meta }: { href: string; icon: ReactNode; label: string; meta: string }) {
+function WorkflowAnchor({ href, icon, label, meta }: Readonly<{ href: string; icon: ReactNode; label: string; meta: string }>) {
   return (
     <Link className="flex items-center gap-2 rounded-lg px-3 py-2 text-[#61746b] transition-colors hover:bg-[#f3f7f5]" href={href}>
       <span className="[&_svg]:size-4">{icon}</span>
@@ -772,7 +895,7 @@ function WorkflowAnchor({ href, icon, label, meta }: { href: string; icon: React
   );
 }
 
-function OverviewCount({ label, value, tone }: { label: string; value: number; tone: "green" | "blue" | "amber" | "slate" }) {
+function OverviewCount({ label, value, tone }: Readonly<{ label: string; value: number; tone: "green" | "blue" | "amber" | "slate" }>) {
   const tones = {
     green: "border-emerald-200 bg-emerald-50 text-emerald-700",
     blue: "border-[#c9dfd3] bg-[#edf6f1] text-[#287451]",
@@ -782,8 +905,16 @@ function OverviewCount({ label, value, tone }: { label: string; value: number; t
   return <span className={cn("rounded-full border px-2.5 py-1", tones[tone])}>{value} {label}</span>;
 }
 
-function StatusDot({ status }: { status: string }) {
-  return <span className={cn("size-2.5 shrink-0 rounded-full", status === "COMPLETE" ? "bg-emerald-500" : status === "READY_FOR_REVIEW" ? "bg-amber-500" : status === "IN_PROGRESS" ? "bg-[#287451]" : "bg-slate-300")} />;
+function StatusDot({ status }: Readonly<{ status: string }>) {
+  let colorClass = "bg-slate-300";
+  if (status === "COMPLETE") {
+    colorClass = "bg-emerald-500";
+  } else if (status === "READY_FOR_REVIEW") {
+    colorClass = "bg-amber-500";
+  } else if (status === "IN_PROGRESS") {
+    colorClass = "bg-[#287451]";
+  }
+  return <span className={cn("size-2.5 shrink-0 rounded-full", colorClass)} />;
 }
 
 function iconForCompletionStatus(status: string) {
@@ -833,6 +964,14 @@ function approvalLabel(status?: string) {
 
 function statusLabel(status: string) {
   return statusOptions.find((option) => option.value === status)?.label ?? status.replaceAll("_", " ");
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "not available";
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "not available" : parsed.toLocaleString();
 }
 
 function statusBadgeClass(status: string) {

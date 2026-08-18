@@ -21,6 +21,7 @@ from app.schemas.eia import (
     EiaAutoStructureRequest,
     EiaDocumentCrossComparisonRead,
     EiaDocumentCreate,
+    EiaDocumentAssignmentsOverviewRead,
     EiaDocumentMemberCreate,
     EiaDocumentMemberInvitationRead,
     EiaDocumentMemberRead,
@@ -42,6 +43,7 @@ from app.schemas.eia import (
     EiaSourceMappingDetectRequest,
     EiaSourceMappingRead,
     EiaSourceMappingRejectRequest,
+    EiaAssignmentUpdate,
     EiaSubSectionContentUpdate,
     EiaSubSectionRead,
     EiaSubSectionUpdate,
@@ -66,6 +68,13 @@ from app.services.eia_collaboration_service import (
     list_subsection_comments,
     remove_eia_document_member,
     update_subsection_comment,
+)
+from app.services.eia_assignment_service import (
+    clear_section_assignment,
+    clear_subsection_assignment,
+    get_eia_document_assignments_overview,
+    update_section_assignment,
+    update_subsection_assignment,
 )
 from app.services.eia_evaluation_service import (
     compare_eia_evaluation_runs,
@@ -428,6 +437,69 @@ def read_eia_document_members(
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> list[EiaDocumentMember]:
     return list_eia_document_members(db, current_user, document_id)
+
+
+@router.get("/{document_id}/assignments", response_model=EiaDocumentAssignmentsOverviewRead)
+def read_eia_document_assignments(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return get_eia_document_assignments_overview(db, current_user, document_id)
+
+
+@router.put(
+    "/{document_id}/sections/{section_id}/assignments",
+    response_model=EiaDocumentAssignmentsOverviewRead,
+)
+def put_eia_section_assignment(
+    document_id: UUID,
+    section_id: UUID,
+    payload: EiaAssignmentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return update_section_assignment(db, current_user, document_id, section_id, payload)
+
+
+@router.delete(
+    "/{document_id}/sections/{section_id}/assignments",
+    response_model=EiaDocumentAssignmentsOverviewRead,
+)
+def delete_eia_section_assignment(
+    document_id: UUID,
+    section_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return clear_section_assignment(db, current_user, document_id, section_id)
+
+
+@router.put(
+    "/{document_id}/subsections/{subsection_id}/assignments",
+    response_model=EiaDocumentAssignmentsOverviewRead,
+)
+def put_eia_subsection_assignment(
+    document_id: UUID,
+    subsection_id: UUID,
+    payload: EiaAssignmentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return update_subsection_assignment(db, current_user, document_id, subsection_id, payload)
+
+
+@router.delete(
+    "/{document_id}/subsections/{subsection_id}/assignments",
+    response_model=EiaDocumentAssignmentsOverviewRead,
+)
+def delete_eia_subsection_assignment(
+    document_id: UUID,
+    subsection_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> dict[str, object]:
+    return clear_subsection_assignment(db, current_user, document_id, subsection_id)
 
 
 @router.delete("/{document_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

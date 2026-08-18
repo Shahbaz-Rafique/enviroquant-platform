@@ -20,6 +20,7 @@ class EiaSubSectionUpdate(BaseModel):
     completion_status: str | None = Field(default=None, max_length=40)
     progress_percentage: float | None = Field(default=None, ge=0, le=100)
     metadata: dict | None = None
+    expected_updated_at: datetime | None = None
 
 
 class EiaSubSectionContentUpdate(BaseModel):
@@ -29,6 +30,7 @@ class EiaSubSectionContentUpdate(BaseModel):
     completion_status: str | None = Field(default=None, max_length=40)
     progress_percentage: float | None = Field(default=None, ge=0, le=100)
     change_summary: str | None = Field(default=None, max_length=500)
+    expected_updated_at: datetime | None = None
 
 
 class EiaSourceDocumentAttachmentCreate(BaseModel):
@@ -72,6 +74,65 @@ class EiaDocumentMemberInvitationRead(ORMModel):
     member: EiaDocumentMemberRead
     invite_url: str | None = None
     email_sent: bool | None = None
+
+
+class EiaAssignmentUpdate(BaseModel):
+    author_user_id: UUID | None = None
+    reviewer_user_id: UUID | None = None
+
+
+class EiaAssigneeSummaryRead(BaseModel):
+    id: UUID
+    full_name: str
+    email: str
+    status: str
+
+
+class EiaSubSectionAssignmentRead(BaseModel):
+    subsection_id: UUID
+    subsection_number: str
+    title: str
+    completion_status: str
+    progress_percentage: float
+    review_status: str
+    unresolved_comment_count: int
+    last_updated_at: datetime | None = None
+    last_updated_by_id: UUID | None = None
+    assignment_source: Literal["SUBSECTION", "SECTION", "UNASSIGNED"]
+    author_assignee: EiaAssigneeSummaryRead | None = None
+    reviewer_assignee: EiaAssigneeSummaryRead | None = None
+    current_role: Literal["AUTHOR", "REVIEWER", "UNASSIGNED"]
+    current_assignee: EiaAssigneeSummaryRead | None = None
+
+
+class EiaSectionAssignmentRead(BaseModel):
+    section_id: UUID
+    section_number: str
+    title: str
+    completion_status: str
+    progress_percentage: float
+    review_status: str
+    unresolved_comment_count: int
+    last_updated_at: datetime | None = None
+    author_assignee: EiaAssigneeSummaryRead | None = None
+    reviewer_assignee: EiaAssigneeSummaryRead | None = None
+    current_role: Literal["AUTHOR", "REVIEWER", "UNASSIGNED"]
+    current_assignee: EiaAssigneeSummaryRead | None = None
+    subsections: list[EiaSubSectionAssignmentRead] = Field(default_factory=list)
+
+
+class EiaAssignedWorkItemRead(BaseModel):
+    section_id: UUID
+    section_number: str
+    section_title: str
+    assignment_role: Literal["AUTHOR", "REVIEWER", "AUTHOR_AND_REVIEWER"]
+    subsection: EiaSubSectionAssignmentRead
+
+
+class EiaDocumentAssignmentsOverviewRead(BaseModel):
+    eia_document_id: UUID
+    sections: list[EiaSectionAssignmentRead] = Field(default_factory=list)
+    my_assigned_work: list[EiaAssignedWorkItemRead] = Field(default_factory=list)
 
 
 class SubSectionCommentCreate(BaseModel):

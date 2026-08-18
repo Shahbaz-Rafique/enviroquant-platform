@@ -222,6 +222,60 @@ export type EiaDocumentMemberInvitation = {
   email_sent: boolean | null;
 };
 
+export type EiaAssignmentUserSummary = Pick<User, "id" | "email" | "full_name" | "status">;
+
+export type EiaSubSectionAssignment = {
+  subsection_id: string;
+  subsection_number: string;
+  title: string;
+  completion_status: string;
+  progress_percentage: number;
+  review_status: string;
+  unresolved_comment_count: number;
+  last_updated_at: string | null;
+  last_updated_by_id: string | null;
+  assignment_source: "SUBSECTION" | "SECTION" | "UNASSIGNED";
+  author_assignee: EiaAssignmentUserSummary | null;
+  reviewer_assignee: EiaAssignmentUserSummary | null;
+  current_role: "AUTHOR" | "REVIEWER" | "UNASSIGNED";
+  current_assignee: EiaAssignmentUserSummary | null;
+};
+
+export type EiaSectionAssignment = {
+  section_id: string;
+  section_number: string;
+  title: string;
+  completion_status: string;
+  progress_percentage: number;
+  review_status: string;
+  unresolved_comment_count: number;
+  last_updated_at: string | null;
+  author_assignee: EiaAssignmentUserSummary | null;
+  reviewer_assignee: EiaAssignmentUserSummary | null;
+  current_role: "AUTHOR" | "REVIEWER" | "UNASSIGNED";
+  current_assignee: EiaAssignmentUserSummary | null;
+  subsections: EiaSubSectionAssignment[];
+};
+
+export type EiaAssignedWorkItem = {
+  section_id: string;
+  section_number: string;
+  section_title: string;
+  assignment_role: "AUTHOR" | "REVIEWER" | "AUTHOR_AND_REVIEWER";
+  subsection: EiaSubSectionAssignment;
+};
+
+export type EiaDocumentAssignmentsOverview = {
+  eia_document_id: string;
+  sections: EiaSectionAssignment[];
+  my_assigned_work: EiaAssignedWorkItem[];
+};
+
+export type EiaAssignmentUpdate = {
+  author_user_id: string | null;
+  reviewer_user_id: string | null;
+};
+
 export type SubSectionComment = {
   id: string;
   tenant_id: string;

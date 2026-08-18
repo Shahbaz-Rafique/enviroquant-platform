@@ -15,6 +15,7 @@ from app.services.audit_service import record_audit_event
 from app.services.eia_service import (
     DOCUMENT_EDIT_ROLES,
     DOCUMENT_READ_ROLES,
+    assert_subsection_version,
     require_subsection_permission,
 )
 from app.services.revision_service import create_subsection_revision
@@ -52,8 +53,15 @@ def save_subsection_content(
     subsection_id: UUID,
     payload: EiaSubSectionContentUpdate,
 ) -> dict[str, object]:
-    subsection = _get_subsection_for_tenant(db, current_user, subsection_id, payload.tenant_id)
+    subsection = _get_subsection_for_tenant(
+        db,
+        current_user,
+        subsection_id,
+        payload.tenant_id,
+        lock_for_update=True,
+    )
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "edit")
+    assert_subsection_version(subsection, payload.expected_updated_at)
 
     if payload.content_html is not None:
         subsection.content_html = payload.content_html
@@ -243,6 +251,8 @@ def _get_subsection_for_tenant(
     current_user: User,
     subsection_id: UUID,
     tenant_id: UUID | None = None,
+    *,
+    lock_for_update: bool = False,
 ) -> EiaSubSection:
     _validate_tenant_scope(current_user, tenant_id)
     statement = (
@@ -255,6 +265,8 @@ def _get_subsection_for_tenant(
         )
         .where(EiaSubSection.id == subsection_id, EiaSubSection.tenant_id == current_user.tenant_id)
     )
+    if lock_for_update:
+        statement = statement.with_for_update(of=EiaSubSection)
     subsection = db.scalars(statement).unique().one_or_none()
     if subsection is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIA subsection not found")

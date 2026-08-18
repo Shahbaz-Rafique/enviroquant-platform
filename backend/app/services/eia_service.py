@@ -143,9 +143,14 @@ def get_subsection_for_document(
     current_user: User,
     document_id: UUID,
     subsection_id: UUID,
+    *,
+    lock_for_update: bool = False,
 ) -> EiaSubSection: 
     get_eia_document_for_tenant(db, current_user, document_id)
-    subsection = db.get(EiaSubSection, subsection_id)
+    statement = select(EiaSubSection).where(EiaSubSection.id == subsection_id)
+    if lock_for_update:
+        statement = statement.with_for_update()
+    subsection = db.scalar(statement)
     if (
         subsection is None
         or subsection.tenant_id != current_user.tenant_id
@@ -162,9 +167,18 @@ def update_eia_subsection(
     subsection_id: UUID,
     payload: EiaSubSectionUpdate,
 ) -> EiaSubSection:
-    subsection = get_subsection_for_document(db, current_user, document_id, subsection_id)
+    subsection = get_subsection_for_document(
+        db,
+        current_user,
+        document_id,
+        subsection_id,
+        lock_for_update=True,
+    )
     require_eia_document_permission(subsection.document, current_user, DOCUMENT_EDIT_ROLES, "edit")
     update_data = payload.model_dump(exclude_unset=True)
+
+    expected_updated_at = update_data.pop("expected_updated_at", None)
+    assert_subsection_version(subsection, expected_updated_at)
 
     if "metadata" in update_data:
         subsection.content_metadata = update_data.pop("metadata") or {}
@@ -204,6 +218,34 @@ def update_eia_subsection(
     db.commit()
     db.refresh(subsection)
     return subsection
+
+
+def assert_subsection_version(
+    subsection: EiaSubSection,
+    expected_updated_at: datetime | None,
+) -> None:
+    if expected_updated_at is None or subsection.updated_at is None:
+        return
+
+    expected = expected_updated_at
+    actual = subsection.updated_at
+    if expected.tzinfo is None:
+        expected = expected.replace(tzinfo=UTC)
+    else:
+        expected = expected.astimezone(UTC)
+    if actual.tzinfo is None:
+        actual = actual.replace(tzinfo=UTC)
+    else:
+        actual = actual.astimezone(UTC)
+
+    if actual != expected:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Subsection was updated by another collaborator. "
+                "Refresh to load the latest version before saving."
+            ),
+        )
 
 
 def get_eia_document_progress(

@@ -185,7 +185,8 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               content_html: editorContent.html,
               content_json: editorContent.json,
               completion_status: nextStatus,
-              progress_percentage: nextProgress
+              progress_percentage: nextProgress,
+              expected_updated_at: workspace.subsection.updated_at
             })
           }
         );
@@ -197,7 +198,12 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
         setSaveState("saved");
       } catch (err) {
         setSaveState("error");
-        setError(err instanceof Error ? err.message : "Subsection content could not be saved");
+        const message = err instanceof Error ? err.message : "Subsection content could not be saved";
+        setError(
+          message.toLowerCase().includes("updated by another collaborator")
+            ? `${message} Your local draft has been preserved in this editor.`
+            : message
+        );
       } finally {
         setSaving(false);
       }
@@ -215,14 +221,14 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   );
 
   useEffect(() => {
-    if (!dirty || !canEdit || saving) {
+    if (!dirty || !canEdit || saving || saveState === "error") {
       return;
     }
     const autosave = window.setTimeout(() => {
       void saveContent();
     }, 4000);
     return () => window.clearTimeout(autosave);
-  }, [canEdit, dirty, saveContent, saving]);
+  }, [canEdit, dirty, saveContent, saveState, saving]);
 
   const saveStatusText = useMemo(() => {
     if (saving) {
