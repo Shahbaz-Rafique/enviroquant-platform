@@ -107,6 +107,7 @@ class EiaSubSectionAssignmentRead(BaseModel):
     unresolved_comment_count: int
     last_updated_at: datetime | None = None
     last_updated_by_id: UUID | None = None
+    last_updated_by: EiaAssigneeSummaryRead | None = None
     due_date: date | None = None
     is_overdue: bool = False
     is_blocked: bool = False
@@ -127,6 +128,8 @@ class EiaSectionAssignmentRead(BaseModel):
     review_status: str
     unresolved_comment_count: int
     last_updated_at: datetime | None = None
+    last_updated_by: EiaAssigneeSummaryRead | None = None
+    has_assignment: bool = False
     due_date: date | None = None
     is_overdue: bool = False
     is_blocked: bool = False
@@ -268,6 +271,7 @@ class EiaSourceMappingConfirmRequest(BaseModel):
     apply_content: bool = False
     completion_status: str | None = Field(default=None, max_length=40)
     progress_percentage: float | None = Field(default=None, ge=0, le=100)
+    expected_updated_at: datetime | None = None
 
 
 class EiaSourceMappingRejectRequest(BaseModel):

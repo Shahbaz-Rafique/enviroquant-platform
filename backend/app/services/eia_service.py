@@ -175,6 +175,7 @@ def update_eia_subsection(
         lock_for_update=True,
     )
     require_eia_document_permission(subsection.document, current_user, DOCUMENT_EDIT_ROLES, "edit")
+    require_assigned_subsection_author(subsection, current_user)
     update_data = payload.model_dump(exclude_unset=True)
 
     expected_updated_at = update_data.pop("expected_updated_at", None)
@@ -225,8 +226,13 @@ def assert_subsection_version(
     subsection: EiaSubSection,
     expected_updated_at: datetime | None,
 ) -> None:
-    if expected_updated_at is None or subsection.updated_at is None:
+    if subsection.updated_at is None:
         return
+    if expected_updated_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+            detail="The subsection version is required. Refresh before saving changes.",
+        )
 
     expected = expected_updated_at
     actual = subsection.updated_at
@@ -268,6 +274,60 @@ def assert_subsection_content_editable(subsection: EiaSubSection) -> None:
         status_code=status.HTTP_409_CONFLICT,
         detail="Start work or start the requested revision before editing subsection content",
     )
+
+
+def require_assigned_subsection_author(
+    subsection: EiaSubSection,
+    current_user: User,
+) -> None:
+    """Limit content changes to the effective author or a workflow manager."""
+    document = subsection.document
+    role_names = {role.lower() for role in current_user.role_names}
+    if (
+        document.created_by_id == current_user.id
+        or is_eia_document_admin(current_user)
+        or Roles.PROJECT_MANAGER in role_names
+    ):
+        return
+
+    author_id = get_effective_subsection_author_id(document, subsection)
+    if author_id == current_user.id:
+        return
+
+    if author_id is None:
+        detail = "Assign an author before editing this subsection"
+    else:
+        detail = "Only the assigned author can edit this subsection"
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
+
+def get_effective_subsection_author_id(
+    document: EiaDocument,
+    subsection: EiaSubSection,
+) -> UUID | None:
+    metadata = document.document_metadata if isinstance(document.document_metadata, dict) else {}
+    assignments = metadata.get("assignments") if isinstance(metadata.get("assignments"), dict) else {}
+    section_assignments = (
+        assignments.get("sections") if isinstance(assignments.get("sections"), dict) else {}
+    )
+    subsection_assignments = (
+        assignments.get("subsections")
+        if isinstance(assignments.get("subsections"), dict)
+        else {}
+    )
+    effective = subsection_assignments.get(str(subsection.id))
+    if not isinstance(effective, dict):
+        effective = section_assignments.get(str(subsection.section_id))
+    if not isinstance(effective, dict):
+        return subsection.assigned_to_id
+
+    raw_author_id = effective.get("author_user_id")
+    if raw_author_id is None:
+        return None
+    try:
+        return UUID(str(raw_author_id))
+    except (TypeError, ValueError, AttributeError):
+        return None
 
 
 def get_eia_document_progress(

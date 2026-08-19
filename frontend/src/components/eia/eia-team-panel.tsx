@@ -22,7 +22,7 @@ type EiaTeamPanelProps = {
 };
 
 const documentRoles = [
-  { value: "EDITOR", label: "Editor" },
+  { value: "EDITOR", label: "Specialist / author" },
   { value: "COMMENTER", label: "Commenter" },
   { value: "REVIEWER", label: "Reviewer" },
   { value: "VIEWER", label: "Viewer" }
@@ -154,6 +154,9 @@ export function EiaTeamPanel({
                 ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs leading-5 text-white/52">
+                Specialists can author assigned sections; reviewers control review decisions.
+              </p>
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="animate-spin" /> : <UserPlus />}

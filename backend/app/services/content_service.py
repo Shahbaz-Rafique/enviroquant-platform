@@ -18,6 +18,7 @@ from app.services.eia_service import (
     assert_subsection_content_editable,
     assert_subsection_version,
     assert_workflow_status_unchanged,
+    require_assigned_subsection_author,
     require_subsection_permission,
 )
 from app.services.revision_service import create_subsection_revision
@@ -63,6 +64,7 @@ def save_subsection_content(
         lock_for_update=True,
     )
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "edit")
+    require_assigned_subsection_author(subsection, current_user)
     assert_subsection_version(subsection, payload.expected_updated_at)
     assert_workflow_status_unchanged(subsection, payload.completion_status)
     if payload.content_html is not None or payload.content_json is not None:
@@ -118,6 +120,7 @@ async def upload_subsection_attachment(
 ) -> EiaAttachment:
     subsection = _get_subsection_for_tenant(db, current_user, subsection_id, tenant_id)
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "upload attachments to")
+    require_assigned_subsection_author(subsection, current_user)
     assert_subsection_content_editable(subsection)
     stored_file = await store_subsection_attachment(
         file=file,
@@ -181,6 +184,7 @@ def link_source_document_attachment(
 ) -> EiaAttachment:
     subsection = _get_subsection_for_tenant(db, current_user, subsection_id, payload.tenant_id)
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "link source documents to")
+    require_assigned_subsection_author(subsection, current_user)
     assert_subsection_content_editable(subsection)
     source_document = db.get(Document, payload.source_document_id)
     if (

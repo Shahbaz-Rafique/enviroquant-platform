@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from io import BytesIO
@@ -742,10 +743,17 @@ def post_subsection_revision_restore(
     subsection_id: UUID,
     revision_id: UUID,
     tenant_id: UUID | None = Query(default=None),
+    expected_updated_at: datetime | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> dict[str, object]:
-    restore_subsection_revision(db, current_user, subsection_id, revision_id)
+    restore_subsection_revision(
+        db,
+        current_user,
+        subsection_id,
+        revision_id,
+        expected_updated_at,
+    )
     return get_subsection_workspace(db, current_user, subsection_id, tenant_id)
 
 

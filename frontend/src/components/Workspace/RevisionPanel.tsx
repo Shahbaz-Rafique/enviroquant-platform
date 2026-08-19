@@ -12,11 +12,12 @@ import type { EiaSubSectionWorkspace, SubSectionRevision } from "@/lib/types";
 type RevisionPanelProps = {
   subsectionId: string;
   tenantId: string;
+  expectedUpdatedAt: string;
   canRestore: boolean;
   onRestored: (workspace: EiaSubSectionWorkspace) => void;
 };
 
-export function RevisionPanel({ subsectionId, tenantId, canRestore, onRestored }: RevisionPanelProps) {
+export function RevisionPanel({ subsectionId, tenantId, expectedUpdatedAt, canRestore, onRestored }: RevisionPanelProps) {
   const [revisions, setRevisions] = useState<SubSectionRevision[]>([]);
   const [loading, setLoading] = useState(true);
   const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -45,7 +46,7 @@ export function RevisionPanel({ subsectionId, tenantId, canRestore, onRestored }
       const workspace = await apiRequest<EiaSubSectionWorkspace>(
         `/eia-documents/subsections/${subsectionId}/revisions/${revision.id}/restore?tenant_id=${encodeURIComponent(
           tenantId
-        )}`,
+        )}&expected_updated_at=${encodeURIComponent(expectedUpdatedAt)}`,
         { method: "POST" }
       );
       onRestored(workspace);

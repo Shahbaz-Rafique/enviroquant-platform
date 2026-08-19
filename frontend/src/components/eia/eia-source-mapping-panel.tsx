@@ -18,6 +18,7 @@ type EiaSourceMappingPanelProps = {
   documentId: string;
   projectId: string;
   canManage: boolean;
+  subsectionVersions: Record<string, string>;
   onApplied: () => void;
 };
 
@@ -25,6 +26,7 @@ export function EiaSourceMappingPanel({
   documentId,
   projectId,
   canManage,
+  subsectionVersions,
   onApplied
 }: EiaSourceMappingPanelProps) {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
@@ -146,7 +148,10 @@ export function EiaSourceMappingPanel({
             ? { reason: "Rejected from document workspace" }
             : {
                 apply_content: action === "apply",
-                progress_percentage: action === "apply" ? Math.max(mapping.confidence_score * 100, 50) : undefined
+                progress_percentage: action === "apply" ? Math.max(mapping.confidence_score * 100, 50) : undefined,
+                expected_updated_at: action === "apply" && mapping.subsection_id
+                  ? subsectionVersions[mapping.subsection_id]
+                  : undefined,
               }
         )
       });

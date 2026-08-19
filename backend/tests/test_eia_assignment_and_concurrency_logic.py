@@ -4,14 +4,15 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 
-from app.models.eia import EiaSubSection
+from app.models.eia import EiaDocument, EiaSubSection
 from app.services.eia_assignment_service import (
+    _assignment_source,
     _is_overdue,
     _section_completion_status,
     _subsection_review_status,
     _user_assignment_role,
 )
-from app.services.eia_service import assert_subsection_version
+from app.services.eia_service import assert_subsection_version, get_effective_subsection_author_id
 from app.services.eia_review_workflow_service import _validate_transition
 
 
@@ -23,6 +24,15 @@ def test_user_assignment_role_is_specific_to_current_user() -> None:
     assert _user_assignment_role(reviewer_id, author_id, reviewer_id) == "REVIEWER"
     assert _user_assignment_role(uuid4(), author_id, reviewer_id) is None
     assert _user_assignment_role(author_id, author_id, author_id) == "AUTHOR_AND_REVIEWER"
+
+
+def test_subsection_assignment_source_distinguishes_override_and_inheritance() -> None:
+    section_assignment = {"author_user_id": uuid4()}
+    subsection_assignment = {"reviewer_user_id": uuid4()}
+
+    assert _assignment_source(None, None) == "UNASSIGNED"
+    assert _assignment_source(section_assignment, None) == "SECTION"
+    assert _assignment_source(section_assignment, subsection_assignment) == "SUBSECTION"
 
 
 def test_review_and_section_statuses_include_comments_and_progress() -> None:
@@ -87,6 +97,15 @@ def test_subsection_version_accepts_equivalent_utc_timestamp() -> None:
     assert_subsection_version(subsection, updated_at.replace(tzinfo=None))
 
 
+def test_subsection_version_requires_current_timestamp() -> None:
+    subsection = EiaSubSection(updated_at=datetime(2026, 8, 18, 10, 30, tzinfo=UTC))
+
+    with pytest.raises(HTTPException) as exc_info:
+        assert_subsection_version(subsection, None)
+
+    assert exc_info.value.status_code == 428
+
+
 def test_subsection_version_rejects_stale_timestamp() -> None:
     updated_at = datetime(2026, 8, 18, 10, 30, tzinfo=UTC)
     subsection = EiaSubSection(updated_at=updated_at)
@@ -95,3 +114,28 @@ def test_subsection_version_rejects_stale_timestamp() -> None:
         assert_subsection_version(subsection, updated_at - timedelta(seconds=1))
 
     assert exc_info.value.status_code == 409
+
+
+def test_effective_author_uses_subsection_override_before_section_assignment() -> None:
+    section_id = uuid4()
+    subsection_id = uuid4()
+    section_author_id = uuid4()
+    subsection_author_id = uuid4()
+    document = EiaDocument(
+        document_metadata={
+            "assignments": {
+                "sections": {
+                    str(section_id): {"author_user_id": str(section_author_id)},
+                },
+                "subsections": {
+                    str(subsection_id): {"author_user_id": str(subsection_author_id)},
+                },
+            }
+        }
+    )
+    subsection = EiaSubSection(id=subsection_id, section_id=section_id)
+
+    assert get_effective_subsection_author_id(document, subsection) == subsection_author_id
+
+    document.document_metadata["assignments"]["subsections"] = {}
+    assert get_effective_subsection_author_id(document, subsection) == section_author_id

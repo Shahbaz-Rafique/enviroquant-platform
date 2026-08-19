@@ -12,10 +12,11 @@ import type { EiaReviewQueueItem } from "@/lib/types";
 
 type EiaReviewQueueProps = {
   documentId: string;
+  mode?: "review" | "approval";
   onOpenSubsection: (subsectionId: string) => void;
 };
 
-export function EiaReviewQueue({ documentId, onOpenSubsection }: EiaReviewQueueProps) {
+export function EiaReviewQueue({ documentId, mode = "review", onOpenSubsection }: EiaReviewQueueProps) {
   const [items, setItems] = useState<EiaReviewQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [approvingSectionId, setApprovingSectionId] = useState<string | null>(null);
@@ -36,6 +37,10 @@ export function EiaReviewQueue({ documentId, onOpenSubsection }: EiaReviewQueueP
   useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
+
+  const visibleItems = mode === "approval"
+    ? items.filter((item) => item.status === "UNDER_REVIEW")
+    : items;
 
   async function approveSection(sectionId: string) {
     setApprovingSectionId(sectionId);
@@ -58,9 +63,13 @@ export function EiaReviewQueue({ documentId, onOpenSubsection }: EiaReviewQueueP
     <section className="builder-panel overflow-hidden">
       <header className="flex flex-col gap-3 border-b border-[#e3eae6] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#287451]">Controlled review</p>
-          <h2 className="mt-1 text-xl font-bold text-[#18372c]">Review queue</h2>
-          <p className="mt-1 text-sm text-[#697a73]">Subsections submitted for review or currently under review.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#287451]">Controlled workflow</p>
+          <h2 className="mt-1 text-xl font-bold text-[#18372c]">{mode === "approval" ? "Section approvals" : "Review queue"}</h2>
+          <p className="mt-1 text-sm text-[#697a73]">
+            {mode === "approval"
+              ? "Approve sections after every subsection is under review and all comments are resolved."
+              : "Subsections submitted for review or currently under review."}
+          </p>
         </div>
         <Button type="button" variant="secondary" disabled={loading} onClick={() => void loadQueue()}>
           <RefreshCcw className={loading ? "animate-spin" : undefined} /> Refresh
@@ -69,12 +78,12 @@ export function EiaReviewQueue({ documentId, onOpenSubsection }: EiaReviewQueueP
 
       <div className="grid gap-3 p-4">
         {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
-        {loading && !items.length ? <Alert>Loading review queue...</Alert> : null}
-        {!loading && !items.length ? <Alert>No subsections are awaiting review.</Alert> : null}
+        {loading && !visibleItems.length ? <Alert>Loading {mode === "approval" ? "section approvals" : "review queue"}...</Alert> : null}
+        {!loading && !visibleItems.length ? <Alert>{mode === "approval" ? "No sections are ready for an approval decision." : "No subsections are awaiting review."}</Alert> : null}
 
-        {items.map((item, index) => {
+        {visibleItems.map((item, index) => {
           const sectionItems = items.filter((candidate) => candidate.section_id === item.section_id);
-          const isFirstSectionItem = items.findIndex((candidate) => candidate.section_id === item.section_id) === index;
+          const isFirstSectionItem = visibleItems.findIndex((candidate) => candidate.section_id === item.section_id) === index;
           const canApproveSection = isFirstSectionItem && sectionItems.every((candidate) => candidate.status === "UNDER_REVIEW");
           return (
           <article key={item.subsection_id} className="grid gap-3 rounded-xl border border-[#dce6e1] bg-white p-4 lg:grid-cols-[minmax(0,1fr)_180px_auto] lg:items-center">
@@ -103,7 +112,7 @@ export function EiaReviewQueue({ documentId, onOpenSubsection }: EiaReviewQueueP
               <Button type="button" onClick={() => onOpenSubsection(item.subsection_id)}>
                 <ShieldCheck /> Review <ArrowRight />
               </Button>
-              {canApproveSection ? (
+              {mode === "approval" && canApproveSection ? (
                 <Button
                   type="button"
                   variant="secondary"

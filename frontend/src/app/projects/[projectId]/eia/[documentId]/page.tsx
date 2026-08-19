@@ -23,9 +23,9 @@ export default function EiaDocumentBuilderPage() {
       <PageNavigation
         actions={
           <Button asChild variant="outline">
-            <Link href={`/projects/${params.projectId}/eia/${params.documentId}/review`}>
+            <Link href={`/projects/${params.projectId}/eia/${params.documentId}#review-queue`}>
               <FileSearch />
-              Review center
+              Review queue
             </Link>
           </Button>
         }

@@ -243,6 +243,7 @@ export type EiaSubSectionAssignment = {
   unresolved_comment_count: number;
   last_updated_at: string | null;
   last_updated_by_id: string | null;
+  last_updated_by: EiaAssignmentUserSummary | null;
   due_date: string | null;
   is_overdue: boolean;
   is_blocked: boolean;
@@ -263,6 +264,8 @@ export type EiaSectionAssignment = {
   review_status: string;
   unresolved_comment_count: number;
   last_updated_at: string | null;
+  last_updated_by: EiaAssignmentUserSummary | null;
+  has_assignment: boolean;
   due_date: string | null;
   is_overdue: boolean;
   is_blocked: boolean;

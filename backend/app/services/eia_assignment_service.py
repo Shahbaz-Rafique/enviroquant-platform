@@ -478,6 +478,7 @@ def _build_subsection_assignment_item(
         "unresolved_comment_count": unresolved_count,
         "last_updated_at": subsection.last_edited_at or subsection.updated_at,
         "last_updated_by_id": subsection.last_edited_by_id,
+        "last_updated_by": _assignee(subsection.last_edited_by),
         "due_date": due_date,
         "is_overdue": _is_overdue(due_date, subsection.completion_status),
         "is_blocked": is_blocked,
@@ -520,14 +521,9 @@ def _summarize_section_assignment(
     )
     section_unresolved = sum(int(item["unresolved_comment_count"]) for item in subsection_items)
     section_review_status = _section_review_status(subsection_items)
-    last_updated_at = max(
-        (
-            item["last_updated_at"]
-            for item in subsection_items
-            if item["last_updated_at"] is not None
-        ),
-        default=None,
-    )
+    updated_items = [item for item in subsection_items if item["last_updated_at"] is not None]
+    last_updated_item = max(updated_items, key=lambda item: item["last_updated_at"]) if updated_items else None
+    last_updated_at = last_updated_item["last_updated_at"] if last_updated_item else None
 
     author_id = section_assignment.get("author_user_id") if section_assignment else None
     reviewer_id = section_assignment.get("reviewer_user_id") if section_assignment else None
@@ -551,6 +547,8 @@ def _summarize_section_assignment(
         "review_status": section_review_status,
         "unresolved_comment_count": section_unresolved,
         "last_updated_at": last_updated_at,
+        "last_updated_by": last_updated_item.get("last_updated_by") if last_updated_item else None,
+        "has_assignment": section_assignment is not None,
         "due_date": due_date,
         "is_overdue": any(bool(item.get("is_overdue")) for item in subsection_items),
         "is_blocked": bool(blocked_items),

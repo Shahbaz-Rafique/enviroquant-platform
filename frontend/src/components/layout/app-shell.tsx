@@ -65,12 +65,15 @@ export function AppShell ({ children, user }: AppShellProps) {
   }
 
   return (
-    <div className='workspace-theme'>
-      <header className='builder-topbar sticky top-0 z-30'>
+    <div className='workspace-theme min-h-screen'>
+      <header className='builder-topbar sticky top-0 z-30 lg:ml-64'>
         <div className='flex h-16 items-center justify-between px-4 lg:px-6'>
           <Link href='/dashboard' className='flex min-w-0 items-center gap-4'>
-            <BrandMark href={null} imageClassName='h-auto w-[168px]' />
-            <span className='hidden h-7 border-l border-[#dce6e1] lg:block' />
+            <BrandMark
+              href={null}
+              className='rounded-md bg-[#123f2e] px-2 py-1 lg:hidden'
+              imageClassName='h-auto w-[138px]'
+            />
             <span className='hidden truncate text-xs font-bold uppercase tracking-[0.16em] text-[#6c7d75] lg:block'>
               Environmental Intelligence Platform
             </span>
@@ -97,12 +100,15 @@ export function AppShell ({ children, user }: AppShellProps) {
       </header>
 
       <div className='min-h-[calc(100vh-4rem)]'>
-        <aside className='fixed bottom-0 left-0 top-16 z-20 hidden w-64 border-r border-[#174b37] bg-[#123f2e] text-white lg:flex lg:flex-col'>
-          <div className='border-b border-white/10 px-5 py-5'>
+        <aside className='fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-[#174b37] bg-[#123f2e] text-white lg:flex lg:flex-col'>
+          <div className='flex h-16 shrink-0 items-center border-b border-white/10 px-5'>
+            <BrandMark href='/dashboard' imageClassName='h-auto w-[174px]' />
+          </div>
+          {/* <div className='border-b border-white/10 px-5 py-5'>
             <p className='text-[11px] font-bold uppercase tracking-[0.18em] text-[#a8cdbb]'>Current capability</p>
             <p className='mt-1 text-sm font-semibold text-white'>EIA workspace</p>
             <p className='mt-1 text-xs leading-5 text-white/60'>Evidence-led authoring and review</p>
-          </div>
+          </div> */}
           <nav className='flex-1 overflow-y-auto px-3 py-4 space-y-1' aria-label='Workspace navigation'>
             {sectionLinks
               .filter(

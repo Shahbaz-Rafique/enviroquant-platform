@@ -23,7 +23,9 @@ from app.services.eia_service import (
     DOCUMENT_EDIT_ROLES,
     DOCUMENT_READ_ROLES,
     assert_subsection_content_editable,
+    assert_subsection_version,
     assert_workflow_status_unchanged,
+    require_assigned_subsection_author,
     require_eia_document_permission,
 )
 from app.services.revision_service import create_subsection_revision
@@ -150,6 +152,14 @@ def confirm_source_mapping(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Mapping has no suggested content to apply",
             )
+        db.execute(
+            select(EiaSubSection.id)
+            .where(EiaSubSection.id == mapping.subsection.id)
+            .with_for_update()
+        ).one()
+        db.refresh(mapping.subsection)
+        require_assigned_subsection_author(mapping.subsection, current_user)
+        assert_subsection_version(mapping.subsection, payload.expected_updated_at)
         assert_subsection_content_editable(mapping.subsection)
         assert_workflow_status_unchanged(mapping.subsection, payload.completion_status)
         mapping.subsection.content_html = mapping.suggested_content_html

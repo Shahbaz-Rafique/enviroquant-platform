@@ -13,6 +13,8 @@ from app.services.eia_service import (
     DOCUMENT_EDIT_ROLES,
     DOCUMENT_READ_ROLES,
     assert_subsection_content_editable,
+    assert_subsection_version,
+    require_assigned_subsection_author,
     require_subsection_permission,
 )
 
@@ -87,9 +89,12 @@ def restore_subsection_revision(
     current_user: User,
     subsection_id: UUID,
     revision_id: UUID,
+    expected_updated_at: datetime | None,
 ) -> EiaSubSection:
-    subsection = _get_subsection_for_revision(db, current_user, subsection_id)
+    subsection = _get_subsection_for_revision(db, current_user, subsection_id, lock_for_update=True)
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "restore revisions")
+    require_assigned_subsection_author(subsection, current_user)
+    assert_subsection_version(subsection, expected_updated_at)
     assert_subsection_content_editable(subsection)
     revision = db.get(SubSectionRevision, revision_id)
     if (
@@ -137,12 +142,17 @@ def _get_subsection_for_revision(
     db: Session,
     current_user: User,
     subsection_id: UUID,
+    *,
+    lock_for_update: bool = False,
 ) -> EiaSubSection:
-    subsection = db.scalar(
+    statement = (
         select(EiaSubSection)
         .options(selectinload(EiaSubSection.document).selectinload(EiaDocument.members))
         .where(EiaSubSection.id == subsection_id, EiaSubSection.tenant_id == current_user.tenant_id)
     )
+    if lock_for_update:
+        statement = statement.with_for_update(of=EiaSubSection)
+    subsection = db.scalar(statement)
     if subsection is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIA subsection not found")
     return subsection

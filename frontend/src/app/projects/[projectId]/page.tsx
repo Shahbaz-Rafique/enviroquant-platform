@@ -314,17 +314,7 @@ export default function ProjectWorkspacePage() {
             </CardContent>
           </Card>
 
-          <Card className="border-dashed">
-            <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle>Platform roadmap</CardTitle>
-                <Badge className="border-slate-200 bg-slate-100 text-slate-600">Future</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-[#697a73]">Cross-project environmental intelligence and operating-system capabilities are in development and are not available in this workspace today.</p>
-            </CardContent>
-          </Card>
+         
         </aside>
       </section>
     </AppShell>

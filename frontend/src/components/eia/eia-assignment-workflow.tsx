@@ -1,9 +1,10 @@
 "use client";
 
-import { ClipboardCheck, Loader2, RefreshCcw, UserCheck, Users2 } from "lucide-react";
+import { ClipboardCheck, Loader2, RefreshCcw, Trash2, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
+import { AssigneeChip } from "@/components/eia/eia-collaboration-indicators";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type {
+  EiaAssignmentUserSummary,
   EiaDocumentAssignmentsOverview,
   EiaDocumentMember,
   EiaSectionAssignment,
@@ -141,6 +143,10 @@ export function EiaAssignmentWorkflow({
   }
 
   async function clearSectionAssignment(sectionId: string) {
+    const section = assignments?.sections.find((item) => item.section_id === sectionId);
+    if (!window.confirm(`Remove the section assignment for ${section?.title ?? "this section"}? Subsection overrides will remain in place.`)) {
+      return;
+    }
     setBusyKey(`section-clear:${sectionId}`);
     setError(null);
     try {
@@ -187,6 +193,12 @@ export function EiaAssignmentWorkflow({
   }
 
   async function clearSubsectionAssignment(subsectionId: string) {
+    const subsection = assignments?.sections
+      .flatMap((section) => section.subsections)
+      .find((item) => item.subsection_id === subsectionId);
+    if (!window.confirm(`Remove the subsection override for ${subsection?.title ?? "this subsection"}? It will inherit its section assignment.`)) {
+      return;
+    }
     setBusyKey(`subsection-clear:${subsectionId}`);
     setError(null);
     try {
@@ -247,8 +259,12 @@ export function EiaAssignmentWorkflow({
                       {item.subsection.subsection_number} {item.subsection.title}
                     </span>
                   </span>
-                  <span className="shrink-0 text-[11px] font-semibold text-[#5f7369]">
-                    {toLabel(item.assignment_role)}
+                  <span className="grid shrink-0 justify-items-end gap-1 text-[11px] font-semibold text-[#5f7369]">
+                    <span>{toLabel(item.assignment_role)}</span>
+                    <span className="flex items-center gap-2">
+                      <Badge className={statusBadgeClass(item.subsection.completion_status)}>{toLabel(item.subsection.completion_status)}</Badge>
+                      <span>{Math.round(item.subsection.progress_percentage)}%</span>
+                    </span>
                   </span>
                 </button>
               ))}
@@ -334,17 +350,24 @@ function SectionAssignmentCard({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="border-[#cfe0d7] bg-[#edf6f1] text-[#287451]">Section {section.section_number}</Badge>
+              <Badge className="border-slate-200 bg-slate-50 text-slate-700">
+                {section.has_assignment ? "Section assignment" : "No section default"}
+              </Badge>
               <Badge className={statusBadgeClass(section.completion_status)}>{toLabel(section.completion_status)}</Badge>
               <Badge className={reviewBadgeClass(section.review_status)}>{toLabel(section.review_status)}</Badge>
               {section.is_overdue ? <Badge className="border-amber-200 bg-amber-50 text-amber-700">Overdue</Badge> : null}
               {section.is_blocked ? <Badge className="border-rose-200 bg-rose-50 text-rose-700">Blocked</Badge> : null}
             </div>
             <h4 className="mt-2 text-base font-bold text-[#214238]">{section.title}</h4>
-            <p className="mt-1 text-xs text-[#6a7d74]">
-              Responsible now: {section.current_assignee?.full_name ?? "Unassigned"} ({toLabel(section.current_role)})
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <AssignmentRoleCard assignee={section.author_assignee} label="Section author" role="AUTHOR" />
+              <AssignmentRoleCard assignee={section.reviewer_assignee} label="Section reviewer" role="REVIEWER" />
+            </div>
+            <p className="mt-2 text-xs font-semibold text-[#52675e]">
+              Responsible now: {sectionResponsibilityLabel(section)}
             </p>
             <p className="mt-1 text-xs text-[#6a7d74]">
-              Last update: {formatDateTime(section.last_updated_at)}
+              Last update: {formatLastUpdate(section.last_updated_at, section.last_updated_by?.full_name)}
             </p>
             <p className="mt-1 text-xs text-[#6a7d74]">
               Due: {formatDate(section.due_date)}{section.blocked_reason ? ` · ${section.blocked_reason}` : ""}
@@ -356,9 +379,10 @@ function SectionAssignmentCard({
               <span>{Math.round(section.progress_percentage)}%</span>
             </div>
             <Progress className="h-1.5" value={section.progress_percentage} />
-            <p className="mt-2 text-[11px] font-medium text-[#6a7d74]">
-              Open comments: {section.unresolved_comment_count}
-            </p>
+            <div className="mt-2 grid gap-1 text-[11px] font-medium text-[#6a7d74]">
+              <p>Review: {toLabel(section.review_status)}</p>
+              <p>Unresolved comments: {section.unresolved_comment_count}</p>
+            </div>
           </div>
         </div>
 
@@ -440,10 +464,10 @@ function SectionAssignmentCard({
               type="button"
               variant="secondary"
               onClick={onClearSection}
-              disabled={busyKey === `section-clear:${section.section_id}`}
+              disabled={!section.has_assignment || busyKey === `section-clear:${section.section_id}`}
             >
-              {busyKey === `section-clear:${section.section_id}` ? <Loader2 className="animate-spin" /> : <Users2 />}
-              Clear
+              {busyKey === `section-clear:${section.section_id}` ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              Remove
             </Button>
           </div>
         ) : null}
@@ -515,17 +539,23 @@ function SubsectionAssignmentRow({
             <span className="text-xs font-bold text-[#287451]">{subsection.subsection_number}</span>
             <Badge className={statusBadgeClass(subsection.completion_status)}>{toLabel(subsection.completion_status)}</Badge>
             <Badge className={reviewBadgeClass(subsection.review_status)}>{toLabel(subsection.review_status)}</Badge>
-            <Badge className="border-slate-200 bg-slate-50 text-slate-700">{toLabel(subsection.assignment_source)}</Badge>
+            <Badge className="border-slate-200 bg-slate-50 text-slate-700">
+              {subsection.assignment_source === "SECTION" ? "Inherited from section" : toLabel(subsection.assignment_source)}
+            </Badge>
             {subsection.is_overdue ? <Badge className="border-amber-200 bg-amber-50 text-amber-700">Overdue</Badge> : null}
             {subsection.is_blocked ? <Badge className="border-rose-200 bg-rose-50 text-rose-700">Blocked</Badge> : null}
             {isMine ? <Badge className="border-[#cfe0d7] bg-[#edf6f1] text-[#287451]">Assigned to me</Badge> : null}
           </div>
           <p className="mt-1 line-clamp-2 text-sm font-medium text-[#334f45]">{subsection.title}</p>
-          <p className="mt-1 text-[11px] text-[#6a7d74]">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <AssignmentRoleCard assignee={subsection.author_assignee} label="Author" role="AUTHOR" />
+            <AssignmentRoleCard assignee={subsection.reviewer_assignee} label="Reviewer" role="REVIEWER" />
+          </div>
+          <p className="mt-2 text-[11px] font-semibold text-[#52675e]">
             Responsible now: {subsection.current_assignee?.full_name ?? "Unassigned"} ({toLabel(subsection.current_role)})
           </p>
           <p className="mt-1 text-[11px] text-[#6a7d74]">
-            Last update: {formatDateTime(subsection.last_updated_at)}
+            Last update: {formatLastUpdate(subsection.last_updated_at, subsection.last_updated_by?.full_name)}
           </p>
           <p className="mt-1 text-[11px] text-[#6a7d74]">
             Due: {formatDate(subsection.due_date)}{subsection.blocked_reason ? ` · ${subsection.blocked_reason}` : ""}
@@ -538,7 +568,10 @@ function SubsectionAssignmentRow({
             <span>{Math.round(subsection.progress_percentage)}%</span>
           </div>
           <Progress className="h-1.5" value={subsection.progress_percentage} />
-          <p className="mt-2 text-[11px] text-[#6a7d74]">Open comments: {subsection.unresolved_comment_count}</p>
+          <div className="mt-2 grid gap-1 text-[11px] text-[#6a7d74]">
+            <p>Review: {toLabel(subsection.review_status)}</p>
+            <p>Unresolved comments: {subsection.unresolved_comment_count}</p>
+          </div>
         </div>
       </div>
 
@@ -597,17 +630,19 @@ function SubsectionAssignmentRow({
             disabled={busyKey === `subsection-save:${subsection.subsection_id}`}
           >
             {busyKey === `subsection-save:${subsection.subsection_id}` ? <Loader2 className="animate-spin" /> : <UserCheck />}
-            Save
+            {subsection.assignment_source === "SUBSECTION" ? "Save changes" : "Save override"}
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onClear}
-            disabled={busyKey === `subsection-clear:${subsection.subsection_id}`}
-          >
-            {busyKey === `subsection-clear:${subsection.subsection_id}` ? <Loader2 className="animate-spin" /> : <Users2 />}
-            Clear
-          </Button>
+          {subsection.assignment_source === "SUBSECTION" ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClear}
+              disabled={busyKey === `subsection-clear:${subsection.subsection_id}`}
+            >
+              {busyKey === `subsection-clear:${subsection.subsection_id}` ? <Loader2 className="animate-spin" /> : <Trash2 />}
+              Remove override
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -648,6 +683,23 @@ function AssignmentBlockControl({
         )}
       </div>
     </div>
+  );
+}
+
+function AssignmentRoleCard({
+  assignee,
+  label,
+  role,
+}: Readonly<{
+  assignee: EiaAssignmentUserSummary | null;
+  label: string;
+  role: "AUTHOR" | "REVIEWER";
+}>) {
+  return (
+    <span className="rounded-lg border border-[#dce6e1] bg-[#f8faf9] px-3 py-2">
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.12em] text-[#7a8a83]">{label}</span>
+      <AssigneeChip assignee={assignee} role={role} />
+    </span>
   );
 }
 
@@ -719,6 +771,31 @@ function formatDateTime(value: string | null) {
     return "Not available";
   }
   return parsed.toLocaleString();
+}
+
+function sectionResponsibilityLabel(section: EiaSectionAssignment) {
+  const responsibilities = new Map<string, { name: string; role: string }>();
+  for (const subsection of section.subsections) {
+    if (subsection.current_assignee) {
+      responsibilities.set(subsection.current_assignee.id, {
+        name: subsection.current_assignee.full_name,
+        role: subsection.current_role,
+      });
+    }
+  }
+  const active = [...responsibilities.values()];
+  if (active.length === 1) {
+    return `${active[0].name} (${toLabel(active[0].role)})`;
+  }
+  if (active.length > 1) {
+    return `${active.length} specialists across assigned subsections`;
+  }
+  return "Unassigned";
+}
+
+function formatLastUpdate(value: string | null, userName?: string) {
+  const timestamp = formatDateTime(value);
+  return userName ? `${userName} · ${timestamp}` : timestamp;
 }
 
 function formatDate(value: string | null) {

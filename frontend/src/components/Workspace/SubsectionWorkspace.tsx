@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Bot, CheckCircle2, FileText, Loader2, RefreshCcw, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, CheckCircle2, Copy, FileText, Loader2, RefreshCcw, Save, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -10,12 +10,13 @@ import { ChecklistPanel } from "@/components/Sidebar/ChecklistPanel";
 import { CommentsPanel } from "@/components/Workspace/CommentsPanel";
 import { RevisionPanel } from "@/components/Workspace/RevisionPanel";
 import { EiaWorkflowActions } from "@/components/eia/eia-workflow-actions";
+import { CollaboratorStack, ResponsibilityCard } from "@/components/eia/eia-collaboration-indicators";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Progress } from "@/components/ui/progress";
-import { apiRequest } from "@/lib/api-client";
+import { ApiError, apiRequest } from "@/lib/api-client";
 import {
   canCommentOnEiaDocument,
   canEditEiaDocument,
@@ -29,8 +30,11 @@ import type {
   EiaAttachment,
   EiaAuthoringAssistResponse,
   EiaChecklistItem,
+  EiaDocumentAssignmentsOverview,
   EiaDocumentMember,
   EiaSourceMapping,
+  EiaSubSection,
+  EiaSubSectionAssignment,
   EiaSubSectionWorkspace as EiaSubSectionWorkspaceType,
   User
 } from "@/lib/types";
@@ -81,12 +85,15 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saved" | "error" | "conflict">("idle");
+  const [newerVersionAvailable, setNewerVersionAvailable] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [documentRole, setDocumentRole] = useState<string | null>(null);
+  const [documentMembers, setDocumentMembers] = useState<EiaDocumentMember[]>([]);
+  const [assignments, setAssignments] = useState<EiaDocumentAssignmentsOverview | null>(null);
   const [assistantError, setAssistantError] = useState<string | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [assistantActionId, setAssistantActionId] = useState<string | null>(null);
@@ -100,7 +107,15 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const canEdit = canEditEiaDocument(effectiveDocumentRole);
   const canComment = canCommentOnEiaDocument(effectiveDocumentRole);
   const canResolve = canReviewEiaDocument(effectiveDocumentRole) || isWorkflowManager;
-  const canAuthorContent = canEdit && completionStatus === "IN_PROGRESS";
+  const subsectionAssignment = useMemo<EiaSubSectionAssignment | null>(() => {
+    for (const section of assignments?.sections ?? []) {
+      const match = section.subsections.find((item) => item.subsection_id === subsectionId);
+      if (match) return match;
+    }
+    return null;
+  }, [assignments, subsectionId]);
+  const isAssignedAuthor = isWorkflowManager || subsectionAssignment?.author_assignee?.id === user.id;
+  const canAuthorContent = canEdit && isAssignedAuthor && completionStatus === "IN_PROGRESS" && !newerVersionAvailable;
   const canUpload = canAuthorContent;
 
   const loadWorkspace = useCallback(async () => {
@@ -122,6 +137,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
       setProgressPercentage(data.subsection.progress_percentage);
       setDirty(false);
       setSaveState("idle");
+      setNewerVersionAvailable(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Subsection workspace could not be loaded");
     } finally {
@@ -135,7 +151,12 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
 
   const loadDocumentRole = useCallback(async () => {
     try {
-      const members = await apiRequest<EiaDocumentMember[]>(`/eia-documents/${documentId}/members`);
+      const [members, nextAssignments] = await Promise.all([
+        apiRequest<EiaDocumentMember[]>(`/eia-documents/${documentId}/members`),
+        apiRequest<EiaDocumentAssignmentsOverview>(`/eia-documents/${documentId}/assignments`),
+      ]);
+      setDocumentMembers(members);
+      setAssignments(nextAssignments);
       setDocumentRole(members.find((member) => member.user_id === user.id)?.role ?? null);
     } catch {
       setDocumentRole(null);
@@ -145,6 +166,41 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   useEffect(() => {
     loadDocumentRole();
   }, [loadDocumentRole]);
+
+  useEffect(() => {
+    if (!workspace || saving) {
+      return;
+    }
+
+    const checkCurrentVersion = async () => {
+      try {
+        const latest = await apiRequest<EiaSubSection>(
+          `/eia-documents/${documentId}/subsections/${subsectionId}`
+        );
+        if (latest.updated_at === workspace.subsection.updated_at) {
+          return;
+        }
+        if (dirty) {
+          setNewerVersionAvailable(true);
+          setSaveState("conflict");
+          return;
+        }
+        setWorkspace((current) => current ? { ...current, subsection: latest } : current);
+        setEditorContent({
+          html: latest.content_html || latest.content || "<p></p>",
+          json: latest.content_json ?? emptyEditorContent.json,
+        });
+        setCompletionStatus(latest.completion_status);
+        setProgressPercentage(latest.progress_percentage);
+        setSaveState("idle");
+      } catch {
+        // Background collaboration checks are deliberately non-blocking.
+      }
+    };
+
+    const interval = window.setInterval(() => void checkCurrentVersion(), 15_000);
+    return () => window.clearInterval(interval);
+  }, [dirty, documentId, saving, subsectionId, workspace]);
 
   const loadAssistantContext = useCallback(async () => {
     setAssistantLoading(true);
@@ -201,8 +257,10 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
         setDirty(false);
         setSaveState("saved");
       } catch (err) {
-        setSaveState("error");
         const message = err instanceof Error ? err.message : "Subsection content could not be saved";
+        const isConflict = err instanceof ApiError && err.status === 409 && message.toLowerCase().includes("another collaborator");
+        setSaveState(isConflict ? "conflict" : "error");
+        if (isConflict) setNewerVersionAvailable(true);
         setError(
           message.toLowerCase().includes("updated by another collaborator")
             ? `${message} Your local draft has been preserved in this editor.`
@@ -225,7 +283,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   );
 
   useEffect(() => {
-    if (!dirty || !canAuthorContent || saving || saveState === "error") {
+    if (!dirty || !canAuthorContent || saving || saveState === "error" || saveState === "conflict") {
       return;
     }
     const autosave = window.setTimeout(() => {
@@ -240,6 +298,9 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
     }
     if (saveState === "error") {
       return "Save failed";
+    }
+    if (saveState === "conflict") {
+      return "Newer version available";
     }
     if (dirty) {
       return "Unsaved changes";
@@ -257,6 +318,16 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
     setProgressPercentage(value);
     setDirty(true);
     setSaveState("idle");
+  }
+
+  async function loadLatestVersion() {
+    await loadWorkspace();
+    setNewerVersionAvailable(false);
+  }
+
+  async function copyLocalDraft() {
+    const parsed = new DOMParser().parseFromString(editorContent.html, "text/html");
+    await navigator.clipboard.writeText(parsed.body.textContent ?? editorContent.html);
   }
 
   function applyWorkspaceUpdate(updated: EiaSubSectionWorkspaceType) {
@@ -402,7 +473,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   }
 
   async function applySuggestedDraft(mapping: EiaSourceMapping) {
-    if (!canAuthorContent) {
+    if (!canAuthorContent || !workspace) {
       return;
     }
 
@@ -413,7 +484,8 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
         method: "POST",
         body: JSON.stringify({
           apply_content: true,
-          progress_percentage: Math.max(progressPercentage, Math.round(mapping.confidence_score * 100), 50)
+          progress_percentage: Math.max(progressPercentage, Math.round(mapping.confidence_score * 100), 50),
+          expected_updated_at: workspace.subsection.updated_at,
         })
       });
       await Promise.all([loadWorkspace(), loadAssistantContext()]);
@@ -436,7 +508,25 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
 
   return (
     <div className="grid gap-5">
-      {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
+      {error && !newerVersionAvailable ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+      {newerVersionAvailable ? (
+        <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <strong className="flex items-center gap-2"><ShieldCheck className="size-4" /> Editing paused to protect collaborator changes</strong>
+              <p className="mt-1 text-xs">A newer version was saved while this subsection was open. Your draft remains here and was not written over the newer content.</p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button size="sm" type="button" variant="secondary" onClick={() => void copyLocalDraft()}>
+                <Copy /> Copy my draft
+              </Button>
+              <Button size="sm" type="button" onClick={() => void loadLatestVersion()}>
+                <RefreshCcw /> Load latest
+              </Button>
+            </div>
+          </div>
+        </Alert>
+      ) : null}
 
       <header className="builder-panel overflow-hidden">
         <div className="builder-section-title flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -449,8 +539,16 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             </div>
             <h1 className="mt-2 text-2xl font-bold leading-tight text-white">{subsection.title}</h1>
             <p className="mt-2 text-sm font-medium text-white/52">{workspace.eia_document_title}</p>
+            {!isAssignedAuthor && !isWorkflowManager ? (
+              <p className="mt-2 text-xs font-semibold text-amber-200">Read-only: this subsection is assigned to another specialist.</p>
+            ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <CollaboratorStack currentUserId={user.id} inverse members={documentMembers} />
+            <ResponsibilityCard
+              assignee={subsectionAssignment?.current_assignee ?? null}
+              role={subsectionAssignment?.current_role ?? "UNASSIGNED"}
+            />
             <span className="min-w-32 text-sm font-semibold text-white/52">
               {canAuthorContent ? saveStatusText : "Content locked"}
             </span>
@@ -462,7 +560,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             ) : null}
             <div className="min-w-56">
               <EiaWorkflowActions
-                canAuthor={canEdit || isWorkflowManager}
+                canAuthor={isAssignedAuthor}
                 canReview={canResolve}
                 status={completionStatus}
                 subsectionId={subsectionId}
@@ -775,7 +873,8 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
           </div>
           <div className="order-4">
             <RevisionPanel
-              canRestore={canEdit}
+              canRestore={canAuthorContent}
+              expectedUpdatedAt={workspace.subsection.updated_at}
               subsectionId={subsection.id}
               tenantId={user.tenant_id}
               onRestored={applyWorkspaceUpdate}
