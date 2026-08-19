@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, MessageSquare, Paperclip, UserPlus } from "lucide-react";
+import { FileText, MessageSquare, Paperclip, ShieldCheck, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import type { EiaActivityItem } from "@/lib/types";
@@ -49,6 +49,9 @@ function iconForActivity(type: EiaActivityItem["type"]) {
   }
   if (type === "member_added") {
     return UserPlus;
+  }
+  if (type === "workflow_status_changed") {
+    return ShieldCheck;
   }
   return FileText;
 }

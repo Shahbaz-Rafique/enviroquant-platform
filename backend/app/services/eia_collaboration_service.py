@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.audit import AuditEvent
 from app.models.eia import EiaAttachment, EiaDocument, EiaSubSection
 from app.models.eia_document_member import EiaDocumentMember
 from app.models.subsection_comment import SubSectionComment
@@ -322,6 +323,51 @@ def list_eia_document_activity(
                 actor=subsection.last_edited_by,
                 subsection=subsection,
             )
+        )
+
+    workflow_rows = list(
+        db.execute(
+            select(AuditEvent, User)
+            .outerjoin(User, User.id == AuditEvent.actor_user_id)
+            .where(
+                AuditEvent.tenant_id == current_user.tenant_id,
+                AuditEvent.event_type == "eia.subsection.workflow_status_changed",
+                AuditEvent.entity_id.in_(
+                    select(EiaSubSection.id).where(
+                        EiaSubSection.eia_document_id == document.id
+                    )
+                ),
+            )
+            .order_by(AuditEvent.created_at.desc())
+            .limit(limit)
+        ).all()
+    )
+    subsection_numbers = dict(
+        db.execute(
+            select(EiaSubSection.id, EiaSubSection.subsection_number).where(
+                EiaSubSection.eia_document_id == document.id
+            )
+        ).all()
+    )
+    for event, actor in workflow_rows:
+        from_status = str(event.event_metadata.get("from_status", "")).replace("_", " ").title()
+        to_status = str(event.event_metadata.get("to_status", "")).replace("_", " ").title()
+        subsection_number = subsection_numbers.get(event.entity_id)
+        items.append(
+            {
+                "id": f"workflow:{event.id}",
+                "type": "workflow_status_changed",
+                "title": "Workflow status changed",
+                "description": f"{from_status} → {to_status}",
+                "created_at": event.created_at,
+                "actor": (
+                    {"id": actor.id, "full_name": actor.full_name, "email": actor.email}
+                    if actor is not None
+                    else None
+                ),
+                "subsection_id": event.entity_id,
+                "subsection_number": subsection_number,
+            }
         )
 
     attachment_rows = list(

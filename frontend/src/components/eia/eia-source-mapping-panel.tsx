@@ -146,7 +146,6 @@ export function EiaSourceMappingPanel({
             ? { reason: "Rejected from document workspace" }
             : {
                 apply_content: action === "apply",
-                completion_status: action === "apply" ? "IN_PROGRESS" : undefined,
                 progress_percentage: action === "apply" ? Math.max(mapping.confidence_score * 100, 50) : undefined
               }
         )

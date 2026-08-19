@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -51,10 +51,21 @@ def update_section_assignment(
     section_assignments[str(section.id)] = {
         "author_user_id": str(payload.author_user_id) if payload.author_user_id else None,
         "reviewer_user_id": str(payload.reviewer_user_id) if payload.reviewer_user_id else None,
+        "due_date": payload.due_date.isoformat() if payload.due_date else None,
+        "is_blocked": payload.is_blocked,
+        "blocked_reason": payload.blocked_reason if payload.is_blocked else None,
         "updated_at": datetime.now(UTC).isoformat(),
         "updated_by_id": str(current_user.id),
     }
     document.document_metadata = metadata
+    subsection_assignments = assignments["subsections"]
+    for subsection in section.subsections:
+        if str(subsection.id) in subsection_assignments:
+            continue
+        if payload.author_user_id or payload.reviewer_user_id:
+            _set_assignment_workflow_status(db, current_user, subsection, "ASSIGNED")
+        else:
+            _set_assignment_workflow_status(db, current_user, subsection, "NOT_STARTED")
 
     record_audit_event(
         db,
@@ -88,6 +99,10 @@ def clear_section_assignment(
     section_assignments = assignments["sections"]
     section_assignments.pop(str(section.id), None)
     document.document_metadata = metadata
+    subsection_assignments = assignments["subsections"]
+    for subsection in section.subsections:
+        if str(subsection.id) not in subsection_assignments:
+            _set_assignment_workflow_status(db, current_user, subsection, "NOT_STARTED")
 
     record_audit_event(
         db,
@@ -136,11 +151,18 @@ def update_subsection_assignment(
     subsection_assignments[str(subsection.id)] = {
         "author_user_id": str(payload.author_user_id) if payload.author_user_id else None,
         "reviewer_user_id": str(payload.reviewer_user_id) if payload.reviewer_user_id else None,
+        "due_date": payload.due_date.isoformat() if payload.due_date else None,
+        "is_blocked": payload.is_blocked,
+        "blocked_reason": payload.blocked_reason if payload.is_blocked else None,
         "updated_at": datetime.now(UTC).isoformat(),
         "updated_by_id": str(current_user.id),
     }
     document.document_metadata = metadata
     subsection.assigned_to_id = payload.author_user_id
+    if payload.author_user_id or payload.reviewer_user_id:
+        _set_assignment_workflow_status(db, current_user, subsection, "ASSIGNED")
+    elif not _section_has_assignment(assignments, subsection.section_id):
+        _set_assignment_workflow_status(db, current_user, subsection, "NOT_STARTED")
 
     record_audit_event(
         db,
@@ -186,6 +208,10 @@ def clear_subsection_assignment(
     subsection_assignments.pop(str(subsection.id), None)
     document.document_metadata = metadata
     subsection.assigned_to_id = None
+    if _section_has_assignment(assignments, subsection.section_id):
+        _set_assignment_workflow_status(db, current_user, subsection, "ASSIGNED")
+    else:
+        _set_assignment_workflow_status(db, current_user, subsection, "NOT_STARTED")
 
     record_audit_event(
         db,
@@ -415,8 +441,8 @@ def _build_section_assignment_item(
 
 def _build_subsection_assignment_item(
     subsection: EiaSubSection,
-    section_assignment: dict[str, UUID | None] | None,
-    subsection_assignment: dict[str, UUID | None] | None,
+    section_assignment: dict[str, object] | None,
+    subsection_assignment: dict[str, object] | None,
     unresolved_by_subsection: dict[UUID, int],
     users_by_id: dict[UUID, User],
     current_user_id: UUID,
@@ -425,6 +451,9 @@ def _build_subsection_assignment_item(
     effective = subsection_assignment if subsection_assignment is not None else section_assignment
     author_id = effective.get("author_user_id") if effective else None
     reviewer_id = effective.get("reviewer_user_id") if effective else None
+    due_date = effective.get("due_date") if effective else None
+    is_blocked = bool(effective.get("is_blocked")) if effective else False
+    blocked_reason = effective.get("blocked_reason") if effective else None
     author_user = users_by_id.get(author_id) if author_id else None
     reviewer_user = users_by_id.get(reviewer_id) if reviewer_id else None
     unresolved_count = unresolved_by_subsection.get(subsection.id, 0)
@@ -449,6 +478,10 @@ def _build_subsection_assignment_item(
         "unresolved_comment_count": unresolved_count,
         "last_updated_at": subsection.last_edited_at or subsection.updated_at,
         "last_updated_by_id": subsection.last_edited_by_id,
+        "due_date": due_date,
+        "is_overdue": _is_overdue(due_date, subsection.completion_status),
+        "is_blocked": is_blocked,
+        "blocked_reason": blocked_reason,
         "assignment_source": assignment_source,
         "author_assignee": _assignee(author_user),
         "reviewer_assignee": _assignee(reviewer_user),
@@ -476,7 +509,7 @@ def _user_assignment_role(
 def _summarize_section_assignment(
     section: EiaSection,
     subsection_items: list[dict[str, object]],
-    section_assignment: dict[str, UUID | None] | None,
+    section_assignment: dict[str, object] | None,
     users_by_id: dict[UUID, User],
 ) -> dict[str, object]:
     section_completion = _section_completion_status(subsection_items)
@@ -505,6 +538,9 @@ def _summarize_section_assignment(
         author_user,
         reviewer_user,
     )
+    due_dates = [item["due_date"] for item in subsection_items if item.get("due_date")]
+    due_date = min(due_dates, default=None)
+    blocked_items = [item for item in subsection_items if item.get("is_blocked")]
 
     return {
         "section_id": section.id,
@@ -515,6 +551,13 @@ def _summarize_section_assignment(
         "review_status": section_review_status,
         "unresolved_comment_count": section_unresolved,
         "last_updated_at": last_updated_at,
+        "due_date": due_date,
+        "is_overdue": any(bool(item.get("is_overdue")) for item in subsection_items),
+        "is_blocked": bool(blocked_items),
+        "blocked_reason": next(
+            (str(item["blocked_reason"]) for item in blocked_items if item.get("blocked_reason")),
+            None,
+        ),
         "author_assignee": _assignee(author_user),
         "reviewer_assignee": _assignee(reviewer_user),
         "current_role": current_role,
@@ -524,8 +567,8 @@ def _summarize_section_assignment(
 
 
 def _assignment_source(
-    section_assignment: dict[str, UUID | None] | None,
-    subsection_assignment: dict[str, UUID | None] | None,
+    section_assignment: dict[str, object] | None,
+    subsection_assignment: dict[str, object] | None,
 ) -> str:
     if subsection_assignment is not None:
         return "SUBSECTION"
@@ -556,7 +599,7 @@ def _ensure_assignment_container(metadata: dict[str, object]) -> dict[str, dict[
     }
 
 
-def _assignment_values(raw: object) -> dict[str, UUID | None] | None:
+def _assignment_values(raw: object) -> dict[str, object] | None:
     if not isinstance(raw, dict):
         return None
 
@@ -566,16 +609,36 @@ def _assignment_values(raw: object) -> dict[str, UUID | None] | None:
     author_user_id = _to_uuid(author_raw)
     reviewer_user_id = _to_uuid(reviewer_raw)
 
-    if author_user_id is None and reviewer_user_id is None:
-        return {
-            "author_user_id": None,
-            "reviewer_user_id": None,
-        }
-
     return {
         "author_user_id": author_user_id,
         "reviewer_user_id": reviewer_user_id,
+        "due_date": _to_date(raw.get("due_date")),
+        "is_blocked": raw.get("is_blocked") is True,
+        "blocked_reason": (
+            raw.get("blocked_reason")
+            if isinstance(raw.get("blocked_reason"), str)
+            else None
+        ),
     }
+
+
+def _to_date(value: object) -> date | None:
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _is_overdue(due_date: object, completion_status: str, *, today: date | None = None) -> bool:
+    return (
+        isinstance(due_date, date)
+        and completion_status not in {"APPROVED", "COMPLETE"}
+        and due_date < (today or datetime.now(UTC).date())
+    )
 
 
 def _to_uuid(value: object) -> UUID | None:
@@ -600,9 +663,13 @@ def _subsection_review_status(
         return "COMMENTS_OPEN"
     if completion_status == "READY_FOR_REVIEW":
         return "READY_FOR_REVIEW"
-    if completion_status == "COMPLETE":
-        return "COMPLETED"
-    if completion_status == "IN_PROGRESS" or progress_percentage > 0:
+    if completion_status == "UNDER_REVIEW":
+        return "UNDER_REVIEW"
+    if completion_status == "REVISION_REQUIRED":
+        return "REVISION_REQUIRED"
+    if completion_status in {"APPROVED", "COMPLETE"}:
+        return "APPROVED"
+    if completion_status in {"ASSIGNED", "IN_PROGRESS"} or progress_percentage > 0:
         return "IN_AUTHORING"
     return "NOT_STARTED"
 
@@ -612,7 +679,7 @@ def _current_responsibility(
     author_user: User | None,
     reviewer_user: User | None,
 ) -> tuple[str, User | None]:
-    if completion_status in {"READY_FOR_REVIEW", "COMPLETE"} and reviewer_user is not None:
+    if completion_status in {"READY_FOR_REVIEW", "UNDER_REVIEW", "APPROVED", "COMPLETE"} and reviewer_user is not None:
         return "REVIEWER", reviewer_user
     if author_user is not None:
         return "AUTHOR", author_user
@@ -623,23 +690,36 @@ def _current_responsibility(
 
 def _section_completion_status(subsection_items: list[dict[str, object]]) -> str:
     statuses = {str(item["completion_status"]) for item in subsection_items}
-    if statuses == {"COMPLETE"}:
-        return "COMPLETE"
+    if statuses <= {"APPROVED", "COMPLETE"}:
+        return "APPROVED"
+    if "REVISION_REQUIRED" in statuses:
+        return "REVISION_REQUIRED"
+    if "UNDER_REVIEW" in statuses:
+        return "UNDER_REVIEW"
     if "READY_FOR_REVIEW" in statuses:
         return "READY_FOR_REVIEW"
     if "IN_PROGRESS" in statuses or any(
         float(item["progress_percentage"]) > 0 for item in subsection_items
     ):
         return "IN_PROGRESS"
+    if "ASSIGNED" in statuses:
+        return "ASSIGNED"
     return "NOT_STARTED"
 
 
 def _section_review_status(subsection_items: list[dict[str, object]]) -> str:
     if any(int(item["unresolved_comment_count"]) > 0 for item in subsection_items):
         return "COMMENTS_OPEN"
-    if all(str(item["completion_status"]) == "COMPLETE" for item in subsection_items):
-        return "COMPLETED"
-    if any(str(item["completion_status"]) == "READY_FOR_REVIEW" for item in subsection_items):
+    if all(str(item["completion_status"]) in {"APPROVED", "COMPLETE"} for item in subsection_items):
+        return "APPROVED"
+    if any(str(item["completion_status"]) == "REVISION_REQUIRED" for item in subsection_items):
+        return "REVISION_REQUIRED"
+    if any(str(item["completion_status"]) == "UNDER_REVIEW" for item in subsection_items):
+        return "UNDER_REVIEW"
+    if any(
+        str(item["completion_status"]) in {"READY_FOR_REVIEW", "UNDER_REVIEW", "APPROVED", "COMPLETE"}
+        for item in subsection_items
+    ):
         return "READY_FOR_REVIEW"
     if any(float(item["progress_percentage"]) > 0 for item in subsection_items):
         return "IN_AUTHORING"
@@ -651,7 +731,11 @@ def _section_responsibility(
     section_author: User | None,
     section_reviewer: User | None,
 ) -> tuple[str, User | dict[str, object] | None]:
-    if any(str(item["completion_status"]) == "READY_FOR_REVIEW" for item in subsection_items):
+    if any(
+        str(item["completion_status"])
+        in {"READY_FOR_REVIEW", "UNDER_REVIEW", "APPROVED", "COMPLETE"}
+        for item in subsection_items
+    ):
         if section_reviewer is not None:
             return "REVIEWER", section_reviewer
     if section_author is not None:
@@ -666,6 +750,54 @@ def _section_responsibility(
             return current_role, current_assignee
 
     return "UNASSIGNED", None
+
+
+def _section_has_assignment(
+    assignments: dict[str, dict[str, object]],
+    section_id: UUID,
+) -> bool:
+    values = _assignment_values(assignments["sections"].get(str(section_id)))
+    return bool(
+        values
+        and (values.get("author_user_id") or values.get("reviewer_user_id"))
+    )
+
+
+def _set_assignment_workflow_status(
+    db: Session,
+    current_user: User,
+    subsection: EiaSubSection,
+    target_status: str,
+) -> None:
+    if target_status == "ASSIGNED" and subsection.completion_status != "NOT_STARTED":
+        return
+    if target_status == "NOT_STARTED" and subsection.completion_status != "ASSIGNED":
+        return
+
+    previous_status = subsection.completion_status
+    subsection.completion_status = target_status
+    if target_status == "NOT_STARTED":
+        subsection.progress_percentage = 0.0
+    record_audit_event(
+        db,
+        tenant_id=current_user.tenant_id,
+        actor_user_id=current_user.id,
+        event_type="eia.subsection.workflow_status_changed",
+        entity_type="eia_subsection",
+        entity_id=subsection.id,
+        summary=(
+            f"Subsection {subsection.subsection_number} moved from "
+            f"{previous_status} to {target_status}"
+        ),
+        metadata={
+            "eia_document_id": str(subsection.eia_document_id),
+            "subsection_id": str(subsection.id),
+            "section_id": str(subsection.section_id),
+            "from_status": previous_status,
+            "to_status": target_status,
+            "trigger": "assignment",
+        },
+    )
 
 
 def _assignee(user: User | dict[str, object] | None) -> dict[str, object] | None:

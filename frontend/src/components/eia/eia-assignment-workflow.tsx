@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
@@ -31,6 +33,9 @@ type EiaAssignmentWorkflowProps = {
 type AssignmentDraft = {
   authorId: string;
   reviewerId: string;
+  dueDate: string;
+  isBlocked: boolean;
+  blockedReason: string;
 };
 
 const emptyAssignmentValue = "__none__";
@@ -61,11 +66,17 @@ export function EiaAssignmentWorkflow({
       nextSectionDrafts[section.section_id] = {
         authorId: section.author_assignee?.id ?? emptyAssignmentValue,
         reviewerId: section.reviewer_assignee?.id ?? emptyAssignmentValue,
+        dueDate: section.due_date ?? "",
+        isBlocked: section.is_blocked,
+        blockedReason: section.blocked_reason ?? "",
       };
       for (const subsection of section.subsections) {
         nextSubsectionDrafts[subsection.subsection_id] = {
           authorId: subsection.author_assignee?.id ?? emptyAssignmentValue,
           reviewerId: subsection.reviewer_assignee?.id ?? emptyAssignmentValue,
+          dueDate: subsection.due_date ?? "",
+          isBlocked: subsection.is_blocked,
+          blockedReason: subsection.blocked_reason ?? "",
         };
       }
     }
@@ -115,6 +126,9 @@ export function EiaAssignmentWorkflow({
           body: JSON.stringify({
             author_user_id: normalizeNullable(draft.authorId),
             reviewer_user_id: normalizeNullable(draft.reviewerId),
+            due_date: draft.dueDate || null,
+            is_blocked: draft.isBlocked,
+            blocked_reason: draft.isBlocked ? draft.blockedReason || null : null,
           }),
         },
       );
@@ -158,6 +172,9 @@ export function EiaAssignmentWorkflow({
           body: JSON.stringify({
             author_user_id: normalizeNullable(draft.authorId),
             reviewer_user_id: normalizeNullable(draft.reviewerId),
+            due_date: draft.dueDate || null,
+            is_blocked: draft.isBlocked,
+            blocked_reason: draft.isBlocked ? draft.blockedReason || null : null,
           }),
         },
       );
@@ -319,6 +336,8 @@ function SectionAssignmentCard({
               <Badge className="border-[#cfe0d7] bg-[#edf6f1] text-[#287451]">Section {section.section_number}</Badge>
               <Badge className={statusBadgeClass(section.completion_status)}>{toLabel(section.completion_status)}</Badge>
               <Badge className={reviewBadgeClass(section.review_status)}>{toLabel(section.review_status)}</Badge>
+              {section.is_overdue ? <Badge className="border-amber-200 bg-amber-50 text-amber-700">Overdue</Badge> : null}
+              {section.is_blocked ? <Badge className="border-rose-200 bg-rose-50 text-rose-700">Blocked</Badge> : null}
             </div>
             <h4 className="mt-2 text-base font-bold text-[#214238]">{section.title}</h4>
             <p className="mt-1 text-xs text-[#6a7d74]">
@@ -326,6 +345,9 @@ function SectionAssignmentCard({
             </p>
             <p className="mt-1 text-xs text-[#6a7d74]">
               Last update: {formatDateTime(section.last_updated_at)}
+            </p>
+            <p className="mt-1 text-xs text-[#6a7d74]">
+              Due: {formatDate(section.due_date)}{section.blocked_reason ? ` · ${section.blocked_reason}` : ""}
             </p>
           </div>
           <div className="min-w-[220px] rounded-lg border border-[#dce6e1] bg-[#f8faf9] px-3 py-2">
@@ -341,15 +363,15 @@ function SectionAssignmentCard({
         </div>
 
         {canManageAssignments ? (
-          <div className="mt-4 grid gap-2 rounded-lg border border-[#dce6e1] bg-[#f8faf9] p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-end">
+          <div className="mt-4 grid gap-2 rounded-lg border border-[#dce6e1] bg-[#f8faf9] p-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px_minmax(0,1fr)_auto_auto] xl:items-end">
             <label className="grid gap-1 text-xs font-semibold text-[#52675e]">
               Section author
               <Select
                 value={sectionDraft?.authorId ?? emptyAssignmentValue}
                 onValueChange={(value) =>
                   onSectionDraftChange({
+                    ...(sectionDraft ?? draftFromAssignment(section)),
                     authorId: value,
-                    reviewerId: sectionDraft?.reviewerId ?? emptyAssignmentValue,
                   })
                 }
               >
@@ -373,7 +395,7 @@ function SectionAssignmentCard({
                 value={sectionDraft?.reviewerId ?? emptyAssignmentValue}
                 onValueChange={(value) =>
                   onSectionDraftChange({
-                    authorId: sectionDraft?.authorId ?? emptyAssignmentValue,
+                    ...(sectionDraft ?? draftFromAssignment(section)),
                     reviewerId: value,
                   })
                 }
@@ -391,6 +413,20 @@ function SectionAssignmentCard({
                 </SelectContent>
               </Select>
             </label>
+
+            <label className="grid gap-1 text-xs font-semibold text-[#52675e]">
+              Due date
+              <Input
+                type="date"
+                value={sectionDraft?.dueDate ?? ""}
+                onChange={(event) => onSectionDraftChange({ ...(sectionDraft ?? draftFromAssignment(section)), dueDate: event.target.value })}
+              />
+            </label>
+
+            <AssignmentBlockControl
+              draft={sectionDraft ?? draftFromAssignment(section)}
+              onChange={onSectionDraftChange}
+            />
 
             <Button
               type="button"
@@ -418,6 +454,9 @@ function SectionAssignmentCard({
           const draft = subsectionDrafts[subsection.subsection_id] ?? {
             authorId: subsection.author_assignee?.id ?? emptyAssignmentValue,
             reviewerId: subsection.reviewer_assignee?.id ?? emptyAssignmentValue,
+            dueDate: subsection.due_date ?? "",
+            isBlocked: subsection.is_blocked,
+            blockedReason: subsection.blocked_reason ?? "",
           };
           return (
             <SubsectionAssignmentRow
@@ -477,6 +516,8 @@ function SubsectionAssignmentRow({
             <Badge className={statusBadgeClass(subsection.completion_status)}>{toLabel(subsection.completion_status)}</Badge>
             <Badge className={reviewBadgeClass(subsection.review_status)}>{toLabel(subsection.review_status)}</Badge>
             <Badge className="border-slate-200 bg-slate-50 text-slate-700">{toLabel(subsection.assignment_source)}</Badge>
+            {subsection.is_overdue ? <Badge className="border-amber-200 bg-amber-50 text-amber-700">Overdue</Badge> : null}
+            {subsection.is_blocked ? <Badge className="border-rose-200 bg-rose-50 text-rose-700">Blocked</Badge> : null}
             {isMine ? <Badge className="border-[#cfe0d7] bg-[#edf6f1] text-[#287451]">Assigned to me</Badge> : null}
           </div>
           <p className="mt-1 line-clamp-2 text-sm font-medium text-[#334f45]">{subsection.title}</p>
@@ -485,6 +526,9 @@ function SubsectionAssignmentRow({
           </p>
           <p className="mt-1 text-[11px] text-[#6a7d74]">
             Last update: {formatDateTime(subsection.last_updated_at)}
+          </p>
+          <p className="mt-1 text-[11px] text-[#6a7d74]">
+            Due: {formatDate(subsection.due_date)}{subsection.blocked_reason ? ` · ${subsection.blocked_reason}` : ""}
           </p>
         </button>
 
@@ -499,12 +543,12 @@ function SubsectionAssignmentRow({
       </div>
 
       {canManageAssignments ? (
-        <div className="grid gap-2 rounded-lg border border-[#dce6e1] bg-[#f8faf9] p-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-end">
+        <div className="grid gap-2 rounded-lg border border-[#dce6e1] bg-[#f8faf9] p-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px_minmax(0,1fr)_auto_auto] xl:items-end">
           <label className="grid gap-1 text-xs font-semibold text-[#52675e]">
             Author
             <Select
               value={draft.authorId}
-              onValueChange={(value) => onDraftChange({ authorId: value, reviewerId: draft.reviewerId })}
+              onValueChange={(value) => onDraftChange({ ...draft, authorId: value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select author" />
@@ -524,7 +568,7 @@ function SubsectionAssignmentRow({
             Reviewer
             <Select
               value={draft.reviewerId}
-              onValueChange={(value) => onDraftChange({ authorId: draft.authorId, reviewerId: value })}
+              onValueChange={(value) => onDraftChange({ ...draft, reviewerId: value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select reviewer" />
@@ -539,6 +583,13 @@ function SubsectionAssignmentRow({
               </SelectContent>
             </Select>
           </label>
+
+          <label className="grid gap-1 text-xs font-semibold text-[#52675e]">
+            Due date
+            <Input type="date" value={draft.dueDate} onChange={(event) => onDraftChange({ ...draft, dueDate: event.target.value })} />
+          </label>
+
+          <AssignmentBlockControl draft={draft} onChange={onDraftChange} />
 
           <Button
             type="button"
@@ -563,6 +614,58 @@ function SubsectionAssignmentRow({
   );
 }
 
+function AssignmentBlockControl({
+  draft,
+  onChange,
+}: Readonly<{
+  draft: AssignmentDraft;
+  onChange: (next: AssignmentDraft) => void;
+}>) {
+  return (
+    <div className="grid gap-1 text-xs font-semibold text-[#52675e]">
+      <span>Work state</span>
+      <div className="flex min-h-10 items-center gap-2">
+        <Checkbox
+          checked={draft.isBlocked}
+          onCheckedChange={(checked) =>
+            onChange({
+              ...draft,
+              isBlocked: checked === true,
+              blockedReason: checked === true ? draft.blockedReason : "",
+            })
+          }
+          aria-label="Mark assignment as blocked"
+        />
+        {draft.isBlocked ? (
+          <Input
+            value={draft.blockedReason}
+            onChange={(event) => onChange({ ...draft, blockedReason: event.target.value })}
+            placeholder="Blocking reason"
+            aria-label="Blocking reason"
+          />
+        ) : (
+          <span className="font-medium text-[#6a7d74]">On track</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function draftFromAssignment(
+  assignment: Pick<
+    EiaSectionAssignment | EiaSubSectionAssignment,
+    "author_assignee" | "reviewer_assignee" | "due_date" | "is_blocked" | "blocked_reason"
+  >,
+): AssignmentDraft {
+  return {
+    authorId: assignment.author_assignee?.id ?? emptyAssignmentValue,
+    reviewerId: assignment.reviewer_assignee?.id ?? emptyAssignmentValue,
+    dueDate: assignment.due_date ?? "",
+    isBlocked: assignment.is_blocked,
+    blockedReason: assignment.blocked_reason ?? "",
+  };
+}
+
 function normalizeNullable(value: string) {
   return value === emptyAssignmentValue ? null : value;
 }
@@ -581,13 +684,13 @@ function toLabel(value: string) {
 
 function statusBadgeClass(status: string) {
   const normalized = status.toUpperCase();
-  if (normalized === "COMPLETE") {
+  if (["APPROVED", "COMPLETE"].includes(normalized)) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-  if (normalized === "READY_FOR_REVIEW") {
+  if (["READY_FOR_REVIEW", "UNDER_REVIEW"].includes(normalized)) {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  if (normalized === "IN_PROGRESS") {
+  if (["IN_PROGRESS", "REVISION_REQUIRED"].includes(normalized)) {
     return "border-[#cfe0d7] bg-[#edf6f1] text-[#287451]";
   }
   return "border-slate-200 bg-slate-50 text-slate-700";
@@ -601,7 +704,7 @@ function reviewBadgeClass(status: string) {
   if (normalized === "READY_FOR_REVIEW") {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  if (normalized === "COMPLETED") {
+  if (["APPROVED", "COMPLETED"].includes(normalized)) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   return "border-slate-200 bg-slate-50 text-slate-700";
@@ -616,4 +719,15 @@ function formatDateTime(value: string | null) {
     return "Not available";
   }
   return parsed.toLocaleString();
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return "No due date";
+  }
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return "No due date";
+  }
+  return parsed.toLocaleDateString();
 }

@@ -9,7 +9,12 @@ from app.models.eia import EiaDocument, EiaSubSection
 from app.models.subsection_revision import SubSectionRevision
 from app.models.user import User
 from app.services.audit_service import record_audit_event
-from app.services.eia_service import DOCUMENT_EDIT_ROLES, DOCUMENT_READ_ROLES, require_subsection_permission
+from app.services.eia_service import (
+    DOCUMENT_EDIT_ROLES,
+    DOCUMENT_READ_ROLES,
+    assert_subsection_content_editable,
+    require_subsection_permission,
+)
 
 
 def create_subsection_revision(
@@ -85,6 +90,7 @@ def restore_subsection_revision(
 ) -> EiaSubSection:
     subsection = _get_subsection_for_revision(db, current_user, subsection_id)
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "restore revisions")
+    assert_subsection_content_editable(subsection)
     revision = db.get(SubSectionRevision, revision_id)
     if (
         revision is None
@@ -96,7 +102,6 @@ def restore_subsection_revision(
     subsection.content = revision.content
     subsection.content_html = revision.content_html
     subsection.content_json = revision.content_json
-    subsection.completion_status = revision.completion_status
     subsection.progress_percentage = revision.progress_percentage
     subsection.last_edited_by_id = current_user.id
     subsection.last_edited_at = datetime.now(UTC)

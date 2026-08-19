@@ -120,7 +120,6 @@ def auto_structure_eia_document(
         subsection.content_json = None
         subsection.last_edited_by_id = current_user.id
         subsection.last_edited_at = now
-        subsection.completion_status = "IN_PROGRESS"
         subsection.progress_percentage = max(subsection.progress_percentage, _auto_progress_score(mapping_group))
         subsection.content_metadata = {
             **(subsection.content_metadata or {}),

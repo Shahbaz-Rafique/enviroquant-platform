@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -79,6 +79,15 @@ class EiaDocumentMemberInvitationRead(ORMModel):
 class EiaAssignmentUpdate(BaseModel):
     author_user_id: UUID | None = None
     reviewer_user_id: UUID | None = None
+    due_date: date | None = None
+    is_blocked: bool = False
+    blocked_reason: str | None = Field(default=None, max_length=1_000)
+
+    @field_validator("blocked_reason")
+    @classmethod
+    def normalize_blocked_reason(cls, value: str | None) -> str | None:
+        normalized = value.strip() if value else None
+        return normalized or None
 
 
 class EiaAssigneeSummaryRead(BaseModel):
@@ -98,6 +107,10 @@ class EiaSubSectionAssignmentRead(BaseModel):
     unresolved_comment_count: int
     last_updated_at: datetime | None = None
     last_updated_by_id: UUID | None = None
+    due_date: date | None = None
+    is_overdue: bool = False
+    is_blocked: bool = False
+    blocked_reason: str | None = None
     assignment_source: Literal["SUBSECTION", "SECTION", "UNASSIGNED"]
     author_assignee: EiaAssigneeSummaryRead | None = None
     reviewer_assignee: EiaAssigneeSummaryRead | None = None
@@ -114,6 +127,10 @@ class EiaSectionAssignmentRead(BaseModel):
     review_status: str
     unresolved_comment_count: int
     last_updated_at: datetime | None = None
+    due_date: date | None = None
+    is_overdue: bool = False
+    is_blocked: bool = False
+    blocked_reason: str | None = None
     author_assignee: EiaAssigneeSummaryRead | None = None
     reviewer_assignee: EiaAssigneeSummaryRead | None = None
     current_role: Literal["AUTHOR", "REVIEWER", "UNASSIGNED"]
@@ -133,6 +150,40 @@ class EiaDocumentAssignmentsOverviewRead(BaseModel):
     eia_document_id: UUID
     sections: list[EiaSectionAssignmentRead] = Field(default_factory=list)
     my_assigned_work: list[EiaAssignedWorkItemRead] = Field(default_factory=list)
+
+
+class EiaWorkflowTransitionRequest(BaseModel):
+    target_status: Literal[
+        "ASSIGNED",
+        "IN_PROGRESS",
+        "READY_FOR_REVIEW",
+        "UNDER_REVIEW",
+        "REVISION_REQUIRED",
+        "APPROVED",
+    ]
+    comment: str | None = Field(default=None, max_length=20_000)
+
+    @field_validator("comment")
+    @classmethod
+    def normalize_comment(cls, value: str | None) -> str | None:
+        normalized = value.strip() if value else None
+        return normalized or None
+
+
+class EiaReviewQueueItemRead(BaseModel):
+    section_id: UUID
+    section_number: str
+    section_title: str
+    subsection_id: UUID
+    subsection_number: str
+    subsection_title: str
+    status: Literal["READY_FOR_REVIEW", "UNDER_REVIEW"]
+    progress_percentage: float
+    submitted_at: datetime
+    unresolved_comment_count: int
+    author_assignee: EiaAssigneeSummaryRead | None = None
+    reviewer_assignee: EiaAssigneeSummaryRead | None = None
+    is_assigned_reviewer: bool = False
 
 
 class SubSectionCommentCreate(BaseModel):
@@ -350,7 +401,14 @@ class EiaActivityActorRead(BaseModel):
 
 class EiaActivityItemRead(BaseModel):
     id: str
-    type: Literal["comment", "comment_resolved", "subsection_updated", "attachment_uploaded", "member_added"]
+    type: Literal[
+        "comment",
+        "comment_resolved",
+        "subsection_updated",
+        "workflow_status_changed",
+        "attachment_uploaded",
+        "member_added",
+    ]
     title: str
     description: str
     created_at: datetime

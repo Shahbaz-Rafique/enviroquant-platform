@@ -9,17 +9,18 @@ import { AttachmentsPanel } from "@/components/Sidebar/AttachmentsPanel";
 import { ChecklistPanel } from "@/components/Sidebar/ChecklistPanel";
 import { CommentsPanel } from "@/components/Workspace/CommentsPanel";
 import { RevisionPanel } from "@/components/Workspace/RevisionPanel";
+import { EiaWorkflowActions } from "@/components/eia/eia-workflow-actions";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
 import {
   canCommentOnEiaDocument,
   canEditEiaDocument,
   canReviewEiaDocument,
+  hasAnyRole,
   hasPermission,
   PERMISSIONS
 } from "@/lib/permissions";
@@ -47,7 +48,6 @@ type EditorContent = {
 };
 
 type SaveOptions = {
-  completionStatus?: string;
   progressPercentage?: number;
 };
 
@@ -61,9 +61,13 @@ const emptyEditorContent: EditorContent = {
 
 const statusOptions = [
   { value: "NOT_STARTED", label: "Not started" },
+  { value: "ASSIGNED", label: "Assigned" },
   { value: "IN_PROGRESS", label: "In progress" },
   { value: "READY_FOR_REVIEW", label: "Ready for review" },
-  { value: "COMPLETE", label: "Complete" }
+  { value: "UNDER_REVIEW", label: "Under review" },
+  { value: "REVISION_REQUIRED", label: "Revision required" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "COMPLETE", label: "Approved" }
 ];
 
 export function SubsectionWorkspace({ documentId, projectId, subsectionId, user }: SubsectionWorkspaceProps) {
@@ -92,10 +96,12 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const [sourceMappings, setSourceMappings] = useState<EiaSourceMapping[]>([]);
 
   const effectiveDocumentRole = documentRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
+  const isWorkflowManager = hasAnyRole(user, ["owner", "admin", "project_manager"]);
   const canEdit = canEditEiaDocument(effectiveDocumentRole);
-  const canUpload = canEdit;
   const canComment = canCommentOnEiaDocument(effectiveDocumentRole);
-  const canResolve = canReviewEiaDocument(effectiveDocumentRole);
+  const canResolve = canReviewEiaDocument(effectiveDocumentRole) || isWorkflowManager;
+  const canAuthorContent = canEdit && completionStatus === "IN_PROGRESS";
+  const canUpload = canAuthorContent;
 
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
@@ -163,16 +169,14 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
 
   const saveContent = useCallback(
     async (options: SaveOptions = {}) => {
-      if (!workspace || !canEdit) {
+      if (!workspace || !canAuthorContent) {
         return;
       }
 
-      const nextStatus = options.completionStatus ?? completionStatus;
       const nextProgress = options.progressPercentage ?? progressPercentage;
 
       setSaving(true);
       setError(null);
-      setCompletionStatus(nextStatus);
       setProgressPercentage(nextProgress);
 
       try {
@@ -184,7 +188,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               tenant_id: user.tenant_id,
               content_html: editorContent.html,
               content_json: editorContent.json,
-              completion_status: nextStatus,
+              completion_status: completionStatus,
               progress_percentage: nextProgress,
               expected_updated_at: workspace.subsection.updated_at
             })
@@ -209,7 +213,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
       }
     },
     [
-      canEdit,
+      canAuthorContent,
       completionStatus,
       editorContent.html,
       editorContent.json,
@@ -221,14 +225,14 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   );
 
   useEffect(() => {
-    if (!dirty || !canEdit || saving || saveState === "error") {
+    if (!dirty || !canAuthorContent || saving || saveState === "error") {
       return;
     }
     const autosave = window.setTimeout(() => {
       void saveContent();
     }, 4000);
     return () => window.clearTimeout(autosave);
-  }, [canEdit, dirty, saveContent, saveState, saving]);
+  }, [canAuthorContent, dirty, saveContent, saveState, saving]);
 
   const saveStatusText = useMemo(() => {
     if (saving) {
@@ -245,12 +249,6 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
 
   function updateEditorContent(payload: EditorContent) {
     setEditorContent(payload);
-    setDirty(true);
-    setSaveState("idle");
-  }
-
-  function updateCompletionStatus(value: string) {
-    setCompletionStatus(value);
     setDirty(true);
     setSaveState("idle");
   }
@@ -379,7 +377,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   }
 
   async function runAssistantAction(action: "OUTLINE" | "EVIDENCE_GAPS" | "GENERATE_DRAFT" | "IMPROVE_DRAFT") {
-    if (!workspace || !canEdit) {
+    if (!workspace || !canAuthorContent) {
       return;
     }
     setAssistantActionId(action);
@@ -404,7 +402,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   }
 
   async function applySuggestedDraft(mapping: EiaSourceMapping) {
-    if (!canEdit) {
+    if (!canAuthorContent) {
       return;
     }
 
@@ -415,7 +413,6 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
         method: "POST",
         body: JSON.stringify({
           apply_content: true,
-          completion_status: completionStatus === "NOT_STARTED" ? "IN_PROGRESS" : completionStatus,
           progress_percentage: Math.max(progressPercentage, Math.round(mapping.confidence_score * 100), 50)
         })
       });
@@ -455,24 +452,29 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="min-w-32 text-sm font-semibold text-white/52">
-              {canEdit ? saveStatusText : "Read-only access"}
+              {canAuthorContent ? saveStatusText : "Content locked"}
             </span>
-            {canEdit ? (
-              <>
-                <Button disabled={saving} type="button" variant="secondary" onClick={() => void saveContent()}>
-                  {saving ? <Loader2 className="animate-spin" /> : <Save />}
-                  Save draft
-                </Button>
-                <Button
-                  disabled={saving}
-                  type="button"
-                  onClick={() => void saveContent({ completionStatus: "COMPLETE", progressPercentage: 100 })}
-                >
-                  <CheckCircle2 />
-                  Mark subsection complete
-                </Button>
-              </>
+            {canAuthorContent ? (
+              <Button disabled={saving} type="button" variant="secondary" onClick={() => void saveContent()}>
+                {saving ? <Loader2 className="animate-spin" /> : <Save />}
+                Save draft
+              </Button>
             ) : null}
+            <div className="min-w-56">
+              <EiaWorkflowActions
+                canAuthor={canEdit || isWorkflowManager}
+                canReview={canResolve}
+                status={completionStatus}
+                subsectionId={subsectionId}
+                onTransition={(updated) => {
+                  setWorkspace((current) => current ? { ...current, subsection: updated } : current);
+                  setCompletionStatus(updated.completion_status);
+                  setProgressPercentage(updated.progress_percentage);
+                  setDirty(false);
+                  setSaveState("saved");
+                }}
+              />
+            </div>
           </div>
         </div>
         <div className="grid gap-2 border-t border-[#e3eae6] bg-[#f8faf9] px-5 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -491,23 +493,14 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
         <main className="grid gap-5" ref={editorRegionRef}>
           <div className="builder-panel overflow-hidden">
             <div className="grid gap-4 border-b border-white/10 p-4 lg:grid-cols-[minmax(0,1fr)_180px_170px]">
-              {canEdit ? (
+              {canAuthorContent ? (
                 <>
-                  <label className="grid gap-2 text-sm font-semibold text-white/78">
-                    Completion status
-                    <Select value={completionStatus} onValueChange={updateCompletionStatus}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </label>
+                  <div className="grid gap-2 text-sm font-semibold text-white/78">
+                    <span>Controlled status</span>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-semibold text-white">
+                      {statusLabel(completionStatus)}
+                    </div>
+                  </div>
                   <label className="grid gap-2 text-sm font-semibold text-white/78">
                     Progress
                     <NumberStepper
@@ -548,7 +541,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               <TipTapEditor
                 ref={editorRef}
                 content={editorContent.html}
-                editable={canEdit}
+                editable={canAuthorContent}
                 onChange={updateEditorContent}
                 onImageUpload={canUpload ? uploadEditorImage : undefined}
               />
@@ -573,7 +566,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
               <ArrowLeft /> Previous
             </Button>
             <div className="flex flex-col gap-2 sm:flex-row">
-              {canEdit ? (
+              {canAuthorContent ? (
                 <Button disabled={saving} type="button" variant="secondary" onClick={() => void saveContent()}>
                   {saving ? <Loader2 className="animate-spin" /> : <Save />} Save draft
                 </Button>
@@ -596,7 +589,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                 <Bot className="size-5 text-[#B6F7FF]" />
                 Intelligence panel
               </span>
-              {canEdit ? (
+              {canAuthorContent ? (
                 <Button
                   aria-label="Refresh drafting assistant"
                   size="icon"
@@ -642,7 +635,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                 <p>
                   Assistance identifies gaps and drafts content from available evidence. Compliance classifications remain transparent, checklist-driven and subject to human review.
                 </p>
-                {canEdit ? (
+                {canAuthorContent ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
                       size="sm"
@@ -799,13 +792,13 @@ function statusLabel(status: string) {
 }
 
 function statusBadgeClass(status: string) {
-  if (status === "COMPLETE") {
+  if (["APPROVED", "COMPLETE"].includes(status)) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-  if (status === "READY_FOR_REVIEW") {
+  if (["READY_FOR_REVIEW", "UNDER_REVIEW"].includes(status)) {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  if (status === "IN_PROGRESS") {
+  if (["IN_PROGRESS", "REVISION_REQUIRED"].includes(status)) {
     return "border-[#b9d8c8] bg-[#eaf5ef] text-[#236c4a]";
   }
   return "border-slate-200 bg-slate-50 text-slate-600";

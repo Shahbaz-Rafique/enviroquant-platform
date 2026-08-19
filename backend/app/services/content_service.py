@@ -15,7 +15,9 @@ from app.services.audit_service import record_audit_event
 from app.services.eia_service import (
     DOCUMENT_EDIT_ROLES,
     DOCUMENT_READ_ROLES,
+    assert_subsection_content_editable,
     assert_subsection_version,
+    assert_workflow_status_unchanged,
     require_subsection_permission,
 )
 from app.services.revision_service import create_subsection_revision
@@ -62,6 +64,9 @@ def save_subsection_content(
     )
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "edit")
     assert_subsection_version(subsection, payload.expected_updated_at)
+    assert_workflow_status_unchanged(subsection, payload.completion_status)
+    if payload.content_html is not None or payload.content_json is not None:
+        assert_subsection_content_editable(subsection)
 
     if payload.content_html is not None:
         subsection.content_html = payload.content_html
@@ -70,15 +75,12 @@ def save_subsection_content(
     if payload.content_json is not None:
         subsection.content_json = payload.content_json
 
-    if payload.completion_status is not None:
-        subsection.completion_status = payload.completion_status
-
     if payload.progress_percentage is not None:
         subsection.progress_percentage = payload.progress_percentage
     else:
         _update_progress_from_content(subsection)
 
-    if subsection.completion_status == "COMPLETE":
+    if subsection.completion_status in {"APPROVED", "COMPLETE"}:
         subsection.progress_percentage = 100.0
 
     subsection.last_edited_by_id = current_user.id
@@ -116,6 +118,7 @@ async def upload_subsection_attachment(
 ) -> EiaAttachment:
     subsection = _get_subsection_for_tenant(db, current_user, subsection_id, tenant_id)
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "upload attachments to")
+    assert_subsection_content_editable(subsection)
     stored_file = await store_subsection_attachment(
         file=file,
         organization_id=current_user.tenant_id,
@@ -178,6 +181,7 @@ def link_source_document_attachment(
 ) -> EiaAttachment:
     subsection = _get_subsection_for_tenant(db, current_user, subsection_id, payload.tenant_id)
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "link source documents to")
+    assert_subsection_content_editable(subsection)
     source_document = db.get(Document, payload.source_document_id)
     if (
         source_document is None
@@ -280,8 +284,6 @@ def _validate_tenant_scope(current_user: User, tenant_id: UUID | None) -> None:
 
 def _update_progress_from_content(subsection: EiaSubSection) -> None:
     has_content = _has_content(subsection.content_html or subsection.content)
-    if has_content and subsection.completion_status == "NOT_STARTED":
-        subsection.completion_status = "IN_PROGRESS"
     if has_content:
         subsection.progress_percentage = max(subsection.progress_percentage, 25.0)
 
@@ -343,8 +345,8 @@ def _checklist_item_from_subsection(subsection: EiaSubSection) -> dict[str, obje
 
 
 def _compliance_status(subsection: EiaSubSection) -> str:
-    if subsection.completion_status == "COMPLETE":
+    if subsection.completion_status in {"APPROVED", "COMPLETE"}:
         return "Compliant"
-    if subsection.completion_status in {"IN_PROGRESS", "READY_FOR_REVIEW"} or subsection.progress_percentage > 0:
+    if subsection.completion_status not in {"NOT_STARTED", "ASSIGNED"} or subsection.progress_percentage > 0:
         return "Partially Compliant"
     return "Missing"

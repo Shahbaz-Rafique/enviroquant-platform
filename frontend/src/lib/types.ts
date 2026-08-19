@@ -224,6 +224,15 @@ export type EiaDocumentMemberInvitation = {
 
 export type EiaAssignmentUserSummary = Pick<User, "id" | "email" | "full_name" | "status">;
 
+export type EiaWorkflowStatus =
+  | "NOT_STARTED"
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "READY_FOR_REVIEW"
+  | "UNDER_REVIEW"
+  | "REVISION_REQUIRED"
+  | "APPROVED";
+
 export type EiaSubSectionAssignment = {
   subsection_id: string;
   subsection_number: string;
@@ -234,6 +243,10 @@ export type EiaSubSectionAssignment = {
   unresolved_comment_count: number;
   last_updated_at: string | null;
   last_updated_by_id: string | null;
+  due_date: string | null;
+  is_overdue: boolean;
+  is_blocked: boolean;
+  blocked_reason: string | null;
   assignment_source: "SUBSECTION" | "SECTION" | "UNASSIGNED";
   author_assignee: EiaAssignmentUserSummary | null;
   reviewer_assignee: EiaAssignmentUserSummary | null;
@@ -250,6 +263,10 @@ export type EiaSectionAssignment = {
   review_status: string;
   unresolved_comment_count: number;
   last_updated_at: string | null;
+  due_date: string | null;
+  is_overdue: boolean;
+  is_blocked: boolean;
+  blocked_reason: string | null;
   author_assignee: EiaAssignmentUserSummary | null;
   reviewer_assignee: EiaAssignmentUserSummary | null;
   current_role: "AUTHOR" | "REVIEWER" | "UNASSIGNED";
@@ -271,9 +288,28 @@ export type EiaDocumentAssignmentsOverview = {
   my_assigned_work: EiaAssignedWorkItem[];
 };
 
+export type EiaReviewQueueItem = {
+  section_id: string;
+  section_number: string;
+  section_title: string;
+  subsection_id: string;
+  subsection_number: string;
+  subsection_title: string;
+  status: "READY_FOR_REVIEW" | "UNDER_REVIEW";
+  progress_percentage: number;
+  submitted_at: string;
+  unresolved_comment_count: number;
+  author_assignee: EiaAssignmentUserSummary | null;
+  reviewer_assignee: EiaAssignmentUserSummary | null;
+  is_assigned_reviewer: boolean;
+};
+
 export type EiaAssignmentUpdate = {
   author_user_id: string | null;
   reviewer_user_id: string | null;
+  due_date: string | null;
+  is_blocked: boolean;
+  blocked_reason: string | null;
 };
 
 export type SubSectionComment = {
@@ -357,7 +393,7 @@ export type EiaDocumentProgress = {
 
 export type EiaActivityItem = {
   id: string;
-  type: "comment" | "comment_resolved" | "subsection_updated" | "attachment_uploaded" | "member_added";
+  type: "comment" | "comment_resolved" | "subsection_updated" | "workflow_status_changed" | "attachment_uploaded" | "member_added";
   title: string;
   description: string;
   created_at: string;

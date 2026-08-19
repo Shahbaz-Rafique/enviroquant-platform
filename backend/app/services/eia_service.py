@@ -183,6 +183,11 @@ def update_eia_subsection(
     if "metadata" in update_data:
         subsection.content_metadata = update_data.pop("metadata") or {}
 
+    requested_status = update_data.pop("completion_status", None)
+    assert_workflow_status_unchanged(subsection, requested_status)
+    if "content" in update_data and update_data["content"] is not None:
+        assert_subsection_content_editable(subsection)
+
     for field, value in update_data.items():
         if value is not None:
             setattr(subsection, field, value)
@@ -191,10 +196,6 @@ def update_eia_subsection(
         subsection.content_html = update_data["content"]
         subsection.last_edited_by_id = current_user.id
         subsection.last_edited_at = datetime.now(UTC)
-
-    if subsection.content and subsection.completion_status == "NOT_STARTED":
-        subsection.completion_status = "IN_PROGRESS"
-        subsection.progress_percentage = max(subsection.progress_percentage, 25.0)
 
     from app.services.revision_service import create_subsection_revision
 
@@ -246,6 +247,27 @@ def assert_subsection_version(
                 "Refresh to load the latest version before saving."
             ),
         )
+
+
+def assert_workflow_status_unchanged(
+    subsection: EiaSubSection,
+    requested_status: str | None,
+) -> None:
+    if requested_status is None or requested_status == subsection.completion_status:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Use the controlled review workflow to change subsection status",
+    )
+
+
+def assert_subsection_content_editable(subsection: EiaSubSection) -> None:
+    if subsection.completion_status == "IN_PROGRESS":
+        return
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Start work or start the requested revision before editing subsection content",
+    )
 
 
 def get_eia_document_progress(
@@ -335,12 +357,12 @@ def _section_progress(section: EiaSection) -> EiaSectionProgressRead:
     subsections = list(section.subsections)
     total_subsections = len(subsections)
     completed_subsections = sum(
-        1 for subsection in subsections if subsection.completion_status == "COMPLETE"
+        1 for subsection in subsections if subsection.completion_status in {"APPROVED", "COMPLETE"}
     )
     in_progress_subsections = sum(
         1
         for subsection in subsections
-        if subsection.completion_status in {"IN_PROGRESS", "READY_FOR_REVIEW"}
+        if subsection.completion_status not in {"NOT_STARTED", "ASSIGNED"}
         or subsection.progress_percentage > 0
     )
     progress_percentage = (

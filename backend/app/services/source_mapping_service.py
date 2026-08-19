@@ -19,7 +19,13 @@ from app.schemas.eia import (
     EiaSourceMappingRejectRequest,
 )
 from app.services.audit_service import record_audit_event
-from app.services.eia_service import DOCUMENT_EDIT_ROLES, DOCUMENT_READ_ROLES, require_eia_document_permission
+from app.services.eia_service import (
+    DOCUMENT_EDIT_ROLES,
+    DOCUMENT_READ_ROLES,
+    assert_subsection_content_editable,
+    assert_workflow_status_unchanged,
+    require_eia_document_permission,
+)
 from app.services.revision_service import create_subsection_revision
 
 
@@ -144,13 +150,11 @@ def confirm_source_mapping(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Mapping has no suggested content to apply",
             )
+        assert_subsection_content_editable(mapping.subsection)
+        assert_workflow_status_unchanged(mapping.subsection, payload.completion_status)
         mapping.subsection.content_html = mapping.suggested_content_html
         mapping.subsection.content = mapping.suggested_content_html
         mapping.subsection.content_json = None
-        if payload.completion_status:
-            mapping.subsection.completion_status = payload.completion_status
-        elif mapping.subsection.completion_status == "NOT_STARTED":
-            mapping.subsection.completion_status = "IN_PROGRESS"
         if payload.progress_percentage is not None:
             mapping.subsection.progress_percentage = payload.progress_percentage
         else:

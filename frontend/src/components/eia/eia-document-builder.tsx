@@ -30,18 +30,19 @@ import { EiaActivityFeed } from "@/components/eia/eia-activity-feed";
 import { EiaAssignmentWorkflow } from "@/components/eia/eia-assignment-workflow";
 import { EiaManagementDashboard } from "@/components/eia/eia-management-dashboard";
 import { EiaProgressOverview } from "@/components/eia/eia-progress-overview";
+import { EiaReviewQueue } from "@/components/eia/eia-review-queue";
 import { EiaSourceMappingPanel } from "@/components/eia/eia-source-mapping-panel";
 import { EiaTeamPanel } from "@/components/eia/eia-team-panel";
+import { EiaWorkflowActions } from "@/components/eia/eia-workflow-actions";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Progress } from "@/components/ui/progress";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getAccessToken } from "@/lib/auth";
 import { API_URL, apiRequest } from "@/lib/api-client";
-import { canEditEiaDocument, hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { canEditEiaDocument, canReviewEiaDocument, hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type {
   EiaActivityItem,
@@ -63,9 +64,13 @@ type EiaDocumentBuilderProps = {
 
 const statusOptions = [
   { value: "NOT_STARTED", label: "Not started" },
+  { value: "ASSIGNED", label: "Assigned" },
   { value: "IN_PROGRESS", label: "In progress" },
   { value: "READY_FOR_REVIEW", label: "Ready for review" },
-  { value: "COMPLETE", label: "Complete" }
+  { value: "UNDER_REVIEW", label: "Under review" },
+  { value: "REVISION_REQUIRED", label: "Revision required" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "COMPLETE", label: "Approved" }
 ];
 
 const insightTabs = [
@@ -76,7 +81,7 @@ const insightTabs = [
 ] as const;
 
 type InsightTab = (typeof insightTabs)[number]["value"];
-type WorkspaceView = "dashboard" | "overview" | "assigned" | "editor";
+type WorkspaceView = "dashboard" | "overview" | "assigned" | "review_queue" | "editor";
 
 export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentBuilderProps) {
   const [document, setDocument] = useState<EiaDocumentStructure | null>(null);
@@ -98,9 +103,11 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const [exportingFormat, setExportingFormat] = useState<"json" | "docx" | "pdf" | null>(null);
   const currentMemberRole = members.find((member) => member.user_id === user.id)?.role ?? null;
   const effectiveDocumentRole = currentMemberRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
-  const canEdit = canEditEiaDocument(effectiveDocumentRole);
   const canManageAssignments =
     document?.created_by_id === user.id || hasAnyRole(user, ["owner", "admin", "project_manager"]);
+  const canEdit = canEditEiaDocument(effectiveDocumentRole);
+  const canReview = canReviewEiaDocument(effectiveDocumentRole) || canManageAssignments;
+  const canAuthorContent = canEdit && completionStatus === "IN_PROGRESS";
 
   const selectedSubsection = useMemo(() => {
     return document?.sections.flatMap((section) => section.subsections).find(
@@ -135,7 +142,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
     }
     return {
       total: subsections.length,
-      complete: subsections.filter((subsection) => subsection.completion_status === "COMPLETE").length
+      complete: subsections.filter((subsection) => ["APPROVED", "COMPLETE"].includes(subsection.completion_status)).length
     };
   }, [document, progressSummary]);
 
@@ -256,7 +263,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   }
 
   let saveStatusText = "Read-only access";
-  if (canEdit) {
+  if (canAuthorContent) {
     saveStatusText = savedAt ? `Saved at ${savedAt}` : "Changes are saved when you select Save draft";
   }
 
@@ -341,11 +348,12 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
             label="Evidence"
             meta="Project files"
           />
-          <WorkflowAnchor
-            href={`/projects/${projectId}/eia/${documentId}/review`}
+          <WorkflowLink
+            active={workspaceView === "review_queue"}
             icon={<FileSearch />}
-            label="Review"
-            meta="Quality checks"
+            label="Review queue"
+            meta="Awaiting review"
+            onClick={() => setWorkspaceView("review_queue")}
           />
           <WorkflowAnchor
             href={`/projects/${projectId}/eia/${documentId}/review#approval`}
@@ -375,6 +383,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
           onOpenSubsection={(subsectionId) => {
             setSelectedSubsectionId(subsectionId);
             setWorkspaceView("editor");
+            void loadDocument();
           }}
         />
       ) : null}
@@ -399,10 +408,25 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
           documentId={documentId}
           loading={loading}
           members={members}
-          onAssignmentsChange={setAssignmentOverview}
+          onAssignmentsChange={(next) => {
+            setAssignmentOverview(next);
+            void loadDocument();
+          }}
           onOpenSubsection={(subsectionId) => {
             setSelectedSubsectionId(subsectionId);
             setWorkspaceView("editor");
+            void loadDocument();
+          }}
+        />
+      ) : null}
+
+      {workspaceView === "review_queue" ? (
+        <EiaReviewQueue
+          documentId={documentId}
+          onOpenSubsection={(subsectionId) => {
+            setSelectedSubsectionId(subsectionId);
+            setWorkspaceView("editor");
+            void loadDocument();
           }}
         />
       ) : null}
@@ -506,7 +530,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                     </Link>
                   </Button>
                 ) : null}
-                {canEdit ? (
+                {canAuthorContent ? (
                   <Button type="submit" disabled={!selectedSubsection || saving}>
                     {saving ? <Loader2 className="animate-spin" /> : <Save />}
                     Save draft
@@ -517,32 +541,48 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
           </div>
 
           <div className="flex flex-col gap-4 border-b border-[#e3eae6] bg-[#f8faf9] px-5 py-3 md:flex-row md:items-end">
-            {canEdit ? (
+            {canEdit || canReview ? (
               <>
-                <label className="grid min-w-52 gap-1.5 text-xs font-semibold text-[#52675e]">
-                  Status
-                  <Select value={completionStatus} onValueChange={setCompletionStatus}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label className="grid w-36 gap-1.5 text-xs font-semibold text-[#52675e]">
-                  Progress
-                  <NumberStepper
-                    max={100}
-                    min={0}
-                    value={progressPercentage}
-                    onChange={setProgressPercentage}
-                  />
-                </label>
+                <div className="grid min-w-52 gap-1.5 text-xs font-semibold text-[#52675e]">
+                  <span>Controlled status</span>
+                  <div className="rounded-lg border border-[#dce6e1] bg-white px-3 py-2 text-sm font-semibold text-[#29483c]">
+                    {statusLabel(completionStatus)}
+                  </div>
+                </div>
+                {canAuthorContent ? (
+                  <label className="grid w-36 gap-1.5 text-xs font-semibold text-[#52675e]">
+                    Progress
+                    <NumberStepper
+                      max={100}
+                      min={0}
+                      value={progressPercentage}
+                      onChange={setProgressPercentage}
+                    />
+                  </label>
+                ) : (
+                  <div className="grid gap-1.5 text-xs font-semibold text-[#52675e]">
+                    <span>Progress</span>
+                    <div className="rounded-lg border border-[#dce6e1] bg-white px-3 py-2 text-sm font-semibold text-[#29483c]">
+                      {progressPercentage}%
+                    </div>
+                  </div>
+                )}
+                {selectedSubsection ? (
+                  <div className="min-w-56">
+                    <EiaWorkflowActions
+                      canAuthor={canEdit || canManageAssignments}
+                      canReview={canReview}
+                      status={completionStatus}
+                      subsectionId={selectedSubsection.id}
+                      onTransition={(updated) => {
+                        setDocument((current) => replaceSubsection(current, updated));
+                        setCompletionStatus(updated.completion_status);
+                        setProgressPercentage(updated.progress_percentage);
+                        void refreshDashboardData();
+                      }}
+                    />
+                  </div>
+                ) : null}
               </>
             ) : (
               <>
@@ -570,7 +610,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
               className="min-h-[420px] resize-y rounded-lg border-[#cfdcd6] bg-white text-base leading-7 text-[#18372c]"
               disabled={!selectedSubsection}
               placeholder="Draft structured EIA content for this checklist item. Include evidence references, quantified details, assumptions, and source notes."
-              readOnly={!canEdit}
+              readOnly={!canAuthorContent}
               value={content}
               onChange={(event) => setContent(event.target.value)}
             />
@@ -683,7 +723,7 @@ function EiaStructureOverview({
 }>) {
   const sections = document?.sections ?? [];
   const subsections = sections.flatMap((section) => section.subsections);
-  const completed = subsections.filter((item) => item.completion_status === "COMPLETE").length;
+  const completed = subsections.filter((item) => ["APPROVED", "COMPLETE"].includes(item.completion_status)).length;
   const inProgress = subsections.filter((item) => item.completion_status === "IN_PROGRESS").length;
   const ready = subsections.filter((item) => item.completion_status === "READY_FOR_REVIEW").length;
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
@@ -863,7 +903,7 @@ function SectionDetailPanel({
 
 function sectionProgress(section: EiaSection) {
   const total = section.subsections.length;
-  const complete = section.subsections.filter((item) => item.completion_status === "COMPLETE").length;
+  const complete = section.subsections.filter((item) => ["APPROVED", "COMPLETE"].includes(item.completion_status)).length;
   const percentage = total
     ? Math.round(section.subsections.reduce((sum, item) => sum + item.progress_percentage, 0) / total)
     : 0;
@@ -907,34 +947,34 @@ function OverviewCount({ label, value, tone }: Readonly<{ label: string; value: 
 
 function StatusDot({ status }: Readonly<{ status: string }>) {
   let colorClass = "bg-slate-300";
-  if (status === "COMPLETE") {
+  if (["APPROVED", "COMPLETE"].includes(status)) {
     colorClass = "bg-emerald-500";
-  } else if (status === "READY_FOR_REVIEW") {
+  } else if (["READY_FOR_REVIEW", "UNDER_REVIEW"].includes(status)) {
     colorClass = "bg-amber-500";
-  } else if (status === "IN_PROGRESS") {
+  } else if (["IN_PROGRESS", "REVISION_REQUIRED"].includes(status)) {
     colorClass = "bg-[#287451]";
   }
   return <span className={cn("size-2.5 shrink-0 rounded-full", colorClass)} />;
 }
 
 function iconForCompletionStatus(status: string) {
-  if (status === "COMPLETE") {
+  if (["APPROVED", "COMPLETE"].includes(status)) {
     return CheckCircle2;
   }
-  if (status === "IN_PROGRESS" || status === "READY_FOR_REVIEW") {
+  if (["IN_PROGRESS", "READY_FOR_REVIEW", "UNDER_REVIEW", "REVISION_REQUIRED"].includes(status)) {
     return CircleDashed;
   }
   return Clock3;
 }
 
 function statusIconClass(status: string) {
-  if (status === "COMPLETE") {
+  if (["APPROVED", "COMPLETE"].includes(status)) {
     return "text-emerald-600";
   }
-  if (status === "READY_FOR_REVIEW") {
+  if (["READY_FOR_REVIEW", "UNDER_REVIEW"].includes(status)) {
     return "text-amber-600";
   }
-  if (status === "IN_PROGRESS") {
+  if (["IN_PROGRESS", "REVISION_REQUIRED"].includes(status)) {
     return "text-[#287451]";
   }
   return "text-[#9aa8a1]";

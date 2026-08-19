@@ -38,6 +38,7 @@ from app.schemas.eia import (
     EiaReviewApprovalCreate,
     EiaReviewApprovalDecision,
     EiaReviewApprovalRead,
+    EiaReviewQueueItemRead,
     EiaSourceDocumentAttachmentCreate,
     EiaSourceMappingConfirmRequest,
     EiaSourceMappingDetectRequest,
@@ -48,6 +49,7 @@ from app.schemas.eia import (
     EiaSubSectionRead,
     EiaSubSectionUpdate,
     EiaSubSectionWorkspaceRead,
+    EiaWorkflowTransitionRequest,
     SubSectionRevisionRead,
     SubSectionCommentCreate,
     SubSectionCommentRead,
@@ -101,6 +103,11 @@ from app.services.eia_review_approval_service import (
     create_review_approval_request,
     decide_review_approval,
     list_review_approvals,
+)
+from app.services.eia_review_workflow_service import (
+    approve_eia_section,
+    list_eia_review_queue,
+    transition_subsection_workflow,
 )
 from app.services.eia_service import (
     DOCUMENT_EDIT_ROLES,
@@ -531,6 +538,28 @@ def read_eia_document_activity(
     return list_eia_document_activity(db, current_user, document_id, limit)
 
 
+@router.get("/{document_id}/review-queue", response_model=list[EiaReviewQueueItemRead])
+def read_eia_review_queue(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> list[dict[str, object]]:
+    return list_eia_review_queue(db, current_user, document_id)
+
+
+@router.post(
+    "/{document_id}/sections/{section_id}/approve",
+    response_model=list[EiaReviewQueueItemRead],
+)
+def post_eia_section_approval(
+    document_id: UUID,
+    section_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> list[dict[str, object]]:
+    return approve_eia_section(db, current_user, document_id, section_id)
+
+
 @router.get("/{document_id}/source-mappings", response_model=list[EiaSourceMappingRead])
 def read_eia_document_source_mappings(
     document_id: UUID,
@@ -585,6 +614,19 @@ def read_subsection_workspace(
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> dict[str, object]:
     return get_subsection_workspace(db, current_user, subsection_id, tenant_id)
+
+
+@router.post(
+    "/subsections/{subsection_id}/workflow/transition",
+    response_model=EiaSubSectionRead,
+)
+def post_subsection_workflow_transition(
+    subsection_id: UUID,
+    payload: EiaWorkflowTransitionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> EiaSubSection:
+    return transition_subsection_workflow(db, current_user, subsection_id, payload)
 
 
 @router.post("/subsections/{subsection_id}/assistant", response_model=EiaAuthoringAssistResponse)

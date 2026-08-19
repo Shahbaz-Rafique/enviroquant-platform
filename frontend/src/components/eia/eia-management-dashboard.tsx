@@ -33,8 +33,6 @@ type SectionAttention = {
   targetSubsectionId: string | null;
 };
 
-const overdueDays = 14;
-
 export function EiaManagementDashboard({ document, progress, assignments, loading, onOpenSubsection }: EiaManagementDashboardProps) {
   const sectionAssignmentById = useMemo(
     () => new Map((assignments?.sections ?? []).map((item) => [item.section_id, item])),
@@ -118,6 +116,11 @@ export function EiaManagementDashboard({ document, progress, assignments, loadin
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge className="border-[#cfe0d7] bg-[#edf6f1] text-[#287451]">Section {item.section.section_number}</Badge>
                     <Badge className={statusBadgeClass(item.completionStatus)}>{labelize(item.completionStatus)}</Badge>
+                    {item.assignment ? (
+                      <Badge className={reviewBadgeClass(item.assignment.review_status)}>
+                        Review: {labelize(item.assignment.review_status)}
+                      </Badge>
+                    ) : null}
                     {item.flags.map((flag) => (
                       <Badge key={flag} className={flagBadgeClass(flag)}>{labelize(flag)}</Badge>
                     ))}
@@ -125,6 +128,9 @@ export function EiaManagementDashboard({ document, progress, assignments, loadin
                   <p className="mt-1 line-clamp-1 text-sm font-semibold text-[#29483c]">{item.section.title}</p>
                   <p className="mt-1 text-xs text-[#6f8078]">
                     Assignee: {item.assignment?.current_assignee?.full_name ?? "Unassigned"} ({labelize(item.assignment?.current_role ?? "UNASSIGNED")})
+                  </p>
+                  <p className="mt-1 text-xs text-[#6f8078]">
+                    Due: {formatDate(item.assignment?.due_date ?? null)} · Open comments: {item.assignment?.unresolved_comment_count ?? 0}
                   </p>
                 </div>
                 <div>
@@ -185,7 +191,7 @@ export function EiaManagementDashboard({ document, progress, assignments, loadin
 function computeSectionFlags(assignment: EiaSectionAssignment | null, completionStatus: string) {
   const flags: string[] = [];
 
-  if (isOverdue(assignment, completionStatus)) {
+  if (isOverdue(assignment)) {
     flags.push("OVERDUE");
   }
   if (isBlocked(assignment)) {
@@ -232,8 +238,14 @@ function inferSectionProgress(section: EiaSection) {
 
 function inferSectionStatus(section: EiaSection, progressPercentage: number) {
   const statuses = new Set(section.subsections.map((item) => item.completion_status));
-  if (statuses.size === 1 && statuses.has("COMPLETE")) {
-    return "COMPLETE";
+  if ([...statuses].every((status) => ["APPROVED", "COMPLETE"].includes(status))) {
+    return "APPROVED";
+  }
+  if (statuses.has("REVISION_REQUIRED")) {
+    return "REVISION_REQUIRED";
+  }
+  if (statuses.has("UNDER_REVIEW")) {
+    return "UNDER_REVIEW";
   }
   if (statuses.has("READY_FOR_REVIEW")) {
     return "READY_FOR_REVIEW";
@@ -241,28 +253,21 @@ function inferSectionStatus(section: EiaSection, progressPercentage: number) {
   if (statuses.has("IN_PROGRESS") || progressPercentage > 0) {
     return "IN_PROGRESS";
   }
+  if (statuses.has("ASSIGNED")) {
+    return "ASSIGNED";
+  }
   return "NOT_STARTED";
 }
 
-function isOverdue(assignment: EiaSectionAssignment | null, completionStatus: string) {
-  if (!assignment?.last_updated_at || completionStatus === "COMPLETE") {
-    return false;
-  }
-  const lastUpdated = new Date(assignment.last_updated_at);
-  if (Number.isNaN(lastUpdated.getTime())) {
-    return false;
-  }
-  const now = Date.now();
-  const msInDay = 24 * 60 * 60 * 1000;
-  const daysSinceUpdate = Math.floor((now - lastUpdated.getTime()) / msInDay);
-  return daysSinceUpdate >= overdueDays;
+function isOverdue(assignment: EiaSectionAssignment | null) {
+  return assignment?.is_overdue ?? false;
 }
 
 function isBlocked(assignment: EiaSectionAssignment | null) {
   if (!assignment) {
     return false;
   }
-  return assignment.review_status === "COMMENTS_OPEN" || assignment.unresolved_comment_count > 0;
+  return assignment.is_blocked;
 }
 
 function isUnassigned(assignment: EiaSectionAssignment | null) {
@@ -294,13 +299,13 @@ function CountBadge({ icon, label, value, tone }: Readonly<{ icon: React.ReactNo
 
 function statusBadgeClass(status: string) {
   const normalized = status.toUpperCase();
-  if (normalized === "COMPLETE") {
+  if (["APPROVED", "COMPLETE"].includes(normalized)) {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
-  if (normalized === "READY_FOR_REVIEW") {
+  if (["READY_FOR_REVIEW", "UNDER_REVIEW"].includes(normalized)) {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
-  if (normalized === "IN_PROGRESS") {
+  if (["IN_PROGRESS", "REVISION_REQUIRED"].includes(normalized)) {
     return "border-[#cfe0d7] bg-[#edf6f1] text-[#287451]";
   }
   return "border-slate-200 bg-slate-50 text-slate-700";
@@ -320,6 +325,20 @@ function flagBadgeClass(flag: string) {
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
+function reviewBadgeClass(status: string) {
+  const normalized = status.toUpperCase();
+  if (normalized === "COMMENTS_OPEN") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  if (normalized === "READY_FOR_REVIEW") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  if (["APPROVED", "COMPLETED"].includes(normalized)) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 function labelize(value: string) {
   return value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 }
@@ -333,4 +352,12 @@ function formatDateTime(value: string | null) {
     return "Not available";
   }
   return parsed.toLocaleString();
+}
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return "No due date";
+  }
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? "No due date" : parsed.toLocaleDateString();
 }
