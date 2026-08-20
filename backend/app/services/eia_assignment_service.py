@@ -287,6 +287,8 @@ def _can_manage_assignments(document: EiaDocument, current_user: User) -> bool:
 def _validate_assignment_targets(document: EiaDocument, payload: EiaAssignmentUpdate) -> None:
     roles_by_user_id = {member.user_id: member.role.upper() for member in document.members}
     roles_by_user_id[document.created_by_id] = "EDITOR"
+    users_by_id = {member.user_id: member.user for member in document.members}
+    users_by_id[document.created_by_id] = document.created_by
 
     for user_id in (payload.author_user_id, payload.reviewer_user_id):
         if user_id is None:
@@ -302,14 +304,33 @@ def _validate_assignment_targets(document: EiaDocument, payload: EiaAssignmentUp
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Section authors must have the EIA document Editor role",
         )
+    if payload.author_user_id and not _user_has_assignment_role(
+        users_by_id[payload.author_user_id],
+        {Roles.OWNER, Roles.ADMIN, Roles.PROJECT_MANAGER, Roles.CONSULTANT},
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Section authors must have the Consultant or management organization role",
+        )
     if payload.reviewer_user_id and roles_by_user_id[payload.reviewer_user_id] not in {
-        "EDITOR",
         "REVIEWER",
     }:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Section reviewers must have the EIA document Editor or Reviewer role",
+            detail="Section reviewers must have the EIA document Reviewer role",
         )
+    if payload.reviewer_user_id and not _user_has_assignment_role(
+        users_by_id[payload.reviewer_user_id],
+        {Roles.OWNER, Roles.ADMIN, Roles.PROJECT_MANAGER, Roles.REVIEWER},
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Section reviewers must have the Reviewer or management organization role",
+        )
+
+
+def _user_has_assignment_role(user: User, allowed_roles: set[str]) -> bool:
+    return not allowed_roles.isdisjoint({role.lower() for role in user.role_names})
 
 
 def _build_assignment_overview(

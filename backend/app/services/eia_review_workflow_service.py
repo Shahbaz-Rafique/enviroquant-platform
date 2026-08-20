@@ -164,6 +164,20 @@ def list_eia_review_queue(
     queue: list[dict[str, object]] = []
     for section in document.sections:
         section_assignment = _assignment_values(section_assignments.get(str(section.id)))
+        can_approve_section = bool(section.subsections) and all(
+            (
+                (
+                    _normalize_legacy_status(candidate.completion_status) == "APPROVED"
+                    and int(counts.get(candidate.id, 0)) == 0
+                )
+                or (
+                    _normalize_legacy_status(candidate.completion_status) == "UNDER_REVIEW"
+                    and _workflow_capabilities(document, candidate, current_user)[1]
+                    and int(counts.get(candidate.id, 0)) == 0
+                )
+            )
+            for candidate in section.subsections
+        )
         for subsection in section.subsections:
             if subsection.completion_status not in {"READY_FOR_REVIEW", "UNDER_REVIEW"}:
                 continue
@@ -174,6 +188,10 @@ def list_eia_review_queue(
             effective = effective or {}
             author = users_by_id.get(effective.get("author_user_id"))
             reviewer = users_by_id.get(effective.get("reviewer_user_id"))
+            if _review_queue_is_personal(current_user) and (
+                reviewer is None or reviewer.id != current_user.id
+            ):
+                continue
             queue.append(
                 {
                     "section_id": section.id,
@@ -191,6 +209,7 @@ def list_eia_review_queue(
                     "is_assigned_reviewer": (
                         reviewer is not None and reviewer.id == current_user.id
                     ),
+                    "can_approve_section": can_approve_section,
                 }
             )
 
@@ -222,6 +241,14 @@ def approve_eia_section(
 
     for subsection in section.subsections:
         normalized = _normalize_legacy_status(subsection.completion_status)
+        if _unresolved_comment_count(db, subsection.id) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Resolve all comments in subsection {subsection.subsection_number} "
+                    "before section approval"
+                ),
+            )
         if normalized == "APPROVED":
             continue
         if normalized != "UNDER_REVIEW":
@@ -234,14 +261,6 @@ def approve_eia_section(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="The assigned reviewer role is required to approve this section",
-            )
-        if _unresolved_comment_count(db, subsection.id) > 0:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"Resolve all comments in subsection {subsection.subsection_number} "
-                    "before section approval"
-                ),
             )
 
     for subsection in section.subsections:
@@ -307,23 +326,33 @@ def _workflow_capabilities(
     subsection: EiaSubSection,
     current_user: User,
 ) -> tuple[bool, bool]:
-    privileged = _is_workflow_manager(document, current_user)
+    workflow_manager = _is_workflow_manager(current_user)
     effective = _effective_assignment(document, subsection)
     member_role = get_document_member_role(document, current_user)
-    is_author = privileged or (
-        member_role == "EDITOR" and effective.get("author_user_id") == current_user.id
+    tenant_roles = {role.lower() for role in current_user.role_names}
+    is_author = workflow_manager or (
+        Roles.CONSULTANT in tenant_roles
+        and member_role == "EDITOR"
+        and effective.get("author_user_id") == current_user.id
     )
-    is_reviewer = privileged or (
-        member_role in {"EDITOR", "REVIEWER"}
+    is_reviewer = workflow_manager or (
+        Roles.REVIEWER in tenant_roles
+        and member_role == "REVIEWER"
         and effective.get("reviewer_user_id") == current_user.id
     )
     return is_author, is_reviewer
 
 
-def _is_workflow_manager(document: EiaDocument, current_user: User) -> bool:
-    if document.created_by_id == current_user.id or is_eia_document_admin(current_user):
-        return True
-    return Roles.PROJECT_MANAGER in {role.lower() for role in current_user.role_names}
+def _is_workflow_manager(current_user: User) -> bool:
+    manager_roles = {Roles.OWNER, Roles.ADMIN, Roles.PROJECT_MANAGER}
+    return not manager_roles.isdisjoint(
+        {role.lower() for role in current_user.role_names}
+    )
+
+
+def _review_queue_is_personal(current_user: User) -> bool:
+    """Reviewers see only their work; workflow managers can oversee the full queue."""
+    return not _is_workflow_manager(current_user)
 
 
 def _effective_assignment(document: EiaDocument, subsection: EiaSubSection) -> dict[str, object]:

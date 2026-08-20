@@ -11,7 +11,14 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProjectCard } from "@/components/projects/project-card";
 import { apiRequest } from "@/lib/api-client";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import {
+  canAccessAuthorPortal,
+  canAccessRegulatorPortal,
+  canAccessReviewPortal,
+  hasPermission,
+  PERMISSIONS,
+  portalName,
+} from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type { Project, User } from "@/lib/types";
 
@@ -77,10 +84,16 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
     });
   }, [projects, searchQuery, statusFilter]);
 
-  const pageTitle = compact ? "Projects" : "Environmental Intelligence Platform";
+  const pageTitle = compact ? "Projects" : portalName(user);
+  const reviewerOnly = canAccessReviewPortal(user) && !canAccessAuthorPortal(user);
+  const regulatorOnly = canAccessRegulatorPortal(user) && !canAccessAuthorPortal(user) && !reviewerOnly;
   const pageDescription = compact
     ? "Find, open and manage your organisation’s active environmental assessment work."
-    : "Create structured Environmental Impact Assessments, connect every claim to its evidence and coordinate review in one secure workspace.";
+    : reviewerOnly
+      ? "Open your assigned projects, review submitted subsections, request revisions, and record approval decisions."
+      : regulatorOnly
+        ? "Inspect the environmental assessment projects made available to you through the regulator workspace."
+        : "Create structured Environmental Impact Assessments, connect every claim to its evidence and coordinate delivery in one secure workspace.";
 
   return (
     <>
@@ -117,7 +130,15 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
               {compact ? "Current EIA capability" : "Your work"}
             </p>
             <h2 className="mt-1 text-2xl font-bold tracking-[-0.02em] text-[#173c2e]">{compact ? pageTitle : "Project portfolio"}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#697a73]">{compact ? pageDescription : "Open an assessment to continue authoring, upload evidence or begin a structured review."}</p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#697a73]">
+              {compact
+                ? pageDescription
+                : reviewerOnly
+                  ? "Only projects containing your assigned review work are shown."
+                  : regulatorOnly
+                    ? "Only projects shared with your regulatory role are shown."
+                    : "Open an assessment to continue authoring, upload evidence, or manage assignments."}
+            </p>
           </div>
           <div className="flex flex-wrap items-start gap-2">
             <Button variant="secondary" onClick={loadProjects}>

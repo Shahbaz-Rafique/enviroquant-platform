@@ -23,6 +23,33 @@ export function hasAnyRole(user: User | null, roles: string[]): boolean {
   return Boolean(user?.roles?.some((role) => allowed.has(role.toLowerCase())));
 }
 
+const MANAGEMENT_ROLES = ["owner", "admin", "project_manager"];
+
+export function canAccessAuthorPortal(user: User | null): boolean {
+  return hasAnyRole(user, [...MANAGEMENT_ROLES, "consultant"]);
+}
+
+export function canAccessReviewPortal(user: User | null): boolean {
+  return hasAnyRole(user, [...MANAGEMENT_ROLES, "reviewer"]);
+}
+
+export function canAccessRegulatorPortal(user: User | null): boolean {
+  return hasAnyRole(user, ["owner", "admin", "regulator"]);
+}
+
+export function canAccessReadOnlyPortal(user: User | null): boolean {
+  return hasAnyRole(user, ["viewer"]);
+}
+
+export function portalName(user: User | null): string {
+  if (hasAnyRole(user, ["owner", "admin"])) return "Administration portal";
+  if (hasAnyRole(user, ["project_manager"])) return "Project management portal";
+  if (hasAnyRole(user, ["consultant"])) return "Consultant portal";
+  if (hasAnyRole(user, ["reviewer"])) return "Reviewer portal";
+  if (hasAnyRole(user, ["regulator"])) return "Regulator portal";
+  return "Read-only portal";
+}
+
 export function displayRole(user: User | null): string {
   if (!user) {
     return "Guest";

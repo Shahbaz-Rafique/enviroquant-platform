@@ -8,7 +8,12 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role_in_tenant
-from app.core.permissions import PROJECT_MANAGE_ROLES, READ_ONLY_ROLES
+from app.core.permissions import (
+    PROJECT_MANAGE_ROLES,
+    READ_ONLY_ROLES,
+    REGULATOR_PORTAL_ROLES,
+    REVIEW_PORTAL_ROLES,
+)
 from app.db.session import get_db
 from app.models.eia import EiaAttachment, EiaDocument, EiaSubSection
 from app.models.eia_document_member import EiaDocumentMember
@@ -159,7 +164,7 @@ def create_project_eia_document(
 def read_project_regulator_insights(
     project_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REGULATOR_PORTAL_ROLES)),
 ) -> dict[str, object]:
     return get_regulator_overview(db, current_user, project_id)
 
@@ -170,7 +175,7 @@ def read_project_regulator_comparison(
     left_document_id: UUID = Query(...),
     right_document_id: UUID = Query(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REGULATOR_PORTAL_ROLES)),
 ) -> dict[str, object]:
     return compare_project_eia_documents(
         db,
@@ -256,7 +261,7 @@ def download_compiled_eia_pdf(
 def read_eia_evaluation_runs(
     document_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> list[object]:
     return list_eia_evaluation_runs(db, current_user, document_id)
 
@@ -271,7 +276,7 @@ def post_eia_evaluation_run(
     background_tasks: BackgroundTasks,
     payload: EiaEvaluationRunCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     run = enqueue_eia_evaluation_run(db, current_user, document_id, payload)
     background_tasks.add_task(process_eia_evaluation_run_background, run.id)
@@ -283,7 +288,7 @@ def read_eia_evaluation_run(
     document_id: UUID,
     run_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     return get_eia_evaluation_run(db, current_user, document_id, run_id)
 
@@ -293,7 +298,7 @@ def read_eia_evaluation_report(
     document_id: UUID,
     run_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     return get_eia_evaluation_run(db, current_user, document_id, run_id)
 
@@ -302,7 +307,7 @@ def read_eia_evaluation_report(
 def read_eia_review_approvals(
     document_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> list[object]:
     return list_review_approvals(db, current_user, document_id)
 
@@ -316,7 +321,7 @@ def post_eia_review_approval(
     document_id: UUID,
     payload: EiaReviewApprovalCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     return create_review_approval_request(db, current_user, document_id, payload)
 
@@ -330,7 +335,7 @@ def post_eia_review_approval_decision(
     approval_id: UUID,
     payload: EiaReviewApprovalDecision,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     return decide_review_approval(db, current_user, document_id, approval_id, payload)
 
@@ -344,7 +349,7 @@ def read_eia_evaluation_comparison(
     run_id: UUID,
     baseline_run_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> dict[str, object]:
     return compare_eia_evaluation_runs(db, current_user, document_id, run_id, baseline_run_id)
 
@@ -354,7 +359,7 @@ def download_eia_evaluation_report_json(
     document_id: UUID,
     run_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> StreamingResponse:
     report_bytes = build_report_json_bytes(db, current_user, document_id, run_id)
     return StreamingResponse(
@@ -369,7 +374,7 @@ def download_eia_evaluation_report_docx(
     document_id: UUID,
     run_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> StreamingResponse:
     report_bytes = build_report_docx_bytes(db, current_user, document_id, run_id)
     return StreamingResponse(
@@ -384,7 +389,7 @@ def download_eia_evaluation_report_pdf(
     document_id: UUID,
     run_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> StreamingResponse:
     report_bytes = build_report_pdf_bytes(db, current_user, document_id, run_id)
     return StreamingResponse(
@@ -403,7 +408,7 @@ def read_eia_evaluation_finding_comments(
     run_id: UUID,
     finding_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> list[object]:
     return list_finding_comments(db, current_user, document_id, run_id, finding_id)
 
@@ -419,7 +424,7 @@ def post_eia_evaluation_finding_comment(
     finding_id: UUID,
     payload: EiaEvaluationFindingCommentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     return create_finding_comment(db, current_user, document_id, run_id, finding_id, payload)
 
@@ -543,7 +548,7 @@ def read_eia_document_activity(
 def read_eia_review_queue(
     document_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> list[dict[str, object]]:
     return list_eia_review_queue(db, current_user, document_id)
 
@@ -556,7 +561,7 @@ def post_eia_section_approval(
     document_id: UUID,
     section_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> list[dict[str, object]]:
     return approve_eia_section(db, current_user, document_id, section_id)
 

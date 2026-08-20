@@ -82,9 +82,8 @@ export function EiaReviewQueue({ documentId, mode = "review", onOpenSubsection }
         {!loading && !visibleItems.length ? <Alert>{mode === "approval" ? "No sections are ready for an approval decision." : "No subsections are awaiting review."}</Alert> : null}
 
         {visibleItems.map((item, index) => {
-          const sectionItems = items.filter((candidate) => candidate.section_id === item.section_id);
           const isFirstSectionItem = visibleItems.findIndex((candidate) => candidate.section_id === item.section_id) === index;
-          const canApproveSection = isFirstSectionItem && sectionItems.every((candidate) => candidate.status === "UNDER_REVIEW");
+          const canApproveSection = isFirstSectionItem && item.can_approve_section;
           return (
           <article key={item.subsection_id} className="grid gap-3 rounded-xl border border-[#dce6e1] bg-white p-4 lg:grid-cols-[minmax(0,1fr)_180px_auto] lg:items-center">
             <div className="min-w-0">

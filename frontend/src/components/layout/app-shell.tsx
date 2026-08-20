@@ -19,7 +19,7 @@ import type { ReactNode } from 'react'
 import { BrandMark } from '@/components/site/brand-mark'
 import { Button } from '@/components/ui/button'
 import { clearSession } from '@/lib/auth'
-import { displayRole, hasPermission, PERMISSIONS } from '@/lib/permissions'
+import { displayRole, hasPermission, PERMISSIONS, portalName } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import type { User } from '@/lib/types'
 
@@ -75,7 +75,7 @@ export function AppShell ({ children, user }: AppShellProps) {
               imageClassName='h-auto w-[138px]'
             />
             <span className='hidden truncate text-xs font-bold uppercase tracking-[0.16em] text-[#6c7d75] lg:block'>
-              Environmental Intelligence Platform
+              {portalName(user)}
             </span>
           </Link>
 

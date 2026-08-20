@@ -727,7 +727,7 @@ function canBeAuthor(member: { role: string }) {
 }
 
 function canBeReviewer(member: { role: string }) {
-  return ["EDITOR", "REVIEWER"].includes(member.role.toUpperCase());
+  return member.role.toUpperCase() === "REVIEWER";
 }
 
 function toLabel(value: string) {

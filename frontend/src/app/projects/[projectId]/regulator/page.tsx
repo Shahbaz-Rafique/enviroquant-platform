@@ -6,9 +6,11 @@ import { useParams } from "next/navigation";
 
 import { useRequireAuth } from "@/components/auth/auth-gate";
 import { EiaRegulatorInsights } from "@/components/eia/eia-regulator-insights";
+import { AccessDenied } from "@/components/layout/access-denied";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageNavigation } from "@/components/layout/page-navigation";
 import { Button } from "@/components/ui/button";
+import { canAccessRegulatorPortal } from "@/lib/permissions";
 
 export default function EiaRegulatorInsightsPage() {
   const params = useParams<{ projectId: string }>();
@@ -16,6 +18,10 @@ export default function EiaRegulatorInsightsPage() {
 
   if (loading || !user) {
     return null;
+  }
+
+  if (!canAccessRegulatorPortal(user)) {
+    return <AppShell user={user}><AccessDenied /></AppShell>;
   }
 
   return (

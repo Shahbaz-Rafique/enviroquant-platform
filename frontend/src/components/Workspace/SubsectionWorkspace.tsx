@@ -19,8 +19,9 @@ import { Progress } from "@/components/ui/progress";
 import { ApiError, apiRequest } from "@/lib/api-client";
 import {
   canCommentOnEiaDocument,
+  canAccessAuthorPortal,
+  canAccessReviewPortal,
   canEditEiaDocument,
-  canReviewEiaDocument,
   hasAnyRole,
   hasPermission,
   PERMISSIONS
@@ -102,11 +103,10 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const [assistantEngine, setAssistantEngine] = useState<string | null>(null);
   const [sourceMappings, setSourceMappings] = useState<EiaSourceMapping[]>([]);
 
-  const effectiveDocumentRole = documentRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
   const isWorkflowManager = hasAnyRole(user, ["owner", "admin", "project_manager"]);
+  const effectiveDocumentRole = documentRole ?? (isWorkflowManager || hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
   const canEdit = canEditEiaDocument(effectiveDocumentRole);
   const canComment = canCommentOnEiaDocument(effectiveDocumentRole);
-  const canResolve = canReviewEiaDocument(effectiveDocumentRole) || isWorkflowManager;
   const subsectionAssignment = useMemo<EiaSubSectionAssignment | null>(() => {
     for (const section of assignments?.sections ?? []) {
       const match = section.subsections.find((item) => item.subsection_id === subsectionId);
@@ -114,7 +114,15 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
     }
     return null;
   }, [assignments, subsectionId]);
-  const isAssignedAuthor = isWorkflowManager || subsectionAssignment?.author_assignee?.id === user.id;
+  const isAssignedAuthor = isWorkflowManager || (
+    canAccessAuthorPortal(user) && subsectionAssignment?.author_assignee?.id === user.id
+  );
+  const isAssignedReviewer = isWorkflowManager || (
+    canAccessReviewPortal(user) &&
+    effectiveDocumentRole === "REVIEWER" &&
+    subsectionAssignment?.reviewer_assignee?.id === user.id
+  );
+  const canResolve = isAssignedReviewer;
   const canAuthorContent = canEdit && isAssignedAuthor && completionStatus === "IN_PROGRESS" && !newerVersionAvailable;
   const canUpload = canAuthorContent;
 
@@ -561,7 +569,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             <div className="min-w-56">
               <EiaWorkflowActions
                 canAuthor={isAssignedAuthor}
-                canReview={canResolve}
+                canReview={isAssignedReviewer}
                 status={completionStatus}
                 subsectionId={subsectionId}
                 onTransition={(updated) => {

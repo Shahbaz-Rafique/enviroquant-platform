@@ -46,7 +46,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { getAccessToken } from "@/lib/auth";
 import { API_URL, ApiError, apiRequest } from "@/lib/api-client";
-import { canEditEiaDocument, canReviewEiaDocument, hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { canAccessReviewPortal, canEditEiaDocument, canReviewEiaDocument, hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type {
   EiaActivityItem,
@@ -108,11 +108,14 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("dashboard");
   const [exportingFormat, setExportingFormat] = useState<"json" | "docx" | "pdf" | null>(null);
   const currentMemberRole = members.find((member) => member.user_id === user.id)?.role ?? null;
-  const effectiveDocumentRole = currentMemberRole ?? (hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
+  const isWorkflowManager = hasAnyRole(user, ["owner", "admin", "project_manager"]);
   const canManageAssignments =
-    document?.created_by_id === user.id || hasAnyRole(user, ["owner", "admin", "project_manager"]);
+    document?.created_by_id === user.id || isWorkflowManager;
+  const effectiveDocumentRole = currentMemberRole ?? (canManageAssignments || hasPermission(user, PERMISSIONS.TENANT_MANAGE) ? "EDITOR" : null);
   const canEdit = canEditEiaDocument(effectiveDocumentRole);
-  const canReview = canReviewEiaDocument(effectiveDocumentRole) || canManageAssignments;
+  const canReview = canAccessReviewPortal(user) && (
+    canReviewEiaDocument(effectiveDocumentRole) || canManageAssignments
+  );
 
   const selectedSubsection = useMemo(() => {
     return document?.sections.flatMap((section) => section.subsections).find(
@@ -169,7 +172,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const selectedSubsectionAssignment = selectedSubsectionId
     ? subsectionAssignmentsById.get(selectedSubsectionId) ?? null
     : null;
-  const isAssignedAuthor = canManageAssignments || selectedSubsectionAssignment?.author_assignee?.id === user.id;
+  const isAssignedAuthor = isWorkflowManager || selectedSubsectionAssignment?.author_assignee?.id === user.id;
   const canAuthorContent = canEdit && isAssignedAuthor && completionStatus === "IN_PROGRESS" && !saveConflict;
   const myAssignedCount = assignmentOverview?.my_assigned_work.length ?? 0;
 
@@ -234,14 +237,14 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
         "#approval": "approval",
       };
       const nextView = viewByHash[window.location.hash];
-      if (nextView) {
+      if (nextView && (canReview || !["review_queue", "approval"].includes(nextView))) {
         setWorkspaceView(nextView);
       }
     };
     syncViewFromHash();
     window.addEventListener("hashchange", syncViewFromHash);
     return () => window.removeEventListener("hashchange", syncViewFromHash);
-  }, []);
+  }, [canReview]);
 
   useEffect(() => {
     if (!selectedSubsection) {
@@ -439,20 +442,24 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
             label="Evidence"
             meta="Project files"
           />
-          <WorkflowLink
-            active={workspaceView === "review_queue"}
-            icon={<FileSearch />}
-            label="Review queue"
-            meta="Awaiting review"
-            onClick={() => setWorkspaceView("review_queue")}
-          />
-          <WorkflowLink
-            active={workspaceView === "approval"}
-            icon={<FileCheck2 />}
-            label="Approval"
-            meta="Section decisions"
-            onClick={() => setWorkspaceView("approval")}
-          />
+          {canReview ? (
+            <WorkflowLink
+              active={workspaceView === "review_queue"}
+              icon={<FileSearch />}
+              label="Review queue"
+              meta="Awaiting review"
+              onClick={() => setWorkspaceView("review_queue")}
+            />
+          ) : null}
+          {canReview ? (
+            <WorkflowLink
+              active={workspaceView === "approval"}
+              icon={<FileCheck2 />}
+              label="Approval"
+              meta="Section decisions"
+              onClick={() => setWorkspaceView("approval")}
+            />
+          ) : null}
         </div>
         <Button
           className="w-full lg:w-auto"
@@ -530,7 +537,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
         />
       ) : null}
 
-      {workspaceView === "review_queue" ? (
+      {workspaceView === "review_queue" && canReview ? (
         <EiaReviewQueue
           documentId={documentId}
           onOpenSubsection={(subsectionId) => {
@@ -541,7 +548,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
         />
       ) : null}
 
-      {workspaceView === "approval" ? (
+      {workspaceView === "approval" && canReview ? (
         <EiaReviewQueue
           documentId={documentId}
           mode="approval"
@@ -647,7 +654,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                   {selectedSubsection?.subsection_number ? `${selectedSubsection.subsection_number}. ` : ""}
                   {selectedSubsection?.title ?? "Select a subsection"}
                 </h2>
-                {!isAssignedAuthor && !canManageAssignments ? (
+                {!isAssignedAuthor && !isWorkflowManager ? (
                   <p className="mt-2 text-xs font-semibold text-amber-200">Read-only: this subsection is assigned to another specialist.</p>
                 ) : null}
               </div>

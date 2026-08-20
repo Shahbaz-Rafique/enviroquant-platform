@@ -187,6 +187,7 @@ class EiaReviewQueueItemRead(BaseModel):
     author_assignee: EiaAssigneeSummaryRead | None = None
     reviewer_assignee: EiaAssigneeSummaryRead | None = None
     is_assigned_reviewer: bool = False
+    can_approve_section: bool = False
 
 
 class SubSectionCommentCreate(BaseModel):

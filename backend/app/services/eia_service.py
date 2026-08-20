@@ -409,7 +409,7 @@ def normalize_document_role(role: str) -> str:
 
 
 def is_eia_document_admin(current_user: User) -> bool:
-    admin_roles = {Roles.OWNER, Roles.ADMIN}
+    admin_roles = {Roles.OWNER, Roles.ADMIN, Roles.PROJECT_MANAGER}
     return any(role.lower() in admin_roles for role in current_user.role_names)
 
 

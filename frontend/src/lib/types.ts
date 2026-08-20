@@ -305,6 +305,7 @@ export type EiaReviewQueueItem = {
   author_assignee: EiaAssignmentUserSummary | null;
   reviewer_assignee: EiaAssignmentUserSummary | null;
   is_assigned_reviewer: boolean;
+  can_approve_section: boolean;
 };
 
 export type EiaAssignmentUpdate = {

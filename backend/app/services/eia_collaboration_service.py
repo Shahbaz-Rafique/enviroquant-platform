@@ -49,10 +49,14 @@ def invite_eia_document_member(
     email_sent: bool | None = None
 
     if target_user is None or target_user.status != "active":
+        tenant_role = {
+            "EDITOR": "CONSULTANT",
+            "REVIEWER": "REVIEWER",
+        }.get(document_role, "VIEWER")
         invitation = invite_user_for_tenant(
             db,
             current_user.tenant,
-            UserInvite(email=email, full_name=payload.full_name, role="VIEWER"),
+            UserInvite(email=email, full_name=payload.full_name, role=tenant_role),
             invited_by=current_user,
         )
         target_user = invitation.user
@@ -61,6 +65,8 @@ def invite_eia_document_member(
 
     if target_user.tenant_id != current_user.tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid tenant scope")
+
+    _validate_document_role_for_user(target_user, document_role)
 
     member = db.scalar(
         select(EiaDocumentMember).where(
@@ -236,6 +242,15 @@ def update_subsection_comment(
     comment = db.get(SubSectionComment, comment_id)
     if comment is None or comment.tenant_id != current_user.tenant_id or comment.subsection_id != subsection.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+
+    from app.services.eia_review_workflow_service import _workflow_capabilities
+
+    _, can_review = _workflow_capabilities(subsection.document, subsection, current_user)
+    if not can_review:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the assigned reviewer or a workflow manager can resolve review comments",
+        )
 
     comment.is_resolved = payload.is_resolved
     record_audit_event(
@@ -418,6 +433,25 @@ def _get_member(db: Session, member_id: UUID) -> EiaDocumentMember:
     if member is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIA document member not found")
     return member
+
+
+def _validate_document_role_for_user(user: User, document_role: str) -> None:
+    tenant_roles = {role.lower() for role in user.role_names}
+    manager_roles = {"owner", "admin", "project_manager"}
+    if document_role == "EDITOR" and tenant_roles.isdisjoint(
+        manager_roles | {"consultant"}
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The document Editor role requires a Consultant or management organization role",
+        )
+    if document_role == "REVIEWER" and tenant_roles.isdisjoint(
+        manager_roles | {"reviewer"}
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The document Reviewer role requires a Reviewer or management organization role",
+        )
 
 
 def _ensure_creator_member(db: Session, document: EiaDocument) -> None:

@@ -17,7 +17,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
-import { hasAnyRole, hasPermission, PERMISSIONS } from "@/lib/permissions";
+import {
+  canAccessAuthorPortal,
+  canAccessRegulatorPortal,
+  canAccessReviewPortal,
+  hasPermission,
+  PERMISSIONS,
+} from "@/lib/permissions";
 import type { EiaDocument, EiaDocumentStructure, Project, ProjectDocument } from "@/lib/types";
 
 export default function ProjectWorkspacePage() {
@@ -37,8 +43,9 @@ export default function ProjectWorkspacePage() {
   const canUpload = hasPermission(user, PERMISSIONS.DOCUMENT_UPLOAD);
   const canManageEia =
     hasPermission(user, PERMISSIONS.PROJECT_CREATE) || hasPermission(user, PERMISSIONS.PROJECT_UPDATE);
-  const canAccessRegulatorInsights =
-    hasAnyRole(user, ["regulator", "reviewer", "admin", "owner"]) || hasPermission(user, PERMISSIONS.REVIEW_READ);
+  const canAccessRegulatorInsights = canAccessRegulatorPortal(user);
+  const reviewerPortal = canAccessReviewPortal(user) && !canAccessAuthorPortal(user);
+  const regulatorPortal = canAccessRegulatorPortal(user) && !canAccessAuthorPortal(user) && !reviewerPortal;
 
   const loadWorkspace = useCallback(async () => {
     setLoading(true);
@@ -206,7 +213,11 @@ export default function ProjectWorkspacePage() {
                     eiaDocuments.map((eiaDocument) => (
                       <Link
                         className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.02] p-4 transition-colors hover:border-[#67E8F9]/24 hover:bg-white/[0.06] md:grid-cols-[minmax(0,1fr)_auto]"
-                        href={`/projects/${projectId}/eia/${eiaDocument.id}`}
+                        href={regulatorPortal
+                          ? `/projects/${projectId}/regulator`
+                          : reviewerPortal
+                            ? `/projects/${projectId}/eia/${eiaDocument.id}/review`
+                            : `/projects/${projectId}/eia/${eiaDocument.id}`}
                         key={eiaDocument.id}
                       >
                         <div className="min-w-0">
@@ -221,7 +232,7 @@ export default function ProjectWorkspacePage() {
                           <Badge>{eiaDocument.status}</Badge>
                           <span className="hidden items-center gap-1 text-xs font-semibold text-white/52 md:inline-flex">
                             <FileSearch className="size-3.5" />
-                            Review
+                            {regulatorPortal ? "Inspect" : reviewerPortal ? "Review" : "Open"}
                           </span>
                         </div>
                       </Link>
@@ -293,9 +304,9 @@ export default function ProjectWorkspacePage() {
               <div className="rounded-lg border border-[#cbe0d5] bg-[#edf6f1] p-3">
                 <div className="mb-1 flex items-center gap-2 font-bold text-white">
                   <BookOpenCheck className="size-4" />
-                  Evidence-first review
+                  Controlled human review
                 </div>
-                <p>Evaluation runs will stay versioned and traceable to uploaded document versions.</p>
+                <p>Every assignment, status transition, subsection comment, revision request, and approval remains traceable.</p>
               </div>
               <Button asChild variant="outline">
                 <Link href={`/projects/${projectId}/documents`}>

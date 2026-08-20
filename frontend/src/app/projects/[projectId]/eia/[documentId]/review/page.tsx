@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { useRequireAuth } from "@/components/auth/auth-gate";
-import { EiaReviewCenter } from "@/components/eia/eia-review-center";
+import { EiaReviewPortal } from "@/components/eia/eia-review-portal";
+import { AccessDenied } from "@/components/layout/access-denied";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageNavigation } from "@/components/layout/page-navigation";
 import { Button } from "@/components/ui/button";
+import { canAccessReviewPortal } from "@/lib/permissions";
 
 export default function EiaReviewCenterPage() {
   const params = useParams<{ projectId: string; documentId: string }>();
@@ -16,6 +18,10 @@ export default function EiaReviewCenterPage() {
 
   if (loading || !user) {
     return null;
+  }
+
+  if (!canAccessReviewPortal(user)) {
+    return <AppShell user={user}><AccessDenied /></AppShell>;
   }
 
   return (
@@ -39,7 +45,7 @@ export default function EiaReviewCenterPage() {
         ]}
       />
 
-      <EiaReviewCenter documentId={params.documentId} projectId={params.projectId} user={user} />
+      <EiaReviewPortal documentId={params.documentId} projectId={params.projectId} />
     </AppShell>
   );
 }
