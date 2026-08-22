@@ -132,9 +132,9 @@ export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(fu
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm">
+    <div className="eia-light-editor overflow-hidden rounded-2xl border border-[#d5dad5] bg-white">
       {editable ? (
-        <div className="flex flex-wrap items-center gap-1 border-b border-white/10 bg-white/[0.04] px-3 py-2">
+        <div className="eia-editor-toolbar flex flex-wrap items-center gap-1 border-b border-[#dfe3de] bg-[#f7f8f5] px-3 py-2">
           <ToolbarButton
             active={editor?.isActive("bold")}
             disabled={!editor}
@@ -163,7 +163,7 @@ export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(fu
             label="Heading 2"
             onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
           />
-          <span className="mx-1 h-6 w-px bg-white/10" />
+          <span className="mx-1 h-6 w-px bg-[#dfe3de]" />
           <ToolbarButton
             active={editor?.isActive("bulletList")}
             disabled={!editor}
@@ -194,7 +194,7 @@ export const TipTapEditor = forwardRef<TipTapEditorHandle, TipTapEditorProps>(fu
           >
             <ImageIcon />
           </FileTrigger>
-          <span className="mx-1 h-6 w-px bg-white/10" />
+          <span className="mx-1 h-6 w-px bg-[#dfe3de]" />
           <ToolbarButton
             disabled={!editor || !editor.can().undo()}
             icon={<Undo2 />}

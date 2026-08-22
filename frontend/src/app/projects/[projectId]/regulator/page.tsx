@@ -36,11 +36,11 @@ export default function EiaRegulatorInsightsPage() {
           </Button>
         }
         backHref={`/projects/${params.projectId}`}
-        backLabel="Project"
+        backLabel="Project workspace"
         breadcrumbs={[
           { label: "Projects", href: "/projects" },
-          { label: "Project Workspace", href: `/projects/${params.projectId}` },
-          { label: "Regulator Insights" }
+          { label: "Project workspace", href: `/projects/${params.projectId}` },
+          { label: "Regulator insights" }
         ]}
       />
 

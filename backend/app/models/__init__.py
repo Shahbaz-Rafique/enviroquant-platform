@@ -10,6 +10,7 @@ from app.models.eia_evaluation import EiaEvaluationFinding, EiaEvaluationRun, Ei
 from app.models.eia_review_approval import EiaReviewApproval
 from app.models.eia_source_mapping import EiaSourceMapping
 from app.models.project import Project, ProjectMember
+from app.models.regulation import RegulationRequirement, RegulationStandard
 from app.models.rbac import Permission, Role, role_permissions, user_roles
 from app.models.subsection_comment import SubSectionComment
 from app.models.subsection_revision import SubSectionRevision
@@ -38,6 +39,8 @@ __all__ = [
     "Permission",
     "Project",
     "ProjectMember",
+    "RegulationRequirement",
+    "RegulationStandard",
     "Role",
     "SubSectionComment",
     "SubSectionRevision",

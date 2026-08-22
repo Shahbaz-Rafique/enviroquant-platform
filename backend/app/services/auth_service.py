@@ -9,7 +9,7 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterTenantRequest, TokenResponse
-from app.services.rbac_service import create_default_roles, sync_tenant_roles
+from app.services.rbac_service import create_default_roles
 
 
 def slugify(value: str) -> str:
@@ -50,7 +50,9 @@ def authenticate_user(db: Session, payload: LoginRequest) -> User:
     if payload.tenant_slug:
         query = query.join(Tenant).where(Tenant.slug == slugify(payload.tenant_slug))
 
-    users = db.scalars(query).unique().all()
+    # Only two matches are needed to distinguish a unique account from an
+    # ambiguous email, even for tenants with a large user table.
+    users = db.scalars(query.limit(2)).unique().all()
     if len(users) != 1:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,11 +65,6 @@ def authenticate_user(db: Session, payload: LoginRequest) -> User:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email, tenant, or password",
         )
-
-    if user.tenant:
-        sync_tenant_roles(db, user.tenant)
-        db.commit()
-        db.refresh(user)
 
     return user
 

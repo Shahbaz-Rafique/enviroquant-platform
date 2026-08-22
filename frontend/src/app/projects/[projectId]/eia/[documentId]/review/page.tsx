@@ -36,12 +36,12 @@ export default function EiaReviewCenterPage() {
           </Button>
         }
         backHref={`/projects/${params.projectId}/eia/${params.documentId}`}
-        backLabel="EIA Builder"
+        backLabel="EIA dashboard"
         breadcrumbs={[
           { label: "Projects", href: "/projects" },
-          { label: "Project Workspace", href: `/projects/${params.projectId}` },
-          { label: "EIA Builder", href: `/projects/${params.projectId}/eia/${params.documentId}` },
-          { label: "Review Center" }
+          { label: "Project workspace", href: `/projects/${params.projectId}` },
+          { label: "EIA dashboard", href: `/projects/${params.projectId}/eia/${params.documentId}` },
+          { label: "Review center" }
         ]}
       />
 

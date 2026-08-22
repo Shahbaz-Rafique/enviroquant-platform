@@ -24,7 +24,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      DATABASE_URL: postgresql+psycopg://enviroquant:enviroquant@postgres:5432/enviroquant
+      DATABASE_URL: postgresql://neondb_owner:npg_7lxEFohdL2qj@ep-summer-bonus-aj9ydkpa-pooler.c-3.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
       FRONTEND_APP_URL: http://localhost:3000
     depends_on:

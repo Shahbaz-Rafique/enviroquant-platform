@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from difflib import SequenceMatcher
 from html import escape
 import re
 from uuid import UUID
@@ -16,6 +15,7 @@ from app.models.eia_source_mapping import EiaSourceMapping
 from app.models.user import User
 from app.schemas.eia import EiaSourceDetectedSection
 from app.services.audit_service import record_audit_event
+from app.services.semantic_mapping_service import best_semantic_match
 
 
 AUTO_MAPPING_METHOD = "auto_parsed_upload"
@@ -63,7 +63,7 @@ def auto_structure_eia_document(
     unmatched_sections = 0
 
     for detected_section in detected_sections:
-        subsection, confidence = _best_subsection_match(document, detected_section)
+        subsection, confidence, detected_method = _best_subsection_match(document, detected_section)
         html_fragment = _content_to_html(detected_section)
         mapping = EiaSourceMapping(
             tenant_id=current_user.tenant_id,
@@ -77,7 +77,7 @@ def auto_structure_eia_document(
             suggested_content_html=html_fragment,
             confidence_score=confidence,
             status="NEEDS_REVIEW",
-            detection_method=AUTO_MAPPING_METHOD,
+            detection_method=detected_method,
             assistant_notes=(
                 "Auto-structured from parsed upload into the best-matching checklist subsection."
                 if subsection
@@ -87,6 +87,7 @@ def auto_structure_eia_document(
                 "auto_generated": True,
                 "input_confidence": detected_section.confidence,
                 "detected_metadata": detected_section.metadata,
+                "pipeline": AUTO_MAPPING_METHOD,
             },
         )
         db.add(mapping)
@@ -238,36 +239,32 @@ def _detected_sections_from_metadata(
 def _best_subsection_match(
     document: EiaDocument,
     detected_section: EiaSourceDetectedSection,
-) -> tuple[EiaSubSection | None, float]:
+) -> tuple[EiaSubSection | None, float, str]:
     subsections = [subsection for section in document.sections for subsection in section.subsections]
     if detected_section.section_number:
         normalized = detected_section.section_number.strip()
         exact = next((subsection for subsection in subsections if subsection.subsection_number == normalized), None)
         if exact:
-            return exact, max(float(detected_section.confidence or 0.0), 0.96)
+            return exact, max(float(detected_section.confidence or 0.0), 0.96), "exact_section_number"
 
         top_level = normalized.split(".")[0]
         section_match = next((section for section in document.sections if section.section_number == top_level), None)
         if section_match and section_match.subsections:
-            best_in_section = _best_title_match(section_match.subsections, detected_section.title)
+            best_in_section = _best_title_match(section_match.subsections, detected_section)
             if best_in_section is not None:
                 return best_in_section
 
-    return _best_title_match(subsections, detected_section.title)
+    return _best_title_match(subsections, detected_section)
 
 
-def _best_title_match(subsections: list[EiaSubSection], detected_title: str) -> tuple[EiaSubSection | None, float]:
-    normalized_title = _normalize_text(detected_title)
-    best_subsection: EiaSubSection | None = None
-    best_score = 0.0
-    for subsection in subsections:
-        score = SequenceMatcher(None, normalized_title, _normalize_text(subsection.title)).ratio()
-        if score > best_score:
-            best_score = score
-            best_subsection = subsection
-    if best_subsection is None or best_score < 0.35:
-        return None, 0.0
-    return best_subsection, round(min(0.94, best_score), 2)
+def _best_title_match(
+    subsections: list[EiaSubSection], detected_section: EiaSourceDetectedSection
+) -> tuple[EiaSubSection | None, float, str]:
+    query = f"{detected_section.title} {detected_section.content or ''}"
+    index, score, method = best_semantic_match(query, [item.title for item in subsections])
+    if index is None or score < 0.28:
+        return None, 0.0, method
+    return subsections[index], round(min(0.94, score), 2), method
 
 
 def _mapping_heading(detected_section: EiaSourceDetectedSection) -> str:

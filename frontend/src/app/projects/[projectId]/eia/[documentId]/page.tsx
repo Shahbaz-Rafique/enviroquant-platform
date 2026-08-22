@@ -40,11 +40,11 @@ export default function EiaDocumentBuilderPage() {
           </Button>
         ) : undefined}
         backHref={`/projects/${params.projectId}`}
-        backLabel="Project"
+        backLabel="Project workspace"
         breadcrumbs={[
           { label: "Projects", href: "/projects" },
-          { label: "Project Workspace", href: `/projects/${params.projectId}` },
-          { label: "EIA Builder" }
+          { label: "Project workspace", href: `/projects/${params.projectId}` },
+          { label: "EIA dashboard" }
         ]}
       />
 

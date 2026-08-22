@@ -56,7 +56,7 @@ const statusFilters = [
   { value: "COMPLIANT", label: "Compliant" },
   { value: "PARTIALLY_COMPLIANT", label: "Partial" },
   { value: "NEEDS_IMPROVEMENT", label: "Needs Work" },
-  { value: "MISSING", label: "Missing" },
+  { value: "MISSING_INFORMATION", label: "Missing information" },
   { value: "NEEDS_REVIEW", label: "Needs Review" }
 ] as const;
 
@@ -223,6 +223,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
 
   const latestScore = getRunMetadataNumber(activeRun, "overall_score");
   const latestAppraisal = getRunMetadataString(activeRun, "overall_appraisal", "-");
+  const scoringEnabled = activeRun?.run_metadata?.scoring_enabled === true;
   const warnings = getRunMetadataStringList(activeRun, "warnings");
   const reviewReport = getRunMetadataObject(activeRun, "review_report");
   const activeApproval = approvals.find((item) => item.status === "REQUESTED") ?? approvals[0] ?? null;
@@ -353,8 +354,8 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
 
           <div className="grid min-w-[340px] gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="grid grid-cols-2 gap-3">
-              <Metric label="Overall score" value={`${latestScore}/10`} />
-              <Metric label="Appraisal" value={latestAppraisal} />
+              {scoringEnabled ? <Metric label="Overall score" value={`${latestScore}/10`} /> : null}
+              {scoringEnabled ? <Metric label="Appraisal" value={latestAppraisal} /> : null}
             </div>
             {canRunReview ? (
               <label className="grid gap-2 text-sm font-semibold text-white/72">
@@ -526,7 +527,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
             <CardContent className="grid gap-3 md:grid-cols-2 3xl:grid-cols-4">
               {isEvaluationRunActive(activeRun) ? (
                 <Alert className="md:col-span-2 xl:col-span-4">
-                  {selectedRunStatusMessage || "Review is still running. Findings and section scores will appear when processing finishes."}
+                  {selectedRunStatusMessage || "Review is still running. Findings and section summaries will appear when processing finishes."}
                 </Alert>
               ) : null}
               {activeRun?.status === "FAILED" && selectedRunStatusMessage ? (
@@ -546,7 +547,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                       <div className="text-xs font-black uppercase text-[#B6F7FF]">Section {summary.section_number}</div>
                       <div className="mt-1 text-sm font-semibold text-white">{summary.section_title}</div>
                     </div>
-                    <div className="text-xl font-black text-white">{summary.score}/10</div>
+                    {scoringEnabled ? <div className="text-xl font-black text-white">{summary.score}/10</div> : null}
                   </div>
                   <p className="mt-3 text-sm leading-6 text-white/62">{summary.summary_comment}</p>
                 </div>
@@ -565,8 +566,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                   Run Comparison
                 </CardTitle>
                 <CardDescription>
-                  Score delta {comparison.delta >= 0 ? "+" : ""}
-                  {comparison.delta} against the selected baseline run.
+                  Deterministic finding changes against the selected baseline run.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
@@ -575,13 +575,13 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                     <div key={section.section_number} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <div className="text-xs font-black uppercase text-[#B6F7FF]">Section {section.section_number}</div>
                       <div className="mt-1 text-sm font-semibold text-white">{section.section_title}</div>
-                      <div className="mt-3 text-sm text-white/64">
+                      {scoringEnabled ? <div className="mt-3 text-sm text-white/64">
                         Current {section.current_score}/10 · Baseline {section.baseline_score}/10
-                      </div>
-                      <div className={cn("mt-2 text-sm font-bold", section.delta >= 0 ? "text-emerald-200" : "text-red-100")}>
+                      </div> : null}
+                      {scoringEnabled ? <div className={cn("mt-2 text-sm font-bold", section.delta >= 0 ? "text-emerald-200" : "text-red-100")}>
                         Delta {section.delta >= 0 ? "+" : ""}
                         {section.delta}
-                      </div>
+                      </div> : null}
                     </div>
                   ))}
                 </div>
@@ -990,7 +990,7 @@ function findingStatusClass(status: string) {
   if (status === "NEEDS_IMPROVEMENT") {
     return "border-red-400/25 bg-red-500/10 text-red-100";
   }
-  if (status === "MISSING") {
+  if (status === "MISSING_INFORMATION") {
     return "border-red-500/30 bg-red-600/14 text-red-50";
   }
   return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
@@ -1015,12 +1015,15 @@ function isEvaluationRunActive(run: EiaEvaluationRun | EiaEvaluationRunDetail | 
 
 function getEvaluationRunMetricLine(run: EiaEvaluationRun | EiaEvaluationRunDetail) {
   if (isEvaluationRunActive(run)) {
-    return "Processing review output. Findings and score appear after completion.";
+    return "Processing review output. Findings appear after completion.";
   }
   if (run.status === "FAILED") {
-    return "Run stopped before a score could be produced.";
+    return "Run stopped before findings could be produced.";
   }
-  return `Score ${getRunMetadataNumber(run, "overall_score")}/10 · Appraisal ${getRunMetadataString(run, "overall_appraisal", "-")}`;
+  if (run.run_metadata?.scoring_enabled === true) {
+    return `Score ${getRunMetadataNumber(run, "overall_score")}/10 · Appraisal ${getRunMetadataString(run, "overall_appraisal", "-")}`;
+  }
+  return "Deterministic checklist classification complete";
 }
 
 function getEvaluationRunStatusMessage(run: EiaEvaluationRun | EiaEvaluationRunDetail | null | undefined) {
@@ -1044,7 +1047,7 @@ function getEvaluationRunStatusMessage(run: EiaEvaluationRun | EiaEvaluationRunD
   if (run.status === "RUNNING") {
     return totalSubsections
       ? `Review is running. ${processedSubsections}/${totalSubsections} subsections processed.`
-      : "Review is running. Findings, section summaries, and the overall score will appear when processing finishes.";
+      : "Review is running. Findings and section summaries will appear when processing finishes.";
   }
   if (run.status === "FAILED") {
     return getRunMetadataString(run, "error", "This evaluation run did not complete.");
@@ -1057,7 +1060,7 @@ function getEvaluationRunStatusMessage(run: EiaEvaluationRun | EiaEvaluationRunD
 
 function countProblemFindings(findings: EiaEvaluationFinding[]) {
   return findings.filter((finding) =>
-    ["NEEDS_IMPROVEMENT", "MISSING", "NEEDS_REVIEW"].includes(finding.status)
+    ["NEEDS_IMPROVEMENT", "MISSING_INFORMATION", "NEEDS_REVIEW"].includes(finding.status)
   ).length;
 }
 

@@ -4,6 +4,7 @@ import { BookOpen } from "lucide-react";
 
 import { useRequireAuth } from "@/components/auth/auth-gate";
 import { DocumentLibraryManager } from "@/components/documents/document-library-manager";
+import { ComplianceKnowledgeManager } from "@/components/documents/compliance-knowledge-manager";
 import { AccessDenied } from "@/components/layout/access-denied";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageNavigation } from "@/components/layout/page-navigation";
@@ -17,6 +18,7 @@ export default function LibraryPage() {
   }
 
   const canReadDocuments = hasPermission(user, PERMISSIONS.DOCUMENT_READ);
+  const canManageKnowledge = hasPermission(user, PERMISSIONS.PROJECT_CREATE);
 
   return (
     <AppShell user={user}>
@@ -29,7 +31,12 @@ export default function LibraryPage() {
           </div>
         }
       />
-      {canReadDocuments ? <DocumentLibraryManager user={user} /> : <AccessDenied />}
+      {canReadDocuments ? (
+        <div className="space-y-5">
+          <DocumentLibraryManager user={user} />
+          <ComplianceKnowledgeManager canManage={canManageKnowledge} />
+        </div>
+      ) : <AccessDenied />}
     </AppShell>
   );
 }

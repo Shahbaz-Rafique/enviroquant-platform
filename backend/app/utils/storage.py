@@ -2,7 +2,6 @@ import hashlib
 import os
 import re
 import tempfile
-from io import BytesIO
 from pathlib import Path
 from uuid import UUID
 

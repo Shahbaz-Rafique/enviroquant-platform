@@ -52,7 +52,9 @@ Each checklist item must return:
 ```json
 {
   "checklist_item": "string",
-  "status": "COMPLIANT | PARTIALLY_COMPLIANT | NON_COMPLIANT",
+  "coverage_ratio": 0.0,
+  "critical_gap_count": 0,
+  "requires_expert_review": false,
   "evidence": "string",
   "confidence": 0.0,
   "missing_elements": ["string"],
@@ -74,19 +76,15 @@ Each checklist item must return:
 * Some information present
 * Missing key details
 
-### NON_COMPLIANT
+### Deterministic decision layer
 
-* Missing or unclear information
+The AI extracts evidence, gaps, and uncertainty. Versioned rules determine `COMPLIANT`, `PARTIALLY_COMPLIANT`, `NEEDS_IMPROVEMENT`, `MISSING_INFORMATION`, or `NEEDS_REVIEW`.
 
 ---
 
 ## 5. Section Completion Rule
 
-Section status is derived from checklist:
-
-* ≥ 80% compliant → COMPLIANT
-* 40% – 79% → PARTIALLY_COMPLIANT
-* < 40% → NON_COMPLIANT
+Section summaries use transparent status counts. Numeric scores and A–E grades are disabled by default for MVP 1.
 
 ---
 

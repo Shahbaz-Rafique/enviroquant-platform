@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.permissions import Permissions, Roles
-from app.models.eia import EiaDocument, EiaSection
-from app.models.eia_evaluation import EiaEvaluationRun, EiaEvaluationSectionSummary
+from app.models.eia import EiaDocument
+from app.models.eia_evaluation import EiaEvaluationRun
 from app.models.eia_review_approval import EiaReviewApproval
 from app.models.project import Project
 from app.models.user import User
@@ -50,6 +50,7 @@ def get_regulator_overview(
                 "latest_appraisal": _run_appraisal(latest_completed),
                 "latest_run_completed_at": latest_completed.completed_at if latest_completed else None,
                 "approval_status": latest_decision.status if latest_decision else None,
+                "scoring_enabled": _scoring_enabled(latest_completed),
             }
         )
         for run in document.evaluation_runs:
@@ -64,6 +65,7 @@ def get_regulator_overview(
                     "completed_at": run.completed_at,
                     "overall_score": _run_score(run),
                     "overall_appraisal": _run_appraisal(run),
+                    "scoring_enabled": _scoring_enabled(run),
                 }
             )
         recent_decisions.extend(review_approvals)
@@ -153,6 +155,7 @@ def compare_project_eia_documents(
         "left_status_counts": _run_status_counts(left_run),
         "right_status_counts": _run_status_counts(right_run),
         "section_deltas": section_deltas,
+        "scoring_enabled": _scoring_enabled(left_run) and _scoring_enabled(right_run),
     }
 
 
@@ -186,6 +189,10 @@ def _run_score(run: EiaEvaluationRun | None) -> float:
         return 0.0
     value = run.run_metadata.get("overall_score")
     return float(value) if isinstance(value, (int, float)) else 0.0
+
+
+def _scoring_enabled(run: EiaEvaluationRun | None) -> bool:
+    return bool(run and isinstance(run.run_metadata, dict) and run.run_metadata.get("scoring_enabled") is True)
 
 
 def _run_appraisal(run: EiaEvaluationRun | None) -> str | None:

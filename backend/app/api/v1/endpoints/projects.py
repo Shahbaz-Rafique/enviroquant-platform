@@ -3,8 +3,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_permission, require_role_in_tenant
-from app.core.permissions import DOCUMENT_UPLOAD_ROLES, PROJECT_MANAGE_ROLES, READ_ONLY_ROLES, Permissions
+from app.core.dependencies import require_role_in_tenant
+from app.core.permissions import DOCUMENT_UPLOAD_ROLES, PROJECT_MANAGE_ROLES, READ_ONLY_ROLES
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.project import Project

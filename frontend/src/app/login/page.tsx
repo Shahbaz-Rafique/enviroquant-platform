@@ -3,7 +3,7 @@
 import { Leaf, Loader2, LogIn, ShieldCheck, Sparkles, UserPlus } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { PasswordInput } from "@/components/auth/password-input";
 import { BrandMark } from "@/components/site/brand-mark";
@@ -26,6 +26,10 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
 
   const hero =
     mode === "register"
@@ -76,10 +80,9 @@ export default function LoginPage() {
         }
       );
       storeSession(session);
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
-    } finally {
       setLoading(false);
     }
   }
@@ -148,6 +151,7 @@ export default function LoginPage() {
                         ? "bg-[#8BD15F] text-[#104A83] shadow-[0_12px_24px_rgba(139,209,95,0.22)]"
                         : "text-white/66 hover:bg-white/6 hover:text-white"
                     )}
+                    disabled={loading}
                     onClick={() => setMode(item)}
                   >
                     {item === "login" ? "Sign In" : "Register"}
@@ -167,7 +171,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form className="mt-8 grid gap-5" onSubmit={submit}>
+            <form aria-busy={loading} className="mt-8 grid gap-5" onSubmit={submit}>
               {error ? (
                 <Alert className="border-red-400/30 bg-red-500/10 text-red-100">
                   {error}
@@ -247,14 +251,29 @@ export default function LoginPage() {
                 disabled={loading}
               >
                 {loading ? (
-                  <Loader2 className="animate-spin" />
+                  <>
+                    <Loader2 className="animate-spin" />
+                    {mode === "register" ? "Creating workspace..." : "Signing in..."}
+                  </>
                 ) : mode === "register" ? (
-                  <UserPlus />
+                  <>
+                    <UserPlus />
+                    Create Workspace
+                  </>
                 ) : (
-                  <LogIn />
+                  <>
+                    <LogIn />
+                    Sign In
+                  </>
                 )}
-                {mode === "register" ? "Create Workspace" : "Sign In"}
               </Button>
+              <span className="sr-only" aria-live="polite">
+                {loading
+                  ? mode === "register"
+                    ? "Creating your workspace"
+                    : "Signing you in"
+                  : ""}
+              </span>
             </form>
           </div>
         </section>

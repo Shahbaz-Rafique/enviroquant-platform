@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.checklist_mapping import ChecklistMapping
 from app.models.eia import EiaDocument, EiaSection, EiaSubSection
+from app.services.compliance_methodology import CHECKLIST_VERSION
 
 
 EIA_STRUCTURE = {
@@ -241,12 +242,93 @@ def seed_eia_structure(db: Session, document: EiaDocument) -> None:
                     subsection_id=eia_subsection.id,
                     checklist_section=subsection["number"],
                     checklist_title=subsection["title"],
+                    checklist_version=CHECKLIST_VERSION,
                     importance=_importance_for_checklist_item(subsection["number"]),
                 )
             )
             subsection_order += 1
 
     db.flush()
+
+
+def synchronize_eia_structure(db: Session, document: EiaDocument) -> dict[str, int]:
+    """Add missing checklist records without replacing consultant-authored content."""
+
+    sections_by_number = {section.section_number: section for section in document.sections}
+    subsections_by_number = {
+        subsection.subsection_number: subsection
+        for section in document.sections
+        for subsection in section.subsections
+    }
+    added_sections = 0
+    added_subsections = 0
+    updated_mappings = 0
+    subsection_order = 1
+
+    for section_order, (section_number, section_data) in enumerate(EIA_STRUCTURE.items(), start=1):
+        section = sections_by_number.get(section_number)
+        if section is None:
+            section = EiaSection(
+                tenant_id=document.tenant_id,
+                eia_document_id=document.id,
+                section_number=section_number,
+                title=section_data["title"],
+                display_order=section_order,
+            )
+            db.add(section)
+            db.flush()
+            sections_by_number[section_number] = section
+            added_sections += 1
+        else:
+            section.display_order = section_order
+
+        for item in section_data["subsections"]:
+            subsection = subsections_by_number.get(item["number"])
+            if subsection is None:
+                subsection = EiaSubSection(
+                    tenant_id=document.tenant_id,
+                    eia_document_id=document.id,
+                    section_id=section.id,
+                    subsection_number=item["number"],
+                    title=item["title"],
+                    completion_status="NOT_STARTED",
+                    progress_percentage=0.0,
+                    display_order=subsection_order,
+                )
+                db.add(subsection)
+                db.flush()
+                subsections_by_number[item["number"]] = subsection
+                added_subsections += 1
+            else:
+                subsection.display_order = subsection_order
+
+            mapping = next(
+                (value for value in subsection.checklist_mappings if value.checklist_section == item["number"]),
+                None,
+            )
+            if mapping is None:
+                mapping = ChecklistMapping(
+                    tenant_id=document.tenant_id,
+                    subsection_id=subsection.id,
+                    checklist_section=item["number"],
+                    checklist_title=item["title"],
+                    checklist_version=CHECKLIST_VERSION,
+                    importance=_importance_for_checklist_item(item["number"]),
+                )
+                db.add(mapping)
+                updated_mappings += 1
+            else:
+                mapping.checklist_title = item["title"]
+                mapping.checklist_version = CHECKLIST_VERSION
+            subsection_order += 1
+
+    document.checklist_version = CHECKLIST_VERSION
+    db.flush()
+    return {
+        "added_sections": added_sections,
+        "added_subsections": added_subsections,
+        "updated_mappings": updated_mappings,
+    }
 
 
 def _importance_for_checklist_item(checklist_section: str) -> str:

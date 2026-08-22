@@ -44,6 +44,8 @@ export function FileTrigger({
         accept={accept}
         className="sr-only"
         disabled={disabled}
+        hidden
+        tabIndex={-1}
         type="file"
         onChange={selectFile}
       />

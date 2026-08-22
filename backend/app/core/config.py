@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     environment: str = "local"
     api_v1_prefix: str = "/api/v1"
     database_url: str = Field(..., min_length=1)
+    database_connect_timeout_seconds: int = Field(default=3, ge=1, le=30)
     secret_key: str = Field(default="change-this-before-deployment", min_length=16)
     access_token_expire_minutes: int = 480
     allowed_origins: list[str] = ["http://localhost:3000"]
@@ -33,6 +34,19 @@ class Settings(BaseSettings):
     openai_evaluation_model: str = "gpt-4.1-mini"
     openai_evaluation_timeout_seconds: int = 90
     openai_evaluation_max_concurrency: int = 6
+    enable_compliance_scoring: bool = False
+    evaluation_worker_poll_seconds: float = Field(default=2.0, ge=0.25, le=60.0)
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def select_installed_postgres_driver(cls, value: object) -> object:
+        if not isinstance(value, str):
+            return value
+        if value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+psycopg://", 1)
+        if value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql+psycopg://", 1)
+        return value
 
 
 @lru_cache

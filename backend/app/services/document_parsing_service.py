@@ -35,6 +35,12 @@ def parse_document_bytes(content: bytes, filename: str, mime_type: str | None) -
             return _parse_pdf(content)
         if extension == ".docx":
             return _parse_docx(content)
+        if extension in {".txt", ".md", ".csv", ".tsv", ".html", ".htm"}:
+            return _parse_plain_text(content, parser_name=f"text-{extension.lstrip('.')}")
+        if extension in {".xlsx", ".xlsm"}:
+            return _parse_workbook(content)
+        if extension in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}:
+            return _parse_image_ocr(content)
         if extension == ".doc":
             return ParsedDocument(
                 parser_status="unsupported",
@@ -78,6 +84,7 @@ def _parse_pdf(content: bytes) -> ParsedDocument:
             current_section_number=current_section_number,
             current_section_title=current_section_title,
             heading_path=heading_path,
+            parser_name="pypdf",
         )
         chunks.extend(page_chunks)
 
@@ -182,6 +189,57 @@ def _parse_docx(content: bytes) -> ParsedDocument:
     )
 
 
+def _parse_plain_text(content: bytes, *, parser_name: str) -> ParsedDocument:
+    text = content.decode("utf-8-sig", errors="replace")
+    chunks, _, _, _ = _extract_chunks_from_text(
+        text,
+        page_number=None,
+        starting_index=0,
+        current_section_number=None,
+        current_section_title=None,
+        heading_path=[],
+        parser_name=parser_name,
+    )
+    return ParsedDocument(
+        parser_status="completed" if chunks else "empty",
+        chunks=chunks,
+        metadata=_parsed_metadata(chunks, parser_name=parser_name),
+    )
+
+
+def _parse_workbook(content: bytes) -> ParsedDocument:
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(BytesIO(content), read_only=True, data_only=True)
+    text_parts: list[str] = []
+    for worksheet in workbook.worksheets:
+        text_parts.append(f"{worksheet.title}")
+        for row in worksheet.iter_rows(values_only=True):
+            values = [str(value).strip() for value in row if value is not None and str(value).strip()]
+            if values:
+                text_parts.append(" | ".join(values))
+    return _parse_plain_text("\n".join(text_parts).encode(), parser_name="openpyxl")
+
+
+def _parse_image_ocr(content: bytes) -> ParsedDocument:
+    try:
+        from PIL import Image
+        import pytesseract
+
+        text = pytesseract.image_to_string(Image.open(BytesIO(content)))
+    except (ImportError, RuntimeError) as exc:
+        return ParsedDocument(
+            parser_status="unsupported",
+            chunks=[],
+            metadata={
+                "error": f"Image OCR runtime is unavailable: {exc}",
+                "detected_sections": [],
+                "chunk_count": 0,
+            },
+        )
+    return _parse_plain_text(text.encode(), parser_name="tesseract-ocr")
+
+
 def _extract_chunks_from_text(
     text: str,
     *,
@@ -190,6 +248,7 @@ def _extract_chunks_from_text(
     current_section_number: str | None,
     current_section_title: str | None,
     heading_path: list[str],
+    parser_name: str,
 ) -> tuple[list[ParsedChunk], str | None, str | None, list[str]]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     chunks: list[ParsedChunk] = []
@@ -212,7 +271,7 @@ def _extract_chunks_from_text(
                     section_title=current_section_title,
                     heading_path=heading_path,
                     text=segment,
-                    parser_name="pypdf",
+                    parser_name=parser_name,
                     page_number_estimated=False,
                 )
             )

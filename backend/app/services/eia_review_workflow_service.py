@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -23,7 +22,6 @@ from app.services.eia_service import (
     DOCUMENT_READ_ROLES,
     get_eia_document_for_tenant,
     get_document_member_role,
-    is_eia_document_admin,
 )
 
 

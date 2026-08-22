@@ -91,7 +91,7 @@ export function EiaRegulatorInsights({ projectId }: EiaRegulatorInsightsProps) {
         <Card>
           <CardHeader>
             <CardTitle>Quality Benchmark</CardTitle>
-            <CardDescription>Rank EIA documents by the latest completed evaluation score and latest approval outcome.</CardDescription>
+            <CardDescription>Review the latest deterministic classification run and approval outcome for each EIA.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
             {!overview?.benchmark_documents.length ? <Alert>No evaluated EIA documents available for benchmarking.</Alert> : null}
@@ -103,8 +103,8 @@ export function EiaRegulatorInsights({ projectId }: EiaRegulatorInsightsProps) {
                     <div className="mt-1 text-sm font-semibold text-white">{item.title}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-black text-white">{item.latest_score}/10</div>
-                    <div className="text-xs text-white/56">{item.latest_appraisal ?? "No appraisal"}</div>
+                    <div className="text-sm font-bold text-white">{item.scoring_enabled ? `${item.latest_score}/10` : "Classified"}</div>
+                    <div className="text-xs text-white/56">{item.scoring_enabled ? item.latest_appraisal ?? "No appraisal" : "Rule-based review"}</div>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -131,8 +131,8 @@ export function EiaRegulatorInsights({ projectId }: EiaRegulatorInsightsProps) {
                     <div className="mt-1 text-xs text-white/52">{new Date(point.created_at).toLocaleString()}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-black text-white">{point.overall_score}/10</div>
-                    <div className="text-xs text-white/56">{point.overall_appraisal ?? "-"}</div>
+                    <div className="text-sm font-bold text-white">{point.scoring_enabled ? `${point.overall_score}/10` : "Completed"}</div>
+                    <div className="text-xs text-white/56">{point.scoring_enabled ? point.overall_appraisal ?? "-" : "Deterministic classification"}</div>
                   </div>
                 </div>
               </div>
@@ -186,23 +186,23 @@ export function EiaRegulatorInsights({ projectId }: EiaRegulatorInsightsProps) {
             {!comparison && !comparing ? <Alert>Select two different evaluated EIA documents to compare.</Alert> : null}
             {comparison ? (
               <div className="grid gap-4">
-                <div className="grid gap-3 md:grid-cols-3">
+                {comparison.scoring_enabled ? <div className="grid gap-3 md:grid-cols-3">
                   <MetricCard icon={<GitCompareArrows />} label="Left Score" value={`${comparison.left_score}/10`} compact />
                   <MetricCard icon={<GitCompareArrows />} label="Right Score" value={`${comparison.right_score}/10`} compact />
                   <MetricCard icon={<AlertTriangle />} label="Delta" value={`${comparison.delta >= 0 ? "+" : ""}${comparison.delta}`} compact />
-                </div>
+                </div> : <Alert>Score grading is disabled. Compare the status counts and changed findings instead.</Alert>}
                 <div className="grid gap-3 md:grid-cols-2">
                   {comparison.section_deltas.map((section) => (
                     <div key={section.section_number} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                       <div className="text-xs font-black uppercase text-[#B6F7FF]">Section {section.section_number}</div>
                       <div className="mt-1 text-sm font-semibold text-white">{section.section_title}</div>
-                      <div className="mt-3 text-sm text-white/68">
+                      {comparison.scoring_enabled ? <div className="mt-3 text-sm text-white/68">
                         Left {section.current_score}/10 · Right {section.baseline_score}/10
-                      </div>
-                      <div className={cn("mt-2 text-sm font-bold", section.delta >= 0 ? "text-emerald-200" : "text-red-100")}>
+                      </div> : null}
+                      {comparison.scoring_enabled ? <div className={cn("mt-2 text-sm font-bold", section.delta >= 0 ? "text-emerald-200" : "text-red-100")}>
                         Delta {section.delta >= 0 ? "+" : ""}
                         {section.delta}
-                      </div>
+                      </div> : null}
                     </div>
                   ))}
                 </div>

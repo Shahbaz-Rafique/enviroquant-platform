@@ -32,7 +32,7 @@ export default function EiaSubsectionWorkspacePage() {
   const parentHref = reviewerPortal
     ? `/projects/${params.projectId}/eia/${params.documentId}/review`
     : `/projects/${params.projectId}/eia/${params.documentId}`;
-  const parentLabel = reviewerPortal ? "Review queue" : "EIA Builder";
+  const parentLabel = reviewerPortal ? "Review center" : "EIA dashboard";
 
   return (
     <AppShell user={user}>
@@ -49,9 +49,10 @@ export default function EiaSubsectionWorkspacePage() {
         backLabel={parentLabel}
         breadcrumbs={[
           { label: "Projects", href: "/projects" },
-          { label: "Project Workspace", href: `/projects/${params.projectId}` },
-          { label: parentLabel, href: parentHref },
-          { label: "Subsection" }
+          { label: "Project workspace", href: `/projects/${params.projectId}` },
+          { label: "EIA dashboard", href: `/projects/${params.projectId}/eia/${params.documentId}` },
+          ...(reviewerPortal ? [{ label: "Review center", href: parentHref }] : []),
+          { label: reviewerPortal ? "Subsection review" : "Subsection editor" }
         ]}
       />
       <div className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-start">

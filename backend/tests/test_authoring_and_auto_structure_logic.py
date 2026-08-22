@@ -57,11 +57,12 @@ def test_best_subsection_match_prefers_exact_section_number() -> None:
         metadata={},
     )
 
-    subsection, confidence = _best_subsection_match(document, detected)
+    subsection, confidence, method = _best_subsection_match(document, detected)
 
     assert subsection is not None
     assert subsection.subsection_number == "4.6.1"
     assert confidence >= 0.96
+    assert method == "exact_section_number"
 
 
 def test_deterministic_authoring_content_builds_outline() -> None:

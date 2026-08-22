@@ -68,3 +68,11 @@ def test_parse_doc_marks_legacy_format_unsupported() -> None:
     assert parsed.parser_status == "unsupported"
     assert parsed.chunks == []
     assert "not supported" in parsed.metadata["error"].lower()
+
+
+def test_parse_plain_text_builds_detected_sections() -> None:
+    parsed = parse_document_bytes(FIXTURE_TEXT.encode(), "legacy-report.txt", "text/plain")
+
+    assert parsed.parser_status == "completed"
+    assert parsed.metadata["detected_sections"]
+    assert any(chunk.section_number == "1.1.1" for chunk in parsed.chunks)

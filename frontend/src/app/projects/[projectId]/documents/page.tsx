@@ -59,7 +59,7 @@ export default function ProjectDocumentsPage() {
     <AppShell user={user}>
       <PageNavigation
         backHref={`/projects/${projectId}`}
-        backLabel="Project"
+        backLabel="Project workspace"
         breadcrumbs={[
           { label: "Projects", href: "/projects" },
           { label: project?.name ?? "Project", href: `/projects/${projectId}` },

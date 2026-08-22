@@ -83,7 +83,9 @@ Deliverable 7 — Compliance Engine
 Statuses:
 COMPLIANT
 PARTIALLY_COMPLIANT
-NON_COMPLIANT
+NEEDS_IMPROVEMENT
+MISSING_INFORMATION
+NEEDS_REVIEW
 Logic:
 deterministic
 rule-based

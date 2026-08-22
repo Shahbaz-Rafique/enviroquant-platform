@@ -107,7 +107,7 @@ def build_compiled_eia_docx_bytes(db: Session, current_user: User, document_id: 
         f"Location: {project['country'] or 'Unspecified'}"
         + (f" / {project['location']}" if project["location"] else "")
     )
-    if latest_evaluation:
+    if latest_evaluation and latest_evaluation["scoring_enabled"]:
         document.add_paragraph(
             "Latest review: "
             f"{latest_evaluation['overall_score']}/10 "
@@ -168,7 +168,7 @@ def build_compiled_eia_pdf_bytes(db: Session, current_user: User, document_id: U
             ),
         ]
     )
-    if latest_evaluation:
+    if latest_evaluation and latest_evaluation["scoring_enabled"]:
         story.append(
             Paragraph(
                 "Latest review: "
@@ -261,6 +261,10 @@ def _serialize_latest_evaluation(run: EiaEvaluationRun | None) -> dict[str, obje
         "completed_at": run.completed_at.isoformat() if run.completed_at else None,
         "overall_score": run.run_metadata.get("overall_score"),
         "overall_appraisal": run.run_metadata.get("overall_appraisal"),
+        "scoring_enabled": run.run_metadata.get("scoring_enabled") is True,
+        "checklist_version": run.checklist_version,
+        "methodology_version": run.methodology_version,
+        "rules_version": run.rules_version,
     }
 
 

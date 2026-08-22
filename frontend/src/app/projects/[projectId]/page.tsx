@@ -113,10 +113,10 @@ export default function ProjectWorkspacePage() {
           </Button>
         }
         backHref="/projects"
-        backLabel="Projects"
+        backLabel="All projects"
         breadcrumbs={[
           { label: "Projects", href: "/projects" },
-          { label: project?.name ?? "Workspace" }
+          { label: project?.name ?? "Project workspace" }
         ]}
       />
       <header className="mb-5 flex flex-col justify-between gap-4 md:flex-row md:items-start">

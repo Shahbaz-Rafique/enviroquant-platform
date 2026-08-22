@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, BriefcaseBusiness, ClipboardCheck, FileClock, FolderPlus, Leaf, RefreshCcw, Search, ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -98,26 +99,35 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
   return (
     <>
       {!compact ? (
-        <section className="mb-5 overflow-hidden rounded-xl border border-[#cfe0d7] bg-[#eaf4ee]">
-          <div className="grid gap-5 p-5 md:p-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
+        <section className="portal-hero relative mb-5 overflow-hidden rounded-[3px] border border-[#19352c] bg-[#071c17]">
+          <Image
+            aria-hidden="true"
+            alt=""
+            className="pointer-events-none absolute -bottom-28 right-[-3rem] hidden h-[400px] w-[400px] object-contain opacity-45 mix-blend-screen lg:block"
+            height={640}
+            src="/images/leaf.png"
+            width={640}
+          />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_30%,rgba(87,133,61,0.22),transparent_28%),linear-gradient(90deg,rgba(7,28,23,1)_0%,rgba(7,28,23,0.97)_58%,rgba(7,28,23,0.58)_100%)]" />
+          <div className="relative grid gap-5 p-6 md:p-8 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#287451]">
-                <Leaf className="size-4" /> EnviroQuant workspace
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#91bd61]">
+                <Leaf className="size-4" /> AI-powered environmental intelligence
               </div>
-              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.025em] text-[#173c2e] md:text-4xl">
+              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.025em] text-white md:text-4xl">
                 {pageTitle}
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-[#52675e] md:text-base">{pageDescription}</p>
-              <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#245f43]">
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/66 md:text-base">{pageDescription}</p>
+              <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#a9cc77]">
                 <ShieldCheck className="size-4" /> Evidence Before Conclusions™
               </p>
             </div>
-            <div className="rounded-lg border border-[#c8dbd1] bg-white/75 p-4">
-              <span className="inline-flex rounded-full bg-[#e2f1e8] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#236c4a]">Roadmap</span>
-              <p className="mt-3 text-sm font-semibold leading-6 text-[#29483c]">
+            <div className="border border-white/10 bg-[#102a21]/90 p-4 backdrop-blur-sm">
+              <span className="inline-flex rounded-sm border border-[#587d42] bg-[#183b2d] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#a9cc77]">Platform roadmap</span>
+              <p className="mt-3 text-sm font-semibold leading-6 text-white/88">
                 Developed toward an Environmental Intelligence Operating System™
               </p>
-              <p className="mt-1 text-xs leading-5 text-[#6a7b73]">Future platform capabilities are clearly marked and are not represented as currently available.</p>
+              <p className="mt-1 text-xs leading-5 text-white/48">Future platform capabilities are clearly marked and are not represented as currently available.</p>
             </div>
           </div>
         </section>

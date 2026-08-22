@@ -67,28 +67,31 @@ export function AppShell ({ children, user }: AppShellProps) {
   return (
     <div className='workspace-theme min-h-screen'>
       <header className='builder-topbar sticky top-0 z-30 lg:ml-64'>
-        <div className='flex h-16 items-center justify-between px-4 lg:px-6'>
+        <div className='flex h-[62px] items-center justify-between px-4 lg:px-7'>
           <Link href='/dashboard' className='flex min-w-0 items-center gap-4'>
             <BrandMark
               href={null}
-              className='rounded-md bg-[#123f2e] px-2 py-1 lg:hidden'
+              className='rounded-sm bg-[#071c17] px-2 py-1 lg:hidden'
               imageClassName='h-auto w-[138px]'
             />
-            <span className='hidden truncate text-xs font-bold uppercase tracking-[0.16em] text-[#6c7d75] lg:block'>
-              {portalName(user)}
-            </span>
+            <div className='hidden min-w-0 lg:block'>
+              <span className='block truncate text-[10px] font-bold uppercase tracking-[0.18em] text-[#7f8a84]'>
+                Environmental intelligence platform
+              </span>
+              <span className='mt-0.5 block truncate text-sm font-bold text-[#1c2c24]'>{portalName(user)}</span>
+            </div>
           </Link>
 
           <div className='hidden items-center gap-3 md:flex'>
-            <div className='flex min-w-0 items-center gap-2 rounded-lg border border-[#dce6e1] bg-[#f7faf8] px-2.5 py-1.5'>
-              <span className='grid size-8 place-items-center rounded-full bg-[#e7f3ec] text-[#287451]'>
+            <div className='flex min-w-0 items-center gap-2 border-l border-[#dfe3df] pl-4'>
+              <span className='grid size-8 place-items-center rounded-full bg-[#edf3e9] text-[#4f7f3d]'>
                 <UserCircle className='size-4' />
               </span>
               <div className='min-w-0 leading-tight'>
-                <p className='truncate text-sm font-semibold text-[#18372c]'>
+                <p className='truncate text-sm font-semibold text-[#1c2c24]'>
                   {user?.full_name ?? 'User'}
                 </p>
-                <p className='text-xs text-[#6c7d75]'>{displayRole(user)}</p>
+                <p className='text-[11px] text-[#737e78]'>{displayRole(user)}</p>
               </div>
             </div>
             <Button variant='secondary' size='sm' onClick={logout}>
@@ -100,16 +103,13 @@ export function AppShell ({ children, user }: AppShellProps) {
       </header>
 
       <div className='min-h-[calc(100vh-4rem)]'>
-        <aside className='fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-[#174b37] bg-[#123f2e] text-white lg:flex lg:flex-col'>
-          <div className='flex h-16 shrink-0 items-center border-b border-white/10 px-5'>
+        <aside className='portal-sidebar fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-[#19352c] bg-[#071c17] text-white lg:flex lg:flex-col'>
+          <div className='flex h-[98px] shrink-0 flex-col justify-center border-b border-white/[0.07] px-5'>
             <BrandMark href='/dashboard' imageClassName='h-auto w-[174px]' />
+            <p className='mt-1 pl-0.5 text-[9px] tracking-[0.04em] text-white/45'>Environmental Intelligence Platform</p>
           </div>
-          {/* <div className='border-b border-white/10 px-5 py-5'>
-            <p className='text-[11px] font-bold uppercase tracking-[0.18em] text-[#a8cdbb]'>Current capability</p>
-            <p className='mt-1 text-sm font-semibold text-white'>EIA workspace</p>
-            <p className='mt-1 text-xs leading-5 text-white/60'>Evidence-led authoring and review</p>
-          </div> */}
-          <nav className='flex-1 overflow-y-auto px-3 py-4 space-y-1' aria-label='Workspace navigation'>
+          <div className='px-5 pb-2 pt-5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#7fa05f]'>Portal sections</div>
+          <nav className='flex-1 space-y-1 overflow-y-auto px-3 pb-4' aria-label='Workspace navigation'>
             {sectionLinks
               .filter(
                 item => !item.permission || hasPermission(user, item.permission)
@@ -123,8 +123,8 @@ export function AppShell ({ children, user }: AppShellProps) {
                     href={item.href}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-white/70 transition-colors hover:bg-white/8 hover:text-white',
-                      active && 'bg-white text-[#174b37] shadow-sm hover:bg-white hover:text-[#174b37]'
+                      'flex h-10 items-center gap-3 rounded-[4px] border-l-2 border-transparent px-3 text-[13px] font-medium text-white/66 transition-colors hover:bg-white/[0.05] hover:text-white',
+                      active && 'border-l-[#74a653] bg-[#183b2d] text-[#a7cd78] shadow-none hover:bg-[#183b2d] hover:text-[#b3d888]'
                     )}
                   >
                     <Icon className='size-4' />
@@ -133,11 +133,11 @@ export function AppShell ({ children, user }: AppShellProps) {
                 )
               })}
           </nav>
-          <div className='border-t border-white/10 p-4'>
-            <div className='rounded-lg bg-white/[0.07] p-3'>
+          <div className='border-t border-white/[0.07] px-5 py-5'>
+            <div className='border-l border-[#5d8d43] pl-3'>
               <p className='text-xs font-semibold text-white'>Evidence Before Conclusions™</p>
               <p className='mt-1 text-[11px] leading-4 text-white/55'>Developed toward an Environmental Intelligence Operating System™</p>
-              <div className='mt-3 flex gap-3 text-xs font-semibold text-[#b9dfca]'>
+              <div className='mt-3 flex gap-3 text-xs font-semibold text-[#94bd6a]'>
                 <Link className='inline-flex items-center gap-1 hover:text-white' href='/contact'><CalendarDays className='size-3.5' /> Book demo</Link>
                 <Link className='inline-flex items-center gap-1 hover:text-white' href='/contact'>Contact <ExternalLink className='size-3.5' /></Link>
               </div>
@@ -145,7 +145,7 @@ export function AppShell ({ children, user }: AppShellProps) {
           </div>
         </aside>
 
-        <main className='workspace-main min-w-0 px-4 pb-24 pt-5 md:px-6 lg:ml-64 lg:px-8 lg:pb-8 lg:pt-7'>
+        <main className='workspace-main min-w-0 px-4 pb-24 pt-5 md:px-6 lg:ml-64 lg:px-7 lg:pb-8 lg:pt-6'>
           {children}
         </main>
       </div>

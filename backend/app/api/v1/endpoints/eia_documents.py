@@ -41,6 +41,7 @@ from app.schemas.eia import (
     EiaEvaluationRunDetailRead,
     EiaEvaluationRunRead,
     EiaRegulatorOverviewRead,
+    EiaReusableContentRead,
     EiaReviewApprovalCreate,
     EiaReviewApprovalDecision,
     EiaReviewApprovalRead,
@@ -123,9 +124,11 @@ from app.services.eia_service import (
     get_eia_document_structure,
     get_subsection_for_document,
     list_project_eia_documents,
+    synchronize_eia_document_checklist,
     update_eia_subsection,
 )
 from app.services.revision_service import list_subsection_revisions, restore_subsection_revision
+from app.services.reusable_content_service import search_reusable_eia_content
 from app.services.source_mapping_service import (
     confirm_source_mapping,
     detect_source_mappings,
@@ -135,6 +138,16 @@ from app.services.source_mapping_service import (
 
 
 router = APIRouter()
+
+
+@router.get("/content-library/search", response_model=list[EiaReusableContentRead])
+def read_reusable_content(
+    query: str = Query(..., min_length=2, max_length=200),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> list[dict[str, object]]:
+    return search_reusable_eia_content(db, current_user, query, limit=limit)
 
 
 @router.get("/project/{project_id}", response_model=list[EiaDocumentRead])
@@ -193,6 +206,16 @@ def read_eia_document_structure(
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
 ) -> EiaDocument:
     return get_eia_document_structure(db, current_user, document_id)
+
+
+@router.post("/{document_id}/checklist/synchronize", response_model=EiaDocumentStructureRead)
+def post_eia_checklist_synchronize(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+) -> EiaDocument:
+    document, _changes = synchronize_eia_document_checklist(db, current_user, document_id)
+    return document
 
 
 @router.post("/{document_id}/auto-structure", response_model=EiaDocumentStructureRead)
@@ -279,6 +302,8 @@ def post_eia_evaluation_run(
     current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     run = enqueue_eia_evaluation_run(db, current_user, document_id, payload)
+    # Low-latency nudge for local/single-process use. The database-backed worker
+    # remains authoritative and recovers pending or interrupted work.
     background_tasks.add_task(process_eia_evaluation_run_background, run.id)
     return run
 

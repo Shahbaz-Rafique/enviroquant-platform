@@ -1,5 +1,4 @@
 from datetime import UTC, datetime
-from difflib import SequenceMatcher
 from html import escape
 import re
 from uuid import UUID
@@ -29,6 +28,7 @@ from app.services.eia_service import (
     require_eia_document_permission,
 )
 from app.services.revision_service import create_subsection_revision
+from app.services.semantic_mapping_service import best_semantic_match
 
 
 MAPPING_STATUS_SUGGESTED = "SUGGESTED"
@@ -84,7 +84,7 @@ def detect_source_mappings(
 
     created: list[EiaSourceMapping] = []
     for detected_section in detected_sections:
-        candidate, confidence = _best_subsection_match(document, detected_section)
+        candidate, confidence, detected_method = _best_subsection_match(document, detected_section)
         detected_content = detected_section.content.strip() if detected_section.content else None
         mapping = EiaSourceMapping(
             tenant_id=current_user.tenant_id,
@@ -98,12 +98,13 @@ def detect_source_mappings(
             suggested_content_html=_content_to_html(detected_content),
             confidence_score=confidence,
             status=MAPPING_STATUS_SUGGESTED if candidate else MAPPING_STATUS_NEEDS_REVIEW,
-            detection_method=payload.detection_method,
+            detection_method=detected_method,
             assistant_notes=_assistant_notes(candidate, confidence),
             mapping_metadata={
                 "source": "user_confirmed_assistant_suggestion",
                 "input_confidence": detected_section.confidence,
                 "detected_metadata": detected_section.metadata,
+                "requested_detection_method": payload.detection_method,
             },
         )
         db.add(mapping)
@@ -365,7 +366,7 @@ def _detected_sections_from_payload_or_metadata(
 def _best_subsection_match(
     document: EiaDocument,
     detected_section: EiaSourceDetectedSection,
-) -> tuple[EiaSubSection | None, float]:
+) -> tuple[EiaSubSection | None, float, str]:
     subsections = [subsection for section in document.sections for subsection in section.subsections]
     if detected_section.section_number:
         normalized_number = detected_section.section_number.strip()
@@ -374,7 +375,7 @@ def _best_subsection_match(
             None,
         )
         if exact:
-            return exact, max(detected_section.confidence or 0.0, 0.95)
+            return exact, max(detected_section.confidence or 0.0, 0.95), "exact_section_number"
 
         top_level = normalized_number.split(".")[0]
         section_match = next(
@@ -386,21 +387,19 @@ def _best_subsection_match(
             None,
         )
         if section_match:
-            return section_match.subsections[0], max(detected_section.confidence or 0.0, 0.72)
+            family = section_match.subsections
+            query = f"{detected_section.title} {detected_section.content or ''}"
+            index, score, method = best_semantic_match(query, [item.title for item in family])
+            if index is not None:
+                return family[index], max(score, 0.72), method
 
-    title = _normalize_text(detected_section.title)
-    best_subsection: EiaSubSection | None = None
-    best_score = 0.0
-    for subsection in subsections:
-        score = SequenceMatcher(None, title, _normalize_text(subsection.title)).ratio()
-        if score > best_score:
-            best_score = score
-            best_subsection = subsection
-
-    if best_subsection is None or best_score < 0.35:
-        return None, 0.0
+    query = f"{detected_section.title} {detected_section.content or ''}"
+    index, best_score, method = best_semantic_match(query, [item.title for item in subsections])
+    if index is None or best_score < 0.28:
+        return None, 0.0, method
+    best_subsection = subsections[index]
     input_confidence = detected_section.confidence if detected_section.confidence is not None else 0.75
-    return best_subsection, round(min(0.94, best_score * input_confidence), 2)
+    return best_subsection, round(min(0.94, best_score * input_confidence), 2), method
 
 
 def _normalize_text(value: str) -> str:

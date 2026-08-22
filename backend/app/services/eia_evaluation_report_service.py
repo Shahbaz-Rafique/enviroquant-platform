@@ -9,7 +9,6 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy.orm import Session
 
-from app.models.eia_evaluation import EiaEvaluationRun
 from app.services.eia_evaluation_service import get_eia_evaluation_run
 
 
@@ -32,14 +31,18 @@ def build_report_payload(db: Session, current_user, document_id: UUID, run_id: U
             "status": run.status,
             "prompt_version": run.prompt_version,
             "model_version": run.model_version,
-            "overall_score": run.run_metadata.get("overall_score"),
-            "overall_appraisal": run.run_metadata.get("overall_appraisal"),
+            "checklist_version": run.checklist_version,
+            "methodology_version": run.methodology_version,
+            "rules_version": run.rules_version,
+            "scoring_enabled": run.run_metadata.get("scoring_enabled") is True,
+            "overall_score": run.run_metadata.get("overall_score") if run.run_metadata.get("scoring_enabled") is True else None,
+            "overall_appraisal": run.run_metadata.get("overall_appraisal") if run.run_metadata.get("scoring_enabled") is True else None,
         },
         "section_summaries": [
             {
                 "section_number": summary.section_number,
                 "section_title": summary.section_title,
-                "score": summary.score,
+                "score": summary.score if run.run_metadata.get("scoring_enabled") is True else None,
                 "summary_comment": summary.summary_comment,
             }
             for summary in run.section_summaries
@@ -73,13 +76,17 @@ def build_report_docx_bytes(db: Session, current_user, document_id: UUID, run_id
     document.add_heading("EnviroQuant Review Report", 0)
     document.add_paragraph(f"Run ID: {run.id}")
     document.add_paragraph(f"Status: {run.status}")
-    document.add_paragraph(f"Overall score: {run.run_metadata.get('overall_score', 0)}/10")
-    document.add_paragraph(f"Appraisal: {run.run_metadata.get('overall_appraisal', '-')}")
+    document.add_paragraph(f"Checklist version: {run.checklist_version}")
+    document.add_paragraph(f"Methodology: {run.methodology_version} / {run.rules_version}")
+    if run.run_metadata.get("scoring_enabled") is True:
+        document.add_paragraph(f"Overall score: {run.run_metadata.get('overall_score', 0)}/10")
+        document.add_paragraph(f"Appraisal: {run.run_metadata.get('overall_appraisal', '-')}")
 
     document.add_heading("Section Summaries", level=1)
     for summary in run.section_summaries:
         document.add_heading(f"Section {summary.section_number} - {summary.section_title}", level=2)
-        document.add_paragraph(f"Score: {summary.score}/10")
+        if run.run_metadata.get("scoring_enabled") is True:
+            document.add_paragraph(f"Score: {summary.score}/10")
         if summary.summary_comment:
             document.add_paragraph(summary.summary_comment)
 
@@ -112,16 +119,25 @@ def build_report_pdf_bytes(db: Session, current_user, document_id: UUID, run_id:
         Spacer(1, 12),
         Paragraph(f"Run ID: {run.id}", styles["Normal"]),
         Paragraph(f"Status: {run.status}", styles["Normal"]),
-        Paragraph(f"Overall score: {run.run_metadata.get('overall_score', 0)}/10", styles["Normal"]),
-        Paragraph(f"Appraisal: {run.run_metadata.get('overall_appraisal', '-')}", styles["Normal"]),
+        Paragraph(f"Checklist version: {run.checklist_version}", styles["Normal"]),
+        Paragraph(f"Methodology: {run.methodology_version} / {run.rules_version}", styles["Normal"]),
         Spacer(1, 12),
         Paragraph("Section Summaries", styles["Heading1"]),
     ]
+    if run.run_metadata.get("scoring_enabled") is True:
+        story[5:5] = [
+            Paragraph(f"Overall score: {run.run_metadata.get('overall_score', 0)}/10", styles["Normal"]),
+            Paragraph(f"Appraisal: {run.run_metadata.get('overall_appraisal', '-')}", styles["Normal"]),
+        ]
     for summary in run.section_summaries:
         story.extend(
             [
                 Paragraph(f"Section {summary.section_number} - {summary.section_title}", styles["Heading2"]),
-                Paragraph(f"Score: {summary.score}/10", styles["Normal"]),
+                *(
+                    [Paragraph(f"Score: {summary.score}/10", styles["Normal"])]
+                    if run.run_metadata.get("scoring_enabled") is True
+                    else []
+                ),
                 Paragraph(summary.summary_comment or "", styles["Normal"]),
                 Spacer(1, 8),
             ]

@@ -419,6 +419,48 @@ export type EiaEvaluationEvidenceReference = {
   source_document_filename: string | null;
 };
 
+export type RegulationRequirement = {
+  id: string;
+  tenant_id: string;
+  standard_id: string;
+  requirement_code: string;
+  title: string;
+  requirement_text: string;
+  section_tags: string[];
+  requirement_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RegulationStandard = {
+  id: string;
+  tenant_id: string;
+  code: string;
+  title: string;
+  jurisdiction: string;
+  authority: string | null;
+  version: string;
+  effective_from: string | null;
+  effective_to: string | null;
+  source_url: string | null;
+  is_active: boolean;
+  standard_metadata: Record<string, unknown>;
+  requirements: RegulationRequirement[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type EiaReusableContent = {
+  eia_document_id: string;
+  eia_document_title: string;
+  subsection_id: string;
+  subsection_number: string;
+  subsection_title: string;
+  content_html: string | null;
+  excerpt: string;
+  updated_at: string;
+};
+
 export type EiaEvaluationFinding = {
   id: string;
   tenant_id: string;
@@ -432,7 +474,7 @@ export type EiaEvaluationFinding = {
     | "COMPLIANT"
     | "PARTIALLY_COMPLIANT"
     | "NEEDS_IMPROVEMENT"
-    | "MISSING"
+    | "MISSING_INFORMATION"
     | "NEEDS_REVIEW"
     | string;
   adequacy: string;
@@ -571,6 +613,7 @@ export type EiaRegulatorBenchmarkItem = {
   latest_appraisal: string | null;
   latest_run_completed_at: string | null;
   approval_status: string | null;
+  scoring_enabled: boolean;
 };
 
 export type EiaRegulatorTrendPoint = {
@@ -581,6 +624,7 @@ export type EiaRegulatorTrendPoint = {
   completed_at: string | null;
   overall_score: number;
   overall_appraisal: string | null;
+  scoring_enabled: boolean;
 };
 
 export type EiaDocumentCrossComparison = {
@@ -594,6 +638,7 @@ export type EiaDocumentCrossComparison = {
   left_status_counts: Record<string, number>;
   right_status_counts: Record<string, number>;
   section_deltas: EiaEvaluationSectionComparison[];
+  scoring_enabled: boolean;
 };
 
 export type EiaRegulatorOverview = {
