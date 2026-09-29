@@ -5,6 +5,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.dependencies import require_role_in_tenant
+from app.core.permissions import TENANT_ADMIN_ROLES
 from app.models.audit import AuditEvent
 from app.models.eia import EiaAttachment, EiaDocument, EiaSubSection
 from app.models.eia_document_member import EiaDocumentMember
@@ -17,6 +19,7 @@ from app.schemas.eia import (
 )
 from app.schemas.user import UserInvite
 from app.services.audit_service import record_audit_event
+from app.services.email_service import send_comment_notification
 from app.services.eia_service import (
     DOCUMENT_COMMENT_ROLES,
     DOCUMENT_MEMBER_MANAGE_ROLES,
@@ -35,6 +38,7 @@ def invite_eia_document_member(
     eia_document_id: UUID,
     payload: EiaDocumentMemberCreate,
 ) -> dict[str, object]:
+    require_role_in_tenant(TENANT_ADMIN_ROLES)(current_user)
     document = get_eia_document_for_tenant(
         db,
         current_user,
@@ -131,6 +135,7 @@ def remove_eia_document_member(
     eia_document_id: UUID,
     user_id: UUID,
 ) -> None:
+    require_role_in_tenant(TENANT_ADMIN_ROLES)(current_user)
     document = get_eia_document_for_tenant(
         db,
         current_user,
@@ -222,6 +227,9 @@ def create_subsection_comment(
     )
     db.commit()
     db.refresh(comment)
+
+    _notify_comment_stakeholders(subsection, comment, current_user)
+
     return comment
 
 
@@ -549,3 +557,52 @@ def _actor(user: User | None) -> dict[str, object] | None:
         "full_name": user.full_name,
         "email": user.email,
     }
+
+
+def _notify_comment_stakeholders(
+    subsection: EiaSubSection,
+    comment: SubSectionComment,
+    commenter: User,
+) -> None:
+    from app.core.config import get_settings
+    from app.services.eia_assignment_service import _document_assignment_maps
+
+    document = subsection.document
+    settings = get_settings()
+    base_url = settings.frontend_app_url.rstrip("/")
+    project_url = (
+        f"{base_url}/projects/{document.project_id}"
+        f"/eia/{document.id}/subsection/{subsection.id}"
+    )
+
+    _, subsection_assignments = _document_assignment_maps(document)
+    assignment = subsection_assignments.get(str(subsection.id), {})
+    users_by_id = {member.user_id: member.user for member in document.members}
+    users_by_id[document.created_by_id] = document.created_by
+
+    notify_ids: set = set()
+    for key in ("author_user_id", "reviewer_user_id"):
+        uid = assignment.get(key)
+        if uid:
+            from uuid import UUID as _UUID
+            try:
+                notify_ids.add(_UUID(uid) if isinstance(uid, str) else uid)
+            except (ValueError, TypeError):
+                pass
+
+    notify_ids.discard(commenter.id)
+
+    for user_id in notify_ids:
+        target = users_by_id.get(user_id)
+        if target is None:
+            continue
+        send_comment_notification(
+            recipient_email=target.email,
+            recipient_name=target.full_name,
+            commenter_name=commenter.full_name,
+            subsection_number=subsection.subsection_number,
+            subsection_title=subsection.title,
+            document_title=document.title,
+            comment_text=comment.content,
+            project_url=project_url,
+        )

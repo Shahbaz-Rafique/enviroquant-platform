@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -15,6 +16,7 @@ from app.schemas.eia import EiaWorkflowTransitionRequest
 from app.services.audit_service import record_audit_event
 from app.services.eia_assignment_service import (
     _assignment_values,
+    _effective_assignment_values,
     _document_assignment_maps,
     _member_user_map,
 )
@@ -22,7 +24,9 @@ from app.services.eia_service import (
     DOCUMENT_READ_ROLES,
     get_eia_document_for_tenant,
     get_document_member_role,
+    is_eia_document_admin,
 )
+from app.services.email_service import send_workflow_transition_notification
 
 
 WORKFLOW_STATUSES = {
@@ -135,6 +139,12 @@ def transition_subsection_workflow(
     )
     db.commit()
     db.refresh(subsection)
+
+    _notify_workflow_transition(
+        document, subsection, current_user,
+        current_status, target_status, payload.comment,
+    )
+
     return subsection
 
 
@@ -182,8 +192,7 @@ def list_eia_review_queue(
             subsection_assignment = _assignment_values(
                 subsection_assignments.get(str(subsection.id))
             )
-            effective = subsection_assignment if subsection_assignment is not None else section_assignment
-            effective = effective or {}
+            effective = _effective_assignment_values(section_assignment, subsection_assignment)
             author = users_by_id.get(effective.get("author_user_id"))
             reviewer = users_by_id.get(effective.get("reviewer_user_id"))
             if _review_queue_is_personal(current_user) and (
@@ -356,9 +365,8 @@ def _review_queue_is_personal(current_user: User) -> bool:
 def _effective_assignment(document: EiaDocument, subsection: EiaSubSection) -> dict[str, object]:
     section_assignments, subsection_assignments = _document_assignment_maps(document)
     subsection_assignment = _assignment_values(subsection_assignments.get(str(subsection.id)))
-    if subsection_assignment is not None:
-        return subsection_assignment
-    return _assignment_values(section_assignments.get(str(subsection.section_id))) or {}
+    section_assignment = _assignment_values(section_assignments.get(str(subsection.section_id)))
+    return _effective_assignment_values(section_assignment, subsection_assignment)
 
 
 def _load_subsection(
@@ -454,3 +462,63 @@ def _user_summary(user: User | None) -> dict[str, object] | None:
         "email": user.email,
         "status": user.status,
     }
+
+
+def _notify_workflow_transition(
+    document: EiaDocument,
+    subsection: EiaSubSection,
+    actor: User,
+    from_status: str,
+    to_status: str,
+    comment: str | None,
+) -> None:
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    base_url = settings.frontend_app_url.rstrip("/")
+    project_url = (
+        f"{base_url}/projects/{document.project_id}"
+        f"/eia/{document.id}/subsection/{subsection.id}"
+    )
+    users_by_id = {member.user_id: member.user for member in document.members}
+    users_by_id[document.created_by_id] = document.created_by
+
+    assignment = _effective_assignment(document, subsection)
+    author_id = assignment.get("author_user_id")
+    reviewer_id = assignment.get("reviewer_user_id")
+
+    notify_user_id = None
+    if to_status in ("READY_FOR_REVIEW",):
+        notify_user_id = reviewer_id
+    elif to_status in ("REVISION_REQUIRED", "APPROVED", "UNDER_REVIEW"):
+        notify_user_id = author_id
+    elif to_status == "IN_PROGRESS" and from_status == "REVISION_REQUIRED":
+        notify_user_id = reviewer_id
+
+    if notify_user_id is None:
+        return
+    try:
+        from uuid import UUID as _UUID
+        notify_user_id = _UUID(notify_user_id) if isinstance(notify_user_id, str) else notify_user_id
+    except (ValueError, TypeError):
+        return
+
+    if notify_user_id == actor.id:
+        return
+
+    target_user = users_by_id.get(notify_user_id)
+    if target_user is None:
+        return
+
+    send_workflow_transition_notification(
+        recipient_email=target_user.email,
+        recipient_name=target_user.full_name,
+        actor_name=actor.full_name,
+        subsection_number=subsection.subsection_number,
+        subsection_title=subsection.title,
+        document_title=document.title,
+        from_status=from_status,
+        to_status=to_status,
+        comment=comment,
+        project_url=project_url,
+    )

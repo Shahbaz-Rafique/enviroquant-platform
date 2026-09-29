@@ -85,10 +85,10 @@ export function ResponsibilityCard({
   role: string;
 }>) {
   return (
-    <div className="flex min-w-[210px] items-center gap-3 rounded-lg border border-[#d7e5de] bg-white px-3 py-2 shadow-sm">
+    <div className="flex items-center gap-2.5 rounded-lg border border-[#d7e5de] bg-white px-3 py-2 shadow-sm">
       <UserAvatar name={assignee?.full_name ?? "Unassigned"} />
-      <div className="min-w-0 flex-1">
-        <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#7a8a83]">
+      <div className="min-w-0">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#7a8a83]">
           Responsible now
         </span>
         <strong className="block truncate text-sm text-[#24463a]">{assignee?.full_name ?? "Unassigned"}</strong>

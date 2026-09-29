@@ -7,6 +7,13 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.schemas.common import ORMModel
 
 
+class EiaEmailRequest(BaseModel):
+    recipient: EmailStr
+    subject: str = Field(default="EIA report", min_length=1, max_length=200, pattern=r"^[^\r\n]+$")
+    message: str | None = Field(default=None, max_length=4000)
+    format: Literal["docx", "pdf"] = "docx"
+
+
 class EiaDocumentCreate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=220)
     metadata: dict = Field(default_factory=dict)
@@ -17,6 +24,8 @@ class EiaDocumentCreate(BaseModel):
 
 class EiaSubSectionUpdate(BaseModel):
     content: str | None = Field(default=None, max_length=100_000)
+    content_html: str | None = Field(default=None, max_length=500_000)
+    content_json: dict | None = None
     completion_status: str | None = Field(default=None, max_length=40)
     progress_percentage: float | None = Field(default=None, ge=0, le=100)
     metadata: dict | None = None
@@ -358,7 +367,6 @@ class EiaDocumentRead(ORMModel):
     project_id: UUID
     title: str
     status: str
-    checklist_version: str
     created_by_id: UUID
     document_metadata: dict
     created_at: datetime
@@ -429,17 +437,6 @@ class EiaEvaluationRunCreate(BaseModel):
     prompt_version: str | None = Field(default=None, max_length=60)
 
 
-class EiaReusableContentRead(BaseModel):
-    eia_document_id: UUID
-    eia_document_title: str
-    subsection_id: UUID
-    subsection_number: str
-    subsection_title: str
-    content_html: str | None = None
-    excerpt: str
-    updated_at: datetime
-
-
 class EiaEvaluationEvidenceReferenceRead(BaseModel):
     chunk_id: str
     source_type: str
@@ -451,9 +448,6 @@ class EiaEvaluationEvidenceReferenceRead(BaseModel):
     page_number: int | None = None
     source_document_id: UUID | None = None
     source_document_filename: str | None = None
-    regulation_standard_code: str | None = None
-    regulation_standard_version: str | None = None
-    regulation_requirement_code: str | None = None
 
 
 class EiaEvaluationFindingRead(ORMModel):
@@ -476,6 +470,11 @@ class EiaEvaluationFindingRead(ORMModel):
     finding_metadata: dict = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
+
+
+class EiaEvaluationFindingDecision(BaseModel):
+    decision: Literal["CLOSED", "RETAINED"]
+    note: str | None = Field(default=None, max_length=4_000)
 
 
 class EiaEvaluationSectionSummaryRead(ORMModel):
@@ -508,9 +507,6 @@ class EiaEvaluationRunRead(ORMModel):
     status: str
     prompt_version: str
     model_version: str
-    checklist_version: str
-    methodology_version: str
-    rules_version: str
     evaluation_scope: str
     started_at: datetime
     completed_at: datetime | None
@@ -625,7 +621,6 @@ class EiaRegulatorBenchmarkItemRead(BaseModel):
     latest_appraisal: str | None = None
     latest_run_completed_at: datetime | None = None
     approval_status: str | None = None
-    scoring_enabled: bool = False
 
 
 class EiaRegulatorTrendPointRead(BaseModel):
@@ -636,7 +631,6 @@ class EiaRegulatorTrendPointRead(BaseModel):
     completed_at: datetime | None = None
     overall_score: float = 0.0
     overall_appraisal: str | None = None
-    scoring_enabled: bool = False
 
 
 class EiaDocumentCrossComparisonRead(BaseModel):
@@ -650,7 +644,6 @@ class EiaDocumentCrossComparisonRead(BaseModel):
     left_status_counts: dict = Field(default_factory=dict)
     right_status_counts: dict = Field(default_factory=dict)
     section_deltas: list[EiaEvaluationSectionComparisonRead] = Field(default_factory=list)
-    scoring_enabled: bool = False
 
 
 class EiaRegulatorOverviewRead(BaseModel):

@@ -3,8 +3,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_role_in_tenant
-from app.core.permissions import DOCUMENT_UPLOAD_ROLES, PROJECT_MANAGE_ROLES, READ_ONLY_ROLES
+from app.core.dependencies import require_permission, require_role_in_tenant
+from app.core.permissions import DOCUMENT_UPLOAD_ROLES, PROJECT_MANAGE_ROLES, READ_ONLY_ROLES, Permissions
 from app.db.session import get_db
 from app.models.document import Document
 from app.models.project import Project
@@ -65,7 +65,7 @@ def patch_project(
 def remove_project(
     project_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(PROJECT_MANAGE_ROLES)),
+    current_user: User = Depends(require_permission(Permissions.PROJECT_DELETE)),
 ) -> None:
     project = get_project_for_tenant(db, current_user, project_id)
     delete_project(db, project)

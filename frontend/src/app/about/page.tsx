@@ -5,7 +5,7 @@ import { AboutMarketingPage } from "@/components/site/marketing-pages";
 export const metadata: Metadata = {
   title: 'About EnviroQuant',
   description:
-    'A modern Environmental Intelligence Platform that standardizes EIA creation and review processes for consultants and regulatory bodies worldwide.',
+    'EnviroQuant is an AI-powered Environmental Intelligence Platform that transforms how organisations create, review, and manage Environmental Impact Assessments.',
 };
 
 export default function AboutPage() {

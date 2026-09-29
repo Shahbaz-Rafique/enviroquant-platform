@@ -68,6 +68,7 @@ ROLE_PERMISSION_MAP = {
 
 def upgrade() -> None:
     bind = op.get_bind()
+    now = sa.func.now()
 
     permission_ids: dict[str, uuid.UUID] = {}
     for permission_key in sorted({key for keys in ROLE_PERMISSION_MAP.values() for key in keys}):

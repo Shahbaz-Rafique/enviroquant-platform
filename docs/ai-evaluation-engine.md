@@ -90,9 +90,7 @@ The AI must always return structured JSON.
 
 {
   "checklist_item": "string",
-  "coverage_ratio": 0.0,
-  "critical_gap_count": 0,
-  "requires_expert_review": false,
+  "status": "COMPLIANT | PARTIALLY_COMPLIANT | NON_COMPLIANT",
   "evidence_summary": "string",
   "evidence_refs": ["chunk_id"],
   "missing_elements": ["string"],
@@ -100,7 +98,7 @@ The AI must always return structured JSON.
   "confidence": 0.0
 }
 
-The AI does not output the final compliance status. Versioned deterministic rules classify the validated signals as `COMPLIANT`, `PARTIALLY_COMPLIANT`, `NEEDS_IMPROVEMENT`, `MISSING_INFORMATION`, or `NEEDS_REVIEW`.
+No free-text outputs allowed outside schema.
 
 7. Validation Layer
 

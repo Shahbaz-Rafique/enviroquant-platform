@@ -1,5 +1,6 @@
 
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
 
 // app/layout.tsx
 import type { Metadata, Viewport } from 'next';

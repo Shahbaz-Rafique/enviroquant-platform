@@ -202,6 +202,18 @@ def invite_user_for_tenant(
     )
 
 
+def renew_pending_invitation(db: Session, user: User) -> str:
+    """Issue password setup access without changing the invitee's organization or roles."""
+    if user.status not in {"pending_invite", "invite_expired"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not awaiting activation")
+    token = secrets.token_urlsafe(32)
+    user.status = "pending_invite"
+    user.invitation_token_hash = hash_invitation_token(token)
+    user.invitation_expires_at = datetime.now(UTC) + timedelta(days=INVITATION_EXPIRY_DAYS)
+    db.commit()
+    return build_invitation_url(token)
+
+
 def accept_invitation(db: Session, payload: AcceptInvitationRequest) -> User:
     token_hash = hash_invitation_token(payload.token)
     user = db.scalar(select(User).where(User.invitation_token_hash == token_hash))

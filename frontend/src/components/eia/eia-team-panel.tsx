@@ -7,8 +7,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import type { EiaDocumentMember, EiaDocumentMemberInvitation } from "@/lib/types";
 
 type EiaTeamPanelProps = {
@@ -22,11 +22,18 @@ type EiaTeamPanelProps = {
 };
 
 const documentRoles = [
-  { value: "EDITOR", label: "Specialist / author" },
-  { value: "COMMENTER", label: "Commenter" },
-  { value: "REVIEWER", label: "Reviewer" },
-  { value: "VIEWER", label: "Viewer" }
+  { value: "EDITOR", label: "Specialist / Author", description: "Can author assigned sections" },
+  { value: "REVIEWER", label: "Reviewer", description: "Can review and approve sections" },
+  { value: "COMMENTER", label: "Commenter", description: "Can add comments only" },
+  { value: "VIEWER", label: "Viewer", description: "Read-only access" }
 ];
+
+const roleBadgeClass: Record<string, string> = {
+  EDITOR: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  REVIEWER: "border-amber-200 bg-amber-50 text-amber-700",
+  COMMENTER: "border-blue-200 bg-blue-50 text-blue-700",
+  VIEWER: "border-slate-200 bg-slate-50 text-slate-600",
+};
 
 export function EiaTeamPanel({
   documentId,
@@ -42,7 +49,8 @@ export function EiaTeamPanel({
   const [error, setError] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [documentRole, setDocumentRole] = useState("VIEWER");
+  const [documentRole, setDocumentRole] = useState("EDITOR");
+  const [showInviteForm, setShowInviteForm] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +72,7 @@ export function EiaTeamPanel({
       onMembersChange(upsertMember(members, invitation.member));
       setInviteUrl(invitation.invite_url);
       formElement.reset();
-      setDocumentRole("VIEWER");
+      setDocumentRole("EDITOR");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Member could not be invited");
     } finally {
@@ -107,92 +115,157 @@ export function EiaTeamPanel({
 
   return (
     <section className="builder-panel overflow-hidden">
-      <div className="builder-section-title flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2">
-          <Users className="size-5 text-[#B6F7FF]" />
-          Team
-        </span>
-        <Button size="icon" type="button" variant="secondary" onClick={refresh} aria-label="Refresh team">
-          <RefreshCcw className={refreshing ? "animate-spin" : undefined} />
-        </Button>
+      <div className="border-b border-[#e3eae6] px-5 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#287451]">Document team</p>
+            <h3 className="mt-1 text-lg font-bold text-[#18372c]">{canManage ? "Manage collaborators" : "Collaborators"}</h3>
+            <p className="mt-1 text-xs text-[#73827b]">
+              {members.length} member{members.length !== 1 ? "s" : ""} on this document
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" type="button" variant="secondary" onClick={refresh}>
+              <RefreshCcw className={cn("size-3.5", refreshing && "animate-spin")} />
+              Refresh
+            </Button>
+            {canManage ? (
+              <Button size="sm" type="button" onClick={() => setShowInviteForm(!showInviteForm)}>
+                <UserPlus className="size-3.5" />
+                {showInviteForm ? "Cancel" : "Invite member"}
+              </Button>
+            ) : null}
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 p-4">
-        {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
-        {inviteUrl ? (
-          <Alert className="border-emerald-400/20 bg-emerald-500/10 text-emerald-100">
+      <div className="grid gap-4 p-4 sm:p-5">
+        {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
+
+        {canManage && inviteUrl ? (
+          <Alert className="border-emerald-200 bg-emerald-50 text-emerald-700">
+            <p className="mb-2 text-xs font-semibold">Member invited successfully! Share this link:</p>
             <div className="flex min-w-0 gap-2">
-              <Input readOnly value={inviteUrl} className="font-mono text-xs" />
+              <Input readOnly value={inviteUrl} className="border-emerald-200 bg-white font-mono text-xs text-emerald-800" />
               <Button type="button" variant="secondary" size="icon" onClick={copyInviteUrl} aria-label="Copy invite link">
-                <Copy />
+                <Copy className="size-3.5" />
               </Button>
             </div>
           </Alert>
         ) : null}
 
-        {canManage ? (
-          <form className="grid gap-3" onSubmit={submit}>
-            <div className="grid gap-2">
-              <Label htmlFor="eia-member-full-name">Full name</Label>
-              <Input id="eia-member-full-name" name="full_name" required minLength={2} />
+        {showInviteForm && canManage ? (
+          <form className="rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-4" onSubmit={submit}>
+            <h4 className="mb-3 text-sm font-bold text-[#18372c]">Invite a new member</h4>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="eia-member-full-name" className="text-xs font-semibold text-[#52675e]">Full name</Label>
+                <Input id="eia-member-full-name" name="full_name" required minLength={2} placeholder="John Smith" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="eia-member-email" className="text-xs font-semibold text-[#52675e]">Email</Label>
+                <Input id="eia-member-email" name="email" type="email" required placeholder="john@example.com" />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="eia-member-email">Email</Label>
-              <Input id="eia-member-email" name="email" type="email" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="eia-member-role">Document role</Label>
-              <Select value={documentRole} onValueChange={setDocumentRole}>
-                <SelectTrigger id="eia-member-role">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
+            <div className="mt-3 grid gap-1.5">
+              <Label htmlFor="eia-member-role" className="text-xs font-semibold text-[#52675e]">Document role</Label>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {documentRoles.map((role) => (
-                  <SelectItem key={role.value} value={role.value}>
-                    {role.label}
-                  </SelectItem>
+                  <button
+                    key={role.value}
+                    type="button"
+                    onClick={() => setDocumentRole(role.value)}
+                    className={cn(
+                      "rounded-lg border p-3 text-left transition-all",
+                      documentRole === role.value
+                        ? "border-[#287451] bg-[#edf6f1] ring-1 ring-[#287451]/20"
+                        : "border-[#dce6e1] bg-white hover:border-[#c4d4cc]"
+                    )}
+                  >
+                    <span className="block text-xs font-bold text-[#18372c]">{role.label}</span>
+                    <span className="mt-0.5 block text-[11px] text-[#73827b]">{role.description}</span>
+                  </button>
                 ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs leading-5 text-white/52">
-                Specialists can author assigned sections; reviewers control review decisions.
-              </p>
+              </div>
             </div>
-            <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="animate-spin" /> : <UserPlus />}
-              Invite
-            </Button>
+            <div className="mt-4 flex justify-end">
+              <Button type="submit" disabled={saving}>
+                {saving ? <Loader2 className="size-3.5 animate-spin" /> : <UserPlus className="size-3.5" />}
+                Send invitation
+              </Button>
+            </div>
           </form>
         ) : null}
 
-        <div className="divide-y divide-white/10 rounded-2xl border border-white/10">
-          {loading ? <div className="p-3 text-sm text-white/52">Loading team...</div> : null}
-          {!loading && !members.length ? <div className="p-3 text-sm text-white/52">No document members.</div> : null}
-          {members.map((member) => (
-            <div className="flex items-center justify-between gap-3 p-3" key={member.id}>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-white">{member.user.full_name}</div>
-                <div className="truncate text-xs font-medium text-white/52">{member.user.email}</div>
-                <div className="mt-1 text-xs font-bold uppercase text-[#B6F7FF]">{member.role}</div>
+        {loading ? <p className="py-4 text-center text-sm text-[#73827b]">Loading team...</p> : null}
+        {!loading && !members.length ? (
+          <div className="rounded-xl border border-dashed border-[#cfdcd6] bg-[#f8faf9] py-8 text-center">
+            <Users className="mx-auto size-8 text-[#9aaba3]" />
+            <p className="mt-2 text-sm font-semibold text-[#52675e]">No members yet</p>
+            <p className="mt-1 text-xs text-[#73827b]">{canManage ? "Invite team members to start collaborating." : "Ask your administrator to add team members."}</p>
+          </div>
+        ) : null}
+
+        {members.length > 0 ? (
+          <div className="grid gap-2">
+            {members.map((member) => (
+              <div
+                className="flex items-center gap-3 rounded-xl border border-[#dce6e1] bg-white px-4 py-3 transition-shadow hover:shadow-sm"
+                key={member.id}
+              >
+                <span className={cn(
+                  "grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold",
+                  member.user_id === currentUserId
+                    ? "bg-[#287451] text-white"
+                    : "bg-[#edf6f1] text-[#287451]"
+                )}>
+                  {getInitials(member.user.full_name)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold text-[#18372c]">{member.user.full_name}</span>
+                    {member.user_id === currentUserId ? (
+                      <span className="shrink-0 text-[10px] font-bold text-[#287451]">You</span>
+                    ) : null}
+                  </div>
+                  <div className="truncate text-xs text-[#73827b]">{member.user.email}</div>
+                </div>
+                <span className={cn(
+                  "shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-bold",
+                  roleBadgeClass[member.role] ?? roleBadgeClass.VIEWER
+                )}>
+                  {member.role}
+                </span>
+                {canManage && member.user_id !== currentUserId ? (
+                  <Button
+                    aria-label={`Remove ${member.user.full_name}`}
+                    disabled={removingUserId === member.user_id}
+                    size="icon"
+                    type="button"
+                    variant="secondary"
+                    className="size-8 shrink-0"
+                    onClick={() => removeMember(member)}
+                  >
+                    {removingUserId === member.user_id ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                  </Button>
+                ) : null}
               </div>
-              {canManage && member.user_id !== currentUserId ? (
-                <Button
-                  aria-label={`Remove ${member.user.full_name}`}
-                  disabled={removingUserId === member.user_id}
-                  size="icon"
-                  type="button"
-                  variant="secondary"
-                  onClick={() => removeMember(member)}
-                >
-                  {removingUserId === member.user_id ? <Loader2 className="animate-spin" /> : <Trash2 />}
-                </Button>
-              ) : null}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((word) => word[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 function upsertMember(members: EiaDocumentMember[], member: EiaDocumentMember) {

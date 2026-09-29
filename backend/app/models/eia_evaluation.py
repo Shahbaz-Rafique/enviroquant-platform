@@ -50,9 +50,15 @@ class EiaEvaluationRun(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(30), default="PENDING", nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(60), nullable=False)
     model_version: Mapped[str] = mapped_column(String(120), nullable=False)
-    checklist_version: Mapped[str] = mapped_column(String(80), nullable=False)
-    methodology_version: Mapped[str] = mapped_column(String(80), nullable=False)
-    rules_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    checklist_version: Mapped[str] = mapped_column(
+        String(80), default="enviroquant-eia-checklist-2026.1", nullable=False
+    )
+    methodology_version: Mapped[str] = mapped_column(
+        String(80), default="rqeia-2014-mvp-1.0", nullable=False
+    )
+    rules_version: Mapped[str] = mapped_column(
+        String(80), default="deterministic-classification-1.0", nullable=False
+    )
     evaluation_scope: Mapped[str] = mapped_column(String(60), default="subsection_content", nullable=False)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

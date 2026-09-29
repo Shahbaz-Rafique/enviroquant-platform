@@ -20,6 +20,8 @@ from app.services.eia_service import (
     get_eia_document_for_tenant,
     is_eia_document_admin,
 )
+from app.services.email_service import send_assignment_notification
+from app.services.user_service import renew_pending_invitation
 
 
 def get_eia_document_assignments_overview(
@@ -78,6 +80,8 @@ def update_section_assignment(
         metadata={"eia_document_id": str(document.id)},
     )
     db.commit()
+
+    _notify_assignees(db, document, section, payload, current_user)
 
     refreshed = _load_document_for_overview(db, current_user, document_id)
     return _build_assignment_overview(db, refreshed, current_user)
@@ -469,7 +473,7 @@ def _build_subsection_assignment_item(
     current_user_id: UUID,
 ) -> tuple[dict[str, object], str | None]:
     assignment_source = _assignment_source(section_assignment, subsection_assignment)
-    effective = subsection_assignment if subsection_assignment is not None else section_assignment
+    effective = _effective_assignment_values(section_assignment, subsection_assignment)
     author_id = effective.get("author_user_id") if effective else None
     reviewer_id = effective.get("reviewer_user_id") if effective else None
     due_date = effective.get("due_date") if effective else None
@@ -616,6 +620,17 @@ def _ensure_assignment_container(metadata: dict[str, object]) -> dict[str, dict[
         "sections": sections,
         "subsections": subsections,
     }
+
+
+def _effective_assignment_values(
+    section_assignment: dict[str, object] | None,
+    subsection_assignment: dict[str, object] | None,
+) -> dict[str, object]:
+    """A subsection reviewer overrides the section reviewer only when assigned."""
+    effective = dict(subsection_assignment if subsection_assignment is not None else section_assignment or {})
+    if not effective.get("reviewer_user_id") and section_assignment:
+        effective["reviewer_user_id"] = section_assignment.get("reviewer_user_id")
+    return effective
 
 
 def _assignment_values(raw: object) -> dict[str, object] | None:
@@ -835,3 +850,45 @@ def _assignee(user: User | dict[str, object] | None) -> dict[str, object] | None
         "email": user.email,
         "status": user.status,
     }
+
+
+def _notify_assignees(
+    db: Session,
+    document: EiaDocument,
+    section: EiaSection,
+    payload: EiaAssignmentUpdate,
+    current_user: User,
+) -> None:
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    base_url = settings.frontend_app_url.rstrip("/")
+    users_by_id = {member.user_id: member.user for member in document.members}
+    users_by_id[document.created_by_id] = document.created_by
+    project_url = f"{base_url}/projects/{document.project_id}/eia/{document.id}"
+
+    activation_urls: dict[UUID, str] = {}
+
+    for user_id, role in [
+        (payload.author_user_id, "author"),
+        (payload.reviewer_user_id, "reviewer"),
+    ]:
+        if user_id is None or user_id == current_user.id:
+            continue
+        target_user = users_by_id.get(user_id)
+        if target_user is None or target_user.status not in {"active", "pending_invite", "invite_expired"}:
+            continue
+        activation_required = target_user.status != "active"
+        if activation_required and user_id not in activation_urls:
+            activation_urls[user_id] = renew_pending_invitation(db, target_user)
+        destination_url = activation_urls[user_id] if activation_required else project_url
+        send_assignment_notification(
+            recipient_email=target_user.email,
+            recipient_name=target_user.full_name,
+            assigner_name=current_user.full_name,
+            document_title=document.title,
+            section_title=f"Section {section.section_number}: {section.title}",
+            role=role,
+            project_url=destination_url,
+            activation_required=activation_required,
+        )

@@ -127,6 +127,20 @@ def decide_review_approval(
         "decision_role": get_document_member_role(document, current_user),
     }
     document.status = "APPROVED" if payload.decision == "APPROVED" else "CHANGES_REQUESTED"
+    metadata = dict(document.document_metadata or {})
+    revision_history = list(metadata.get("revision_history") or [])
+    revision_history.append({
+        "revision": f"{len(revision_history) + 1:02d}",
+        "date": approval.decided_at.date().isoformat(),
+        "description": "Approved for controlled issue" if payload.decision == "APPROVED" else "Changes requested after professional review",
+        "decision": payload.decision,
+        "reviewer_user_id": str(current_user.id),
+        "evaluation_run_id": str(approval.evaluation_run_id),
+    })
+    metadata["revision_history"] = revision_history
+    metadata["revision"] = revision_history[-1]["revision"]
+    metadata["controlled_issue_id"] = f"EQ-{str(document.id)[:8].upper()}-R{revision_history[-1]['revision']}"
+    document.document_metadata = metadata
     record_audit_event(
         db,
         tenant_id=current_user.tenant_id,

@@ -29,7 +29,7 @@ def create_project(db: Session, current_user: User, payload: ProjectCreate) -> P
         name=payload.name,
         description=payload.description,
         sector=payload.sector,
-        country=payload.country,
+        country="State of Kuwait",
         location=payload.location,
         project_metadata=payload.metadata,
         created_by_id=current_user.id,

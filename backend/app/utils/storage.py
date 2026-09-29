@@ -1,18 +1,21 @@
 import hashlib
+import logging
 import os
 import re
 import tempfile
+from io import BytesIO
 from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException, UploadFile, status
-import cloudinary
 from cloudinary import uploader
+from cloudinary.exceptions import Error as CloudinaryError
 
 from app.core.config import get_settings
 
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 DOCUMENT_ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 ATTACHMENT_ALLOWED_EXTENSIONS = {
     ".csv",
@@ -31,13 +34,56 @@ ATTACHMENT_ALLOWED_EXTENSIONS = {
 IMAGE_EXTENSIONS = {".gif", ".jpeg", ".jpg", ".png", ".webp"}
 ALLOWED_EXTENSIONS = DOCUMENT_ALLOWED_EXTENSIONS
 
-if settings.cloudinary_cloud_name and settings.cloudinary_api_key and settings.cloudinary_api_secret:
-    cloudinary.config(
-        cloud_name=settings.cloudinary_cloud_name,
-        api_key=settings.cloudinary_api_key,
-        api_secret=settings.cloudinary_api_secret,
-        secure=True,
-    )
+def _upload_to_cloudinary(path: str, **options) -> dict:
+    if not all((settings.cloudinary_cloud_name, settings.cloudinary_api_key, settings.cloudinary_api_secret)):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="File storage is not configured. Set CLOUDINARY_CLOUD_NAME, "
+            "CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in backend/.env, then restart the backend.",
+        )
+    try:
+        return uploader.upload(
+            path,
+            cloud_name=settings.cloudinary_cloud_name,
+            api_key=settings.cloudinary_api_key,
+            api_secret=settings.cloudinary_api_secret,
+            secure=True,
+            **options,
+        )
+    except (CloudinaryError, ValueError) as exc:
+        message = str(exc)
+        for secret in (settings.cloudinary_api_key, settings.cloudinary_api_secret):
+            if secret:
+                message = message.replace(secret, "[redacted]")
+        http_code = getattr(exc, "http_code", None)
+        logger.error(
+            "Cloudinary upload failed type=%s http_code=%s detail=%s",
+            type(exc).__name__,
+            http_code,
+            message[:1000],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=_cloudinary_error_detail(exc),
+        ) from exc
+
+
+def _cloudinary_error_detail(exc: Exception) -> str:
+    message = str(exc).lower()
+    http_code = getattr(exc, "http_code", None)
+    if http_code == 401 or "invalid signature" in message or "unknown api key" in message:
+        return "Cloudinary rejected the credentials. Verify the cloud name, API key and API secret, then restart the backend."
+    if http_code == 403 or "not allowed" in message or "disabled" in message:
+        return "Cloudinary rejected this asset type or upload operation. Check the account security and PDF/raw-file delivery settings."
+    if http_code == 429 or "rate limit" in message or "quota" in message:
+        return "Cloudinary upload limits have been reached. Check account usage and retry after the limit resets."
+    if "too large" in message or "maximum" in message and "size" in message:
+        return "Cloudinary rejected the file because it exceeds the account's upload-size limit."
+    if "timeout" in message or "timed out" in message or "connection" in message:
+        return "Cloudinary could not be reached while uploading. Check the backend network connection and retry."
+    if http_code == 400:
+        return "Cloudinary rejected the upload request. Check the file name, file type and account upload settings."
+    return "Cloudinary accepted the account connection but rejected this upload. Retry once; the backend log now contains the safe provider error."
 
 
 class StoredFile:
@@ -103,10 +149,7 @@ async def store_document_version(
     safe_filename = sanitize_filename(file.filename or "document")
     return await _store_upload(
         file=file,
-        folder=(
-            f"{settings.cloudinary_folder}/organizations/{organization_id}/projects/"
-            f"{project_id}/documents/{document_id}/v{version_number}"
-        ),
+        folder=_document_folder(organization_id, project_id, document_id, version_number),
         resource_type="raw",
         safe_filename=safe_filename,
         allowed_extensions=DOCUMENT_ALLOWED_EXTENSIONS,
@@ -126,10 +169,7 @@ def store_document_version_bytes(
     return _store_bytes(
         content=content,
         original_filename=filename or safe_filename,
-        folder=(
-            f"{settings.cloudinary_folder}/organizations/{organization_id}/projects/"
-            f"{project_id}/documents/{document_id}/v{version_number}"
-        ),
+        folder=_document_folder(organization_id, project_id, document_id, version_number),
         resource_type="raw",
         safe_filename=safe_filename,
         allowed_extensions=DOCUMENT_ALLOWED_EXTENSIONS,
@@ -149,10 +189,7 @@ async def store_subsection_attachment(
     resource_type = "image" if extension in IMAGE_EXTENSIONS else "raw"
     return await _store_upload(
         file=file,
-        folder=(
-            f"{settings.cloudinary_folder}/organizations/{organization_id}/projects/{project_id}/"
-            f"eia-documents/{eia_document_id}/subsections/{subsection_id}/attachments"
-        ),
+        folder=_subsection_folder(organization_id, project_id, eia_document_id, subsection_id),
         resource_type=resource_type,
         safe_filename=safe_filename,
         allowed_extensions=ATTACHMENT_ALLOWED_EXTENSIONS,
@@ -188,12 +225,11 @@ async def _store_upload(
                 checksum.update(chunk)
                 temp_file.write(chunk)
 
-        upload_result = uploader.upload(
+        upload_result = _upload_to_cloudinary(
             temp_file_path,
             resource_type=resource_type,
             folder=folder,
-            use_filename=True,
-            unique_filename=False,
+            public_id=_compact_public_id(safe_filename, checksum.hexdigest()),
             overwrite=True,
             filename_override=file.filename or safe_filename,
         )
@@ -249,12 +285,11 @@ def _store_bytes(
             temp_file_path = temp_file.name
             temp_file.write(content)
 
-        upload_result = uploader.upload(
+        upload_result = _upload_to_cloudinary(
             temp_file_path,
             resource_type=resource_type,
             folder=folder,
-            use_filename=True,
-            unique_filename=False,
+            public_id=_compact_public_id(safe_filename, checksum),
             overwrite=True,
             filename_override=original_filename or safe_filename,
         )
@@ -277,3 +312,22 @@ def _store_bytes(
         checksum_sha256=checksum,
         original_filename=original_filename or safe_filename,
     )
+
+
+def _document_folder(organization_id: UUID, project_id: UUID, document_id: UUID, version_number: int) -> str:
+    return (
+        f"{settings.cloudinary_folder}/o/{organization_id.hex}/p/{project_id.hex}/"
+        f"d/{document_id.hex}/v{version_number}"
+    )
+
+
+def _subsection_folder(organization_id: UUID, project_id: UUID, eia_document_id: UUID, subsection_id: UUID) -> str:
+    return (
+        f"{settings.cloudinary_folder}/o/{organization_id.hex}/p/{project_id.hex}/"
+        f"e/{eia_document_id.hex}/s/{subsection_id.hex}"
+    )
+
+
+def _compact_public_id(filename: str, checksum: str) -> str:
+    stem = re.sub(r"[^A-Za-z0-9_-]+", "-", Path(filename).stem).strip("-")[:36] or "file"
+    return f"{checksum[:20]}-{stem}"

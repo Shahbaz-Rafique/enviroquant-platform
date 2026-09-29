@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Loader2, Map, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, MapPin, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+import { ProjectMap } from "@/components/map/project-map-lazy";
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ type ProjectFormState = {
 const initialState: ProjectFormState = {
   name: "",
   sector: "",
-  country: "",
+  country: "State of Kuwait",
   location: "",
   description: "",
   capacity: "",
@@ -46,6 +46,8 @@ export function ProjectForm() {
   const router = useRouter();
   const [form, setForm] = useState(initialState);
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -57,7 +59,6 @@ export function ProjectForm() {
     event.preventDefault();
     setSaving(true);
     setError(null);
-
     try {
       const project = await apiRequest<Project>("/projects", {
         method: "POST",
@@ -66,6 +67,8 @@ export function ProjectForm() {
           sector: form.sector || null,
           country: form.country || null,
           location: form.location || null,
+          latitude: latitude ?? null,
+          longitude: longitude ?? null,
           description: form.description || null,
           metadata: {
             capacity: form.capacity || null,
@@ -84,83 +87,45 @@ export function ProjectForm() {
 
   return (
     <form onSubmit={submit}>
-      {error ? <Alert className="mb-5 border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
+      {error ? <Alert className="mb-5 border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
 
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid gap-5">
           <div className="grid gap-2">
             <Label htmlFor="name">Project name <span className="text-red-600">*</span></Label>
-            <Input
-              id="name"
-              required
-              placeholder="Enter project name"
-              value={form.name}
-              onChange={(event) => updateField("name", event.target.value)}
-            />
+            <Input id="name" required placeholder="Enter project name" value={form.name} onChange={(e) => updateField("name", e.target.value)} />
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="location">Project location <span className="text-red-600">*</span></Label>
-            <Input
-              id="location"
-              required
-              placeholder="Enter location or coordinates"
-              value={form.location}
-              onChange={(event) => updateField("location", event.target.value)}
-            />
+            <Input id="location" required placeholder="e.g. Al Ahmadi, Kuwait" value={form.location} onChange={(e) => updateField("location", e.target.value)} />
           </div>
 
           <div className="grid gap-2">
             <Label htmlFor="description">Project overview <span className="text-red-600">*</span></Label>
-            <Textarea
-              id="description"
-              required
-              placeholder="Provide a brief description of the project."
-              value={form.description}
-              onChange={(event) => updateField("description", event.target.value)}
-            />
+            <Textarea id="description" required placeholder="Provide a brief description of the project." value={form.description} onChange={(e) => updateField("description", e.target.value)} />
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="sector">Project type <span className="text-red-600">*</span></Label>
-              <Input
-                id="sector"
-                required
-                placeholder="Select or enter project type"
-                value={form.sector}
-                onChange={(event) => updateField("sector", event.target.value)}
-              />
+              <Input id="sector" required placeholder="e.g. Oil & Gas, Infrastructure" value={form.sector} onChange={(e) => updateField("sector", e.target.value)} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
-                placeholder="Country"
-                value={form.country}
-                onChange={(event) => updateField("country", event.target.value)}
-              />
+              <Label htmlFor="country">Regulatory jurisdiction</Label>
+              <Input id="country" readOnly value={form.country} />
+              <p className="text-xs text-[#74847d]">EnviroQuant is currently configured for Kuwait EIA requirements.</p>
             </div>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="capacity">Project size & capacity</Label>
-              <Input
-                id="capacity"
-                placeholder="e.g. 150 hectares"
-                value={form.capacity}
-                onChange={(event) => updateField("capacity", event.target.value)}
-              />
+              <Input id="capacity" placeholder="e.g. 150 hectares" value={form.capacity} onChange={(e) => updateField("capacity", e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="timeline">Estimated project timeline</Label>
-              <Input
-                id="timeline"
-                type="date"
-                value={form.timeline}
-                onChange={(event) => updateField("timeline", event.target.value)}
-              />
+              <Input id="timeline" type="date" value={form.timeline} onChange={(e) => updateField("timeline", e.target.value)} />
             </div>
           </div>
 
@@ -174,26 +139,38 @@ export function ProjectForm() {
                     id={`component-${component}`}
                     onCheckedChange={(checked) => setSelectedComponents((current) => checked ? [...current, component] : current.filter((item) => item !== component))}
                   />
-                  <Label className="cursor-pointer text-sm font-medium text-[#52675e]" htmlFor={`component-${component}`}>
-                    {component}
-                  </Label>
+                  <Label className="cursor-pointer text-sm font-medium text-[#52675e]" htmlFor={`component-${component}`}>{component}</Label>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <aside className="rounded-xl border border-dashed border-[#cbdad3] bg-[#f8faf9] p-4">
-          <div className="flex items-center justify-between gap-3">
-            <Label>Project area mapping</Label>
-            <Badge className="border-slate-200 bg-slate-100 text-slate-600">Roadmap</Badge>
+        <aside className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <Label className="flex items-center gap-2"><MapPin className="size-4 text-[#287451]" />Project location map</Label>
+            {latitude && longitude ? (
+              <span className="text-xs text-[#697a73]">{latitude.toFixed(4)}, {longitude.toFixed(4)}</span>
+            ) : (
+              <span className="text-xs text-[#9aaba3]">Click map to pin location</span>
+            )}
           </div>
-          <div className="mt-3 grid aspect-video place-items-center rounded-lg border border-dashed border-[#cbdad3] bg-white">
-            <div className="px-4 text-center text-sm text-[#74847d]">
-              <Map className="mx-auto mb-2 size-10 text-[#6f9f87]" />
-              Interactive project-area mapping is not available yet. Add maps and plans as evidence after creating the project.
-            </div>
+          <div className="overflow-hidden rounded-xl border border-[#dce6e1] bg-[#f8faf9]" style={{ height: 360 }}>
+            <ProjectMap
+              latitude={latitude}
+              longitude={longitude}
+              editable
+              locationName={form.location || form.name}
+              onChange={(lat, lng) => {
+                setLatitude(lat);
+                setLongitude(lng);
+                if (!form.location) {
+                  updateField("location", `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+                }
+              }}
+            />
           </div>
+          <p className="text-xs text-[#9aaba3]">Click anywhere on the map to pin the project site. You can drag the pin to adjust.</p>
         </aside>
       </div>
 
@@ -203,10 +180,10 @@ export function ProjectForm() {
         </Button>
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           <span className="text-xs text-[#74847d]">Next: evidence and structured EIA setup.</span>
-        <Button type="submit" disabled={saving}>
-          {saving ? <Loader2 className="animate-spin" /> : <Save />}
-          Save & continue <ArrowRight />
-        </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="animate-spin" /> : <Save />}
+            Save & continue <ArrowRight />
+          </Button>
         </div>
       </div>
     </form>

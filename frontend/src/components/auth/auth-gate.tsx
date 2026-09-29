@@ -25,14 +25,6 @@ export function useCurrentUser(): AuthGateState {
       return;
     }
 
-    // A successful login already returned and stored the current user. Render it
-    // immediately while validating the token in the background instead of
-    // blocking the destination page on a duplicate request.
-    const storedUser = getStoredUser();
-    if (storedUser) {
-      setState({ user: storedUser, loading: false });
-    }
-
     apiRequest<User>("/auth/me")
       .then((user) => {
         storeSession({ access_token: token, token_type: "bearer", user } satisfies TokenResponse);

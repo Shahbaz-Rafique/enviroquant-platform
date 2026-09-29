@@ -12,6 +12,8 @@ class ProjectCreate(BaseModel):
     sector: str | None = Field(default=None, max_length=120)
     country: str | None = Field(default=None, max_length=120)
     location: str | None = Field(default=None, max_length=255)
+    latitude: float | None = None
+    longitude: float | None = None
     metadata: dict = Field(default_factory=dict)
 
 
@@ -21,6 +23,8 @@ class ProjectUpdate(BaseModel):
     sector: str | None = Field(default=None, max_length=120)
     country: str | None = Field(default=None, max_length=120)
     location: str | None = Field(default=None, max_length=255)
+    latitude: float | None = None
+    longitude: float | None = None
     status: str | None = Field(default=None, max_length=40)
     metadata: dict | None = None
 
@@ -33,6 +37,8 @@ class ProjectRead(ORMModel):
     sector: str | None
     country: str | None
     location: str | None
+    latitude: float | None
+    longitude: float | None
     status: str
     project_metadata: dict
     created_by_id: UUID

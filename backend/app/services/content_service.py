@@ -66,9 +66,18 @@ def save_subsection_content(
     require_subsection_permission(subsection, current_user, DOCUMENT_EDIT_ROLES, "edit")
     require_assigned_subsection_author(subsection, current_user)
     assert_subsection_version(subsection, payload.expected_updated_at)
-    assert_workflow_status_unchanged(subsection, payload.completion_status)
-    if payload.content_html is not None or payload.content_json is not None:
-        assert_subsection_content_editable(subsection)
+    has_content = payload.content_html is not None or payload.content_json is not None
+    auto_start = (
+        has_content
+        and subsection.completion_status in ("NOT_STARTED", "ASSIGNED")
+        and payload.completion_status in (None, "IN_PROGRESS")
+    )
+    if auto_start:
+        subsection.completion_status = "IN_PROGRESS"
+    else:
+        assert_workflow_status_unchanged(subsection, payload.completion_status)
+        if has_content:
+            assert_subsection_content_editable(subsection, current_user)
 
     if payload.content_html is not None:
         subsection.content_html = payload.content_html

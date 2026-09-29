@@ -136,7 +136,8 @@ def _build_authoring_prompt(subsection: EiaSubSection, payload: EiaAuthoringAssi
     checklist_lines = "\n".join(f"- {mapping.checklist_title}" for mapping in subsection.checklist_mappings) or f"- {subsection.title}"
     attachment_lines = "\n".join(f"- {attachment.original_filename}" for attachment in subsection.attachments[:8]) or "- No attachments"
     mapping_lines = "\n".join(
-        f"- {mapping.detected_title or mapping.detected_section_number or 'Mapped source'}"
+        f"- {mapping.detected_title or mapping.detected_section_number or 'Mapped source'}: "
+        f"{_plaintext(mapping.detected_content or '')[:1800]}"
         for mapping in subsection.source_mappings[:8]
     ) or "- No mapped sources"
     current_draft = (subsection.content_html or subsection.content or "").strip() or "[no draft]"
@@ -156,6 +157,10 @@ Attachments:
 
 Mapped source suggestions:
 {mapping_lines}
+
+Evidence rule:
+Draft only from the current content and quoted mapped-source text above. If those sources do not support a
+project-specific statement, identify the missing evidence instead of completing the statement from general knowledge.
 
 Additional user instructions:
 {payload.instructions or "[none]"}

@@ -26,7 +26,9 @@ class EiaDocument(TimestampMixin, Base):
     )
     title: Mapped[str] = mapped_column(String(220), nullable=False)
     status: Mapped[str] = mapped_column(String(40), default="draft", nullable=False)
-    checklist_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    checklist_version: Mapped[str] = mapped_column(
+        String(80), default="enviroquant-eia-checklist-2026.1", nullable=False
+    )
     created_by_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),

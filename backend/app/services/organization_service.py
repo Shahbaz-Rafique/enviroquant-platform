@@ -9,6 +9,7 @@ from app.schemas.organization import OrganizationCreate, OrganizationUpdate
 from app.schemas.user import UserInvite
 from app.services.auth_service import slugify
 from app.services.rbac_service import create_default_roles
+from app.seeds.regulation_seed import seed_kuwait_regulatory_library
 from app.services.user_service import InvitationResult, invite_user_for_tenant
 
 
@@ -30,6 +31,7 @@ def create_organization(db: Session, payload: OrganizationCreate) -> Tenant:
     db.add(organization)
     db.flush()
     create_default_roles(db, organization)
+    seed_kuwait_regulatory_library(db, organization.id, commit=False)
     db.commit()
     db.refresh(organization)
     return organization

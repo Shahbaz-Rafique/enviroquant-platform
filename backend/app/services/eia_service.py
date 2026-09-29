@@ -10,8 +10,7 @@ from app.models.eia_document_member import EiaDocumentMember
 from app.models.eia import EiaDocument, EiaSection, EiaSubSection
 from app.models.user import User
 from app.schemas.eia import EiaDocumentCreate, EiaDocumentProgressRead, EiaSectionProgressRead, EiaSubSectionUpdate
-from app.seeds.eia_checklist_seed import seed_eia_structure, synchronize_eia_structure
-from app.services.compliance_methodology import CHECKLIST_VERSION
+from app.seeds.eia_checklist_seed import seed_eia_structure
 from app.services.eia_auto_structure_service import auto_structure_eia_document
 from app.services.audit_service import record_audit_event
 from app.services.project_service import get_project_for_tenant
@@ -46,15 +45,14 @@ def list_project_eia_documents(db: Session, current_user: User, project_id: UUID
                 EiaDocumentMember.user_id == current_user.id,
             ),
         )
-        .where(
-            EiaDocument.tenant_id == current_user.tenant_id,
-            EiaDocument.project_id == project.id,
-            or_(
-                EiaDocument.created_by_id == current_user.id,
-                EiaDocumentMember.id.is_not(None),
-            ),
-        )
+        .where(EiaDocument.tenant_id == current_user.tenant_id, EiaDocument.project_id == project.id)
         .order_by(EiaDocument.updated_at.desc())
+    )
+    statement = statement.where(
+        or_(
+            EiaDocument.created_by_id == current_user.id,
+            EiaDocumentMember.id.is_not(None),
+        )
     )
     return list(db.scalars(statement).all())
 
@@ -71,7 +69,6 @@ def create_eia_document(
         tenant_id=current_user.tenant_id,
         project_id=project.id,
         title=title,
-        checklist_version=CHECKLIST_VERSION,
         created_by_id=current_user.id,
         document_metadata=payload.metadata,
     )
@@ -124,37 +121,6 @@ def get_eia_document_structure(db: Session, current_user: User, document_id: UUI
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIA document not found")
     require_eia_document_permission(document, current_user, DOCUMENT_READ_ROLES, "view")
     return document
-
-
-def synchronize_eia_document_checklist(
-    db: Session, current_user: User, document_id: UUID
-) -> tuple[EiaDocument, dict[str, int]]:
-    statement = (
-        select(EiaDocument)
-        .options(
-            selectinload(EiaDocument.sections)
-            .selectinload(EiaSection.subsections)
-            .selectinload(EiaSubSection.checklist_mappings)
-        )
-        .where(EiaDocument.id == document_id, EiaDocument.tenant_id == current_user.tenant_id)
-    )
-    document = db.scalars(statement).unique().one_or_none()
-    if document is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIA document not found")
-    require_eia_document_permission(document, current_user, DOCUMENT_EDIT_ROLES, "synchronize checklist")
-    changes = synchronize_eia_structure(db, document)
-    record_audit_event(
-        db,
-        tenant_id=current_user.tenant_id,
-        actor_user_id=current_user.id,
-        event_type="eia.checklist.synchronized",
-        entity_type="eia_document",
-        entity_id=document.id,
-        summary=f"EIA checklist synchronized to {CHECKLIST_VERSION}",
-        metadata={"checklist_version": CHECKLIST_VERSION, **changes},
-    )
-    db.commit()
-    return get_eia_document_structure(db, current_user, document.id), changes
 
 
 def get_eia_document_for_tenant(
@@ -218,18 +184,43 @@ def update_eia_subsection(
         subsection.content_metadata = update_data.pop("metadata") or {}
 
     requested_status = update_data.pop("completion_status", None)
-    assert_workflow_status_unchanged(subsection, requested_status)
-    if "content" in update_data and update_data["content"] is not None:
-        assert_subsection_content_editable(subsection)
+    has_content_change = (
+        ("content" in update_data and update_data["content"] is not None)
+        or ("content_html" in update_data and update_data["content_html"] is not None)
+    )
+    # Allow NOT_STARTED/ASSIGNED → IN_PROGRESS when saving content (implicit "start work")
+    auto_start = (
+        has_content_change
+        and subsection.completion_status in ("NOT_STARTED", "ASSIGNED")
+        and requested_status in (None, "IN_PROGRESS")
+    )
+    if auto_start:
+        subsection.completion_status = "IN_PROGRESS"
+        requested_status = None  # already applied
+    else:
+        assert_workflow_status_unchanged(subsection, requested_status)
+    if has_content_change and not auto_start:
+        assert_subsection_content_editable(subsection, current_user)
+
+    content_html = update_data.pop("content_html", None)
+    content_json = update_data.pop("content_json", None)
 
     for field, value in update_data.items():
         if value is not None:
             setattr(subsection, field, value)
 
-    if "content" in update_data and update_data["content"] is not None:
+    if content_html is not None:
+        subsection.content_html = content_html
+        subsection.content = content_html
+        subsection.last_edited_by_id = current_user.id
+        subsection.last_edited_at = datetime.now(UTC)
+    elif "content" in update_data and update_data["content"] is not None:
         subsection.content_html = update_data["content"]
         subsection.last_edited_by_id = current_user.id
         subsection.last_edited_at = datetime.now(UTC)
+
+    if content_json is not None:
+        subsection.content_json = content_json
 
     from app.services.revision_service import create_subsection_revision
 
@@ -300,9 +291,17 @@ def assert_workflow_status_unchanged(
     )
 
 
-def assert_subsection_content_editable(subsection: EiaSubSection) -> None:
+def assert_subsection_content_editable(subsection: EiaSubSection, current_user: User | None = None) -> None:
     if subsection.completion_status == "IN_PROGRESS":
         return
+    if current_user is not None:
+        role_names = {r.lower() for r in current_user.role_names}
+        if (
+            is_eia_document_admin(current_user)
+            or Roles.PROJECT_MANAGER in role_names
+            or subsection.document.created_by_id == current_user.id
+        ):
+            return
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
         detail="Start work or start the requested revision before editing subsection content",

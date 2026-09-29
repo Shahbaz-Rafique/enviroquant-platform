@@ -5,10 +5,12 @@ from io import BytesIO
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role_in_tenant
 from app.core.permissions import (
+    TENANT_ADMIN_ROLES,
     PROJECT_MANAGE_ROLES,
     READ_ONLY_ROLES,
     REGULATOR_PORTAL_ROLES,
@@ -37,11 +39,12 @@ from app.schemas.eia import (
     EiaEvaluationComparisonRead,
     EiaEvaluationFindingCommentCreate,
     EiaEvaluationFindingCommentRead,
+    EiaEvaluationFindingDecision,
+    EiaEvaluationFindingRead,
     EiaEvaluationRunCreate,
     EiaEvaluationRunDetailRead,
     EiaEvaluationRunRead,
     EiaRegulatorOverviewRead,
-    EiaReusableContentRead,
     EiaReviewApprovalCreate,
     EiaReviewApprovalDecision,
     EiaReviewApprovalRead,
@@ -63,6 +66,11 @@ from app.schemas.eia import (
     SubSectionCommentUpdate,
 )
 from app.services.authoring_assistant_service import generate_authoring_guidance
+from app.services.section_suggestions_service import generate_section_suggestions
+from app.services.executive_summary_service import generate_executive_summary
+from app.services.eia_builder_migration_service import migrate_legacy_eia_builder_structure
+from app.services.eia_delivery_service import email_eia_document
+from app.schemas.eia import EiaEmailRequest
 from app.services.content_service import (
     get_subsection_workspace,
     link_source_document_attachment,
@@ -88,6 +96,7 @@ from app.services.eia_assignment_service import (
 from app.services.eia_evaluation_service import (
     compare_eia_evaluation_runs,
     create_finding_comment,
+    decide_evaluation_finding,
     enqueue_eia_evaluation_run,
     get_eia_evaluation_run,
     list_finding_comments,
@@ -124,11 +133,10 @@ from app.services.eia_service import (
     get_eia_document_structure,
     get_subsection_for_document,
     list_project_eia_documents,
-    synchronize_eia_document_checklist,
+    require_eia_document_permission,
     update_eia_subsection,
 )
 from app.services.revision_service import list_subsection_revisions, restore_subsection_revision
-from app.services.reusable_content_service import search_reusable_eia_content
 from app.services.source_mapping_service import (
     confirm_source_mapping,
     detect_source_mappings,
@@ -138,16 +146,6 @@ from app.services.source_mapping_service import (
 
 
 router = APIRouter()
-
-
-@router.get("/content-library/search", response_model=list[EiaReusableContentRead])
-def read_reusable_content(
-    query: str = Query(..., min_length=2, max_length=200),
-    limit: int = Query(20, ge=1, le=50),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
-) -> list[dict[str, object]]:
-    return search_reusable_eia_content(db, current_user, query, limit=limit)
 
 
 @router.get("/project/{project_id}", response_model=list[EiaDocumentRead])
@@ -208,14 +206,23 @@ def read_eia_document_structure(
     return get_eia_document_structure(db, current_user, document_id)
 
 
-@router.post("/{document_id}/checklist/synchronize", response_model=EiaDocumentStructureRead)
-def post_eia_checklist_synchronize(
+@router.delete("/{document_id}", status_code=204)
+def delete_eia_document(
     document_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
-) -> EiaDocument:
-    document, _changes = synchronize_eia_document_checklist(db, current_user, document_id)
-    return document
+) -> None:
+    document = db.scalar(
+        select(EiaDocument).where(
+            EiaDocument.id == document_id,
+            EiaDocument.tenant_id == current_user.tenant_id,
+        )
+    )
+    if document is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIA document not found")
+    require_eia_document_permission(document, current_user, DOCUMENT_EDIT_ROLES, "delete")
+    db.delete(document)
+    db.commit()
 
 
 @router.post("/{document_id}/auto-structure", response_model=EiaDocumentStructureRead)
@@ -250,6 +257,36 @@ def download_compiled_eia_json(
         media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="enviroquant-eia-{document_id}.json"'},
     )
+
+
+@router.post("/{document_id}/sections/{section_id}/suggestions")
+def section_suggestions(document_id: UUID, section_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES))) -> dict:
+    return generate_section_suggestions(db, current_user, document_id, section_id)
+
+
+@router.post("/{document_id}/executive-summary")
+def create_executive_summary(
+    document_id: UUID,
+    force: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(PROJECT_MANAGE_ROLES)),
+) -> dict:
+    return generate_executive_summary(db, current_user, document_id, force=force)
+
+
+@router.post("/{document_id}/builder-structure/migrate", response_model=EiaDocumentStructureRead)
+def migrate_builder_structure(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(PROJECT_MANAGE_ROLES)),
+) -> EiaDocument:
+    migrate_legacy_eia_builder_structure(db, current_user, document_id)
+    return get_eia_document_structure(db, current_user, document_id)
+
+
+@router.post("/{document_id}/email")
+def send_eia_report(document_id: UUID, payload: EiaEmailRequest, db: Session = Depends(get_db), current_user: User = Depends(require_role_in_tenant(PROJECT_MANAGE_ROLES))) -> dict:
+    return email_eia_document(db, current_user, document_id, payload)
 
 
 @router.get("/{document_id}/export.docx")
@@ -302,8 +339,6 @@ def post_eia_evaluation_run(
     current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> object:
     run = enqueue_eia_evaluation_run(db, current_user, document_id, payload)
-    # Low-latency nudge for local/single-process use. The database-backed worker
-    # remains authoritative and recovers pending or interrupted work.
     background_tasks.add_task(process_eia_evaluation_run_background, run.id)
     return run
 
@@ -377,6 +412,17 @@ def read_eia_evaluation_comparison(
     current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
 ) -> dict[str, object]:
     return compare_eia_evaluation_runs(db, current_user, document_id, run_id, baseline_run_id)
+
+
+@router.delete("/{document_id}/evaluation-runs/{run_id}", status_code=204)
+def delete_eia_evaluation_run(
+    document_id: UUID,
+    run_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
+) -> None:
+    from app.services.eia_evaluation_service import delete_evaluation_run
+    delete_evaluation_run(db, current_user, document_id, run_id)
 
 
 @router.get("/{document_id}/evaluation-runs/{run_id}/report.json")
@@ -455,6 +501,21 @@ def post_eia_evaluation_finding_comment(
 
 
 @router.post(
+    "/{document_id}/evaluation-runs/{run_id}/findings/{finding_id}/decision",
+    response_model=EiaEvaluationFindingRead,
+)
+def post_eia_evaluation_finding_decision(
+    document_id: UUID,
+    run_id: UUID,
+    finding_id: UUID,
+    payload: EiaEvaluationFindingDecision,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role_in_tenant(REVIEW_PORTAL_ROLES)),
+) -> object:
+    return decide_evaluation_finding(db, current_user, document_id, run_id, finding_id, payload)
+
+
+@router.post(
     "/{document_id}/members",
     response_model=EiaDocumentMemberInvitationRead,
     status_code=status.HTTP_201_CREATED,
@@ -463,7 +524,7 @@ def post_eia_document_member(
     document_id: UUID,
     payload: EiaDocumentMemberCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(TENANT_ADMIN_ROLES)),
 ) -> dict[str, object]:
     return invite_eia_document_member(db, current_user, document_id, payload)
 
@@ -545,7 +606,7 @@ def delete_eia_document_member(
     document_id: UUID,
     user_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role_in_tenant(READ_ONLY_ROLES)),
+    current_user: User = Depends(require_role_in_tenant(TENANT_ADMIN_ROLES)),
 ) -> None:
     remove_eia_document_member(db, current_user, document_id, user_id)
 

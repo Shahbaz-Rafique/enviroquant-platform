@@ -1,0 +1,909 @@
+{
+  "id": "0ac01d78-4f06-43c7-8a37-37912143ca65",
+  "title": "TIERS Limited EIA Document",
+  "metadata": {},
+  "sections": [
+    {
+      "number": "1",
+      "title": "DESCRIPTION OF THE PROJECT",
+      "subsections": [
+        {
+          "number": "1.1.1",
+          "title": "Are the need and objectives of the project explained?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.2",
+          "title": "Is the programme for implementation described (timeline, start/finish dates for construction, operation, commissioning, including phases)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.3",
+          "title": "Are all main components of the project described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.4",
+          "title": "Is the location of each project component identified (maps, plans, diagrams)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.5",
+          "title": "Is the layout of the site(s) described (ground levels, buildings, structures, underground works, storage, water features, planting, access, boundaries)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.6",
+          "title": "For tunneling and earthworks - are activities properly described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.7",
+          "title": "Are all construction activities described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.8",
+          "title": "Are all operation activities described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.10",
+          "title": "Are additional services required described (transport, water, sewerage, waste, electricity, telecoms, roads, harbors, power-lines, etc.)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.11",
+          "title": "Are any developments likely to occur as a consequence of the project identified?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.12",
+          "title": "Are existing activities which will alter or cease identified?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.1.13",
+          "title": "Are other existing or planned developments with potential cumulative effects identified?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.2.1",
+          "title": "Is the area of land occupied by permanent components quantified and shown on scaled maps?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.3.1",
+          "title": "Is the area of land required temporarily for construction quantified and mapped?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.3.2",
+          "title": "Is restoration and after-use of temporarily occupied land described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.3.4",
+          "title": "Is the size of structures/works identified (floor area, height, excavations, embankments, stacks, water depth, etc.)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.3.5",
+          "title": "Is the form and appearance of structures described (materials, colors, design, plant species, etc.)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.3.6",
+          "title": "For urban projects - numbers and characteristics of new populations/businesses described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.3.7",
+          "title": "For displacement projects - numbers and characteristics of displaced people/businesses described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.3.8",
+          "title": "For transport projects - type, volume, temporal pattern, and distribution of traffic described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.4.1",
+          "title": "Are all operating processes described (manufacturing, extraction, etc.)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.4.2",
+          "title": "Are types and quantities of outputs described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.4.3",
+          "title": "Are types and quantities of raw materials and energy needed discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.4.4",
+          "title": "Are environmental implications of sourcing raw materials discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.4.5",
+          "title": "Is efficiency in use of energy and raw materials discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.5.1",
+          "title": "Are hazardous materials identified and quantified (construction, operation, commissioning)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.5.2",
+          "title": "Is transport of raw materials and traffic movements discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.5.3",
+          "title": "Is employment created or lost discussed (by phase)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.5.4",
+          "title": "Are access arrangements and worker/visitor traffic movements estimated?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.5.5",
+          "title": "Is housing and services for employees discussed (if relevant)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.5.6",
+          "title": "Are types and quantities of solid waste identified (by phase)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.1",
+          "title": "Composition and hazards of solid wastes discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.2",
+          "title": "Methods for collecting, storing, treating, transporting, and disposing of solid wastes described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.3",
+          "title": "Locations for final disposal of solid wastes discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.4",
+          "title": "Types and quantities of liquid effluents identified (by phase)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.5",
+          "title": "Composition and hazards of liquid effluents discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.6",
+          "title": "Methods for collecting, storing, treating, transporting, and disposing of liquid effluents described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.7",
+          "title": "Locations for final disposal of liquid effluents discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.8",
+          "title": "Types and quantities of gaseous and particulate emissions identified (by phase)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.9",
+          "title": "Composition and hazards of air emissions discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.10",
+          "title": "Methods for collecting, treating, and discharging air emissions described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.11",
+          "title": "Locations and characteristics of air discharges identified (stack height, velocity, temperature)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.12",
+          "title": "Potential for resource recovery from wastes discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.13",
+          "title": "Sources of noise, heat, light, or electromagnetic radiation identified and quantified?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.14",
+          "title": "Methods for estimating residues/emissions and difficulties discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.6.15",
+          "title": "Uncertainty attached to estimates discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.7.1",
+          "title": "Are risks associated with the project discussed (hazardous materials, spills, fire, explosion, traffic, process failure, natural disasters)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "1.7.2",
+          "title": "Are measures to prevent and respond to accidents described (prevention, training, contingency, emergency plans)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    },
+    {
+      "number": "2",
+      "title": "CONSIDERATION OF ALTERNATIVES",
+      "subsections": [
+        {
+          "number": "2.1",
+          "title": "Is the process by which the project was developed described, and are alternatives considered?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "2.2",
+          "title": "Are the alternatives realistic and genuine?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "2.3",
+          "title": "Are the main reasons for choice of the proposed project explained (including environmental reasons)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "2.4",
+          "title": "Are the main environmental effects of the alternatives compared with the proposed project?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    },
+    {
+      "number": "3",
+      "title": "DESCRIPTION OF THE ENVIRONMENT LIKELY TO BE AFFECTED",
+      "subsections": [
+        {
+          "number": "3.1.1",
+          "title": "Existing land uses and people using the land described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.2",
+          "title": "Topography, geology, and soils described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.3",
+          "title": "Significant topographic/geological features and soil conditions (quality, stability, erosion, contamination) described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.4",
+          "title": "Fauna, flora, and habitats described and mapped?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.5",
+          "title": "Species populations and protected areas/species defined?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.6",
+          "title": "Water environment described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.7",
+          "title": "Hydrology, water quality, and water uses described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.8",
+          "title": "Local climate, meteorology, and air quality described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.9",
+          "title": "Existing noise climate described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.10",
+          "title": "Existing light, heat, and electromagnetic radiation described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.1.11",
+          "title": "Material assets (buildings, minerals, water resources) described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.2.1",
+          "title": "Archaeological, historic, architectural, or cultural features described (including protected sites)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.2.2",
+          "title": "Demographic, social, and socio-economic conditions described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.2.3",
+          "title": "Future changes in the environment without the project (No Project / Moving Baseline) described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.3.1",
+          "title": "Study area defined widely enough?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.3.2",
+          "title": "All relevant agencies contacted?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.3.3",
+          "title": "Sources of data adequately referenced?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.3.4",
+          "title": "Survey methods, difficulties, and uncertainties described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.3.5",
+          "title": "Methods appropriate for the purpose?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "3.3.6",
+          "title": "Important data gaps identified and how they were handled explained?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    },
+    {
+      "number": "4",
+      "title": "DESCRIPTION OF THE LIKELY SIGNIFICANT EFFECTS",
+      "subsections": [
+        {
+          "number": "4.1.1",
+          "title": "Scoping process described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.1.2",
+          "title": "Systematic approach to scoping evident?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.1.3",
+          "title": "Full consultation carried out during scoping?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.1.4",
+          "title": "Comments and views of consultees presented?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.1",
+          "title": "Secondary effects described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.2",
+          "title": "Temporary/short-term effects described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.3",
+          "title": "Permanent effects described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.4",
+          "title": "Long-term effects described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.5",
+          "title": "Ancillary activities effects described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.6",
+          "title": "Indirect/consequential development effects described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.7",
+          "title": "Cumulative effects with other developments described (including worst-case)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.4.8",
+          "title": "Geographic extent, duration, frequency, reversibility, probability described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.5.1",
+          "title": "Primary and secondary effects on human health and welfare described/quantified?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.5.2",
+          "title": "Impacts on biodiversity, climate change, and sustainable development discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.6.1",
+          "title": "Significance discussed in terms of legal compliance and sensitivity of receptors?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.6.2",
+          "title": "Appropriate standards and guidance used?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.6.3",
+          "title": "Positive effects described as well as negative?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.6.4",
+          "title": "Significance of each effect clearly explained?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.7.1",
+          "title": "Methods used to predict effects described and justified?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.7.2",
+          "title": "Worst-case predictions used where uncertain?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.7.3",
+          "title": "Difficulties in data compilation acknowledged?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.7.4",
+          "title": "Level of treatment appropriate to importance?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "4.7.5",
+          "title": "Emphasis given to most severe effects?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    },
+    {
+      "number": "5",
+      "title": "DESCRIPTION OF MITIGATION",
+      "subsections": [
+        {
+          "number": "5.1",
+          "title": "Significant adverse effects and potential for mitigation discussed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "5.2",
+          "title": "Effect of mitigation on magnitude and significance explained?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "5.3",
+          "title": "Reasons for choosing proposed mitigation explained?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "5.4",
+          "title": "Full range of mitigation approaches considered (avoid, reduce, remedy, compensate, etc.)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "5.5",
+          "title": "Arrangements to monitor and manage residual impacts proposed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "5.6",
+          "title": "Any negative effects of the proposed mitigation described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    },
+    {
+      "number": "6",
+      "title": "NON-TECHNICAL SUMMARY",
+      "subsections": [
+        {
+          "number": "6.1",
+          "title": "Does the EIA include a Non-Technical Summary?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "6.2",
+          "title": "Is it concise but comprehensive (project, environment, effects, mitigation)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "6.3",
+          "title": "Does it explain the development consent process and role of EIA?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "6.4",
+          "title": "Does it provide an overview of the assessment approach?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "6.5",
+          "title": "Is it written in non-technical language?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    },
+    {
+      "number": "7",
+      "title": "REGULATORY FRAMEWORK",
+      "subsections": [
+        {
+          "number": "7.1",
+          "title": "Relevant Kuwait regulations (KEPA, Ministry of Oil, etc.) provided?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "7.2",
+          "title": "Applicable environmental standards discussed (Noise, Air, Effluent, Waste, Soil, Biodiversity, etc.)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "7.3",
+          "title": "KOC HSE MS Policy, Vision & Mission clearly described?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "7.4",
+          "title": "Applicable features of KOC EIA Procedure implemented?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "7.5",
+          "title": "Relevant HSE MS Procedures utilized or referenced?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    },
+    {
+      "number": "8",
+      "title": "QUALITY OF PRESENTATION",
+      "subsections": [
+        {
+          "number": "8.1",
+          "title": "Information available in clearly defined document(s)?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.2",
+          "title": "Logically organized and clearly structured?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.3",
+          "title": "Table of contents present?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.4",
+          "title": "Clear description of process followed?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.5",
+          "title": "Comprehensive but concise?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.6",
+          "title": "Effective use of tables, figures, maps, photos?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.7",
+          "title": "Effective use of annexes/appendices?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.8",
+          "title": "All analyses and conclusions supported by evidence?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.9",
+          "title": "Consistent terminology used?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.10",
+          "title": "Reads as a single document with good cross-referencing?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        },
+        {
+          "number": "8.11",
+          "title": "Presentation fair, impartial, and objective?",
+          "content": "",
+          "content_html": null,
+          "content_json": null
+        }
+      ]
+    }
+  ]
+}

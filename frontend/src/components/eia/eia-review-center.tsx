@@ -11,7 +11,8 @@ import {
   MessageSquarePlus,
   RotateCw,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -56,7 +57,7 @@ const statusFilters = [
   { value: "COMPLIANT", label: "Compliant" },
   { value: "PARTIALLY_COMPLIANT", label: "Partial" },
   { value: "NEEDS_IMPROVEMENT", label: "Needs Work" },
-  { value: "MISSING_INFORMATION", label: "Missing information" },
+  { value: "MISSING", label: "Missing" },
   { value: "NEEDS_REVIEW", label: "Needs Review" }
 ] as const;
 
@@ -223,7 +224,6 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
 
   const latestScore = getRunMetadataNumber(activeRun, "overall_score");
   const latestAppraisal = getRunMetadataString(activeRun, "overall_appraisal", "-");
-  const scoringEnabled = activeRun?.run_metadata?.scoring_enabled === true;
   const warnings = getRunMetadataStringList(activeRun, "warnings");
   const reviewReport = getRunMetadataObject(activeRun, "review_report");
   const activeApproval = approvals.find((item) => item.status === "REQUESTED") ?? approvals[0] ?? null;
@@ -334,31 +334,31 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
 
   return (
     <div className="grid gap-5">
-      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl">
-        <div className="grid gap-5 border-b border-white/10 p-5 xl:grid-cols-[minmax(0,1fr)_auto]">
+      <section className="overflow-hidden rounded-[28px] border border-[#dce6e1] bg-white shadow-sm ">
+        <div className="grid gap-5 border-b border-[#dce6e1] p-5 xl:grid-cols-[minmax(0,1fr)_auto]">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <Badge className="border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]">Reviewer Workspace</Badge>
+              <Badge className="border-[#b9d8c8] bg-[#eaf5ef] text-[#287451]">Reviewer Workspace</Badge>
               {activeRun ? <Badge className={cn(runStatusClass(activeRun.status))}>{activeRun.status}</Badge> : null}
-              <span className="text-xs font-semibold uppercase text-white/46">
+              <span className="text-xs font-semibold uppercase text-[#52675e]">
                 {document?.sections.length ?? 0} sections
               </span>
             </div>
-            <h1 className="truncate text-2xl font-bold leading-tight text-white">
+            <h1 className="truncate text-2xl font-bold leading-tight text-[#18372c]">
               {document?.title ?? "EIA review center"}
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/66">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[#52675e]">
               Parsed document chunks, deterministic compliance logic, immutable runs, exportable reports, and reviewer findings are all managed from one governed review surface.
             </p>
           </div>
 
-          <div className="grid min-w-[340px] gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <div className="grid min-w-[340px] gap-3 rounded-2xl border border-[#dce6e1] bg-[#f2f7f4] p-4">
             <div className="grid grid-cols-2 gap-3">
-              {scoringEnabled ? <Metric label="Overall score" value={`${latestScore}/10`} /> : null}
-              {scoringEnabled ? <Metric label="Appraisal" value={latestAppraisal} /> : null}
+              <Metric label="Overall score" value={`${latestScore}/10`} />
+              <Metric label="Appraisal" value={latestAppraisal} />
             </div>
             {canRunReview ? (
-              <label className="grid gap-2 text-sm font-semibold text-white/72">
+              <label className="grid gap-2 text-sm font-semibold text-[#52675e]">
                 Source document scope
                 <Select value={selectedSourceDocumentId} onValueChange={setSelectedSourceDocumentId}>
                   <SelectTrigger>
@@ -404,7 +404,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
           </div>
         </div>
 
-        <div className="grid divide-y divide-white/10 md:grid-cols-4 md:divide-x md:divide-y-0">
+        <div className="grid divide-y divide-[#e3eae6] md:grid-cols-4 md:divide-x md:divide-y-0">
           <MetricTile icon={<ClipboardCheck />} label="Runs" value={runs.length} />
           <MetricTile icon={<CheckCircle2 />} label="Filtered Findings" value={filteredFindings.length} />
           <MetricTile icon={<ShieldAlert />} label="Needs Work" value={countProblemFindings(activeRun?.findings ?? [])} />
@@ -412,53 +412,69 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
         </div>
       </section>
 
-      {error ? <Alert className="border-red-400/30 bg-red-500/10 text-red-100">{error}</Alert> : null}
+      {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
       {loading ? <Alert>Loading review center...</Alert> : null}
       {!loading && !error && queueBlockedReason ? (
-        <Alert className="border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#D9FBFF]">{queueBlockedReason}</Alert>
+        <Alert className="border-[#b9d8c8] bg-[#eaf5ef] text-[#344f44]">{queueBlockedReason}</Alert>
       ) : null}
       {!loading && !error && activeProcessingRun ? (
-        <Alert className="border-white/12 bg-white/[0.05] text-white/78">
+        <Alert className="border-[#dce6e1] bg-[#edf6f1] text-[#52675e]">
           {getEvaluationRunStatusMessage(activeProcessingRun)}
         </Alert>
       ) : null}
 
       <section className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(0,1fr)_360px]">
-        <aside className="builder-panel sticky top-20 self-start overflow-hidden">
-          <div className="border-b border-white/10 px-4 py-3">
+        <aside className="builder-panel self-start overflow-hidden xl:sticky xl:top-20">
+          <div className="border-b border-[#dce6e1] px-4 py-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-base font-bold text-white">Evaluation Runs</span>
+              <span className="text-base font-bold text-[#18372c]">Evaluation Runs</span>
               <Badge>{runs.length}</Badge>
             </div>
-            <p className="mt-1 text-xs text-white/52">Runs process asynchronously and stay immutable once completed.</p>
+            <p className="mt-1 text-xs text-[#697a73]">Runs process asynchronously and stay immutable once completed.</p>
           </div>
-          <div className="max-h-[calc(100vh-14rem)] overflow-y-auto p-3">
+          <div className="max-h-96 overflow-y-auto p-3 xl:max-h-[calc(100vh-14rem)]">
             {!runs.length ? (
               <Alert>No evaluation runs yet.</Alert>
             ) : (
               <div className="grid gap-2">
                 {runs.map((run) => (
-                  <button
+                  <div
                     key={run.id}
-                    type="button"
-                    onClick={() => setSelectedRunId(run.id)}
                     className={cn(
-                      "rounded-xl border border-white/10 bg-white/[0.03] p-3 text-left transition-colors hover:bg-white/[0.06]",
-                      selectedRunId === run.id && "border-[#67E8F9]/28 bg-[#67E8F9]/10"
+                      "rounded-xl border border-[#dce6e1] bg-white transition-colors",
+                      selectedRunId === run.id && "border-[#b9d8c8] bg-[#eaf5ef]"
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-white">
-                        {new Date(run.created_at).toLocaleString()}
-                      </span>
-                      <Badge className={cn(runStatusClass(run.status))}>{run.status}</Badge>
-                    </div>
-                    <div className="mt-2 text-xs text-white/58">{getEvaluationRunMetricLine(run)}</div>
-                    <div className="mt-1 text-xs text-white/42">
-                      Routed chunks {getRunMetadataNumber(run, "routed_chunk_count")}
-                    </div>
-                    <div className="mt-2 text-xs leading-5 text-white/50">{getEvaluationRunStatusMessage(run)}</div>
-                  </button>
+                    <button
+                      type="button"
+                      className="w-full p-3 text-left"
+                      onClick={() => setSelectedRunId(run.id)}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-[#18372c]">
+                          {new Date(run.created_at).toLocaleString()}
+                        </span>
+                        <Badge className={cn(runStatusClass(run.status))}>{run.status}</Badge>
+                      </div>
+                      <div className="mt-2 text-xs text-[#52675e]">{getEvaluationRunMetricLine(run)}</div>
+                      <div className="mt-1 text-xs text-[#52675e]">
+                        Routed chunks {getRunMetadataNumber(run, "routed_chunk_count")}
+                      </div>
+                      <div className="mt-2 text-xs leading-5 text-[#52675e]">{getEvaluationRunStatusMessage(run)}</div>
+                    </button>
+                    {canRunReview && !["PENDING", "RUNNING"].includes(run.status) ? (
+                      <div className="border-t border-[#e3eae6] px-3 py-2">
+                        <DeleteRunButton
+                          documentId={documentId}
+                          runId={run.id}
+                          onDeleted={() => {
+                            setRuns((prev) => prev.filter((r) => r.id !== run.id));
+                            if (selectedRunId === run.id) setSelectedRunId(null);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 ))}
               </div>
             )}
@@ -467,17 +483,19 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
 
         <div className="grid gap-5">
           <Card>
-            <CardHeader className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:items-end">
-              <div>
-                <CardTitle>Section appraisal</CardTitle>
-                <CardDescription>
-                  Scoring is deterministic. Parsed source chunks and structured draft content feed the evidence analysis layer.
-                </CardDescription>
+            <CardHeader className="gap-4">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle>Section appraisal</CardTitle>
+                  <CardDescription>AI scoring against RQEIA checklist. Select a run in the sidebar to see findings.</CardDescription>
+                </div>
+                <span className="text-xs font-semibold text-[#697a73]">{filteredFindings.length} findings shown</span>
               </div>
-              <label className="grid gap-2 text-sm font-semibold text-white/72">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="grid gap-1.5 text-xs font-semibold text-[#52675e]">
                 Status
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="min-w-[180px]">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -489,10 +507,10 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                   </SelectContent>
                 </Select>
               </label>
-              <label className="grid gap-2 text-sm font-semibold text-white/72">
+              <label className="grid gap-1.5 text-xs font-semibold text-[#52675e]">
                 Section
                 <Select value={selectedSection} onValueChange={setSelectedSection}>
-                  <SelectTrigger className="min-w-[160px]">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -505,8 +523,8 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                   </SelectContent>
                 </Select>
               </label>
-              <label className="grid gap-2 text-sm font-semibold text-white/72">
-                Compare
+              <label className="grid gap-1.5 text-xs font-semibold text-[#52675e]">
+                Compare run
                 <Select value={baselineRunId} onValueChange={setBaselineRunId}>
                   <SelectTrigger className="min-w-[220px]">
                     <SelectValue />
@@ -523,33 +541,34 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                   </SelectContent>
                 </Select>
               </label>
+              </div>
             </CardHeader>
-            <CardContent className="grid gap-3 md:grid-cols-2 3xl:grid-cols-4">
+            <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {isEvaluationRunActive(activeRun) ? (
-                <Alert className="md:col-span-2 xl:col-span-4">
-                  {selectedRunStatusMessage || "Review is still running. Findings and section summaries will appear when processing finishes."}
+                <Alert className="col-span-full">
+                  {selectedRunStatusMessage || "Review is still running. Findings and section scores will appear when processing finishes."}
                 </Alert>
               ) : null}
               {activeRun?.status === "FAILED" && selectedRunStatusMessage ? (
-                <Alert className="md:col-span-2 xl:col-span-4 border-red-400/30 bg-red-500/10 text-red-100">
+                <Alert className="col-span-full border-red-200 bg-red-50 text-red-700">
                   {selectedRunStatusMessage}
                 </Alert>
               ) : null}
               {showEmptyCompletedRunMessage ? (
-                <Alert className="md:col-span-2 xl:col-span-4 border-amber-400/25 bg-amber-500/10 text-amber-100">
+                <Alert className="col-span-full border-amber-200 bg-amber-50 text-amber-700">
                   This run completed without checklist findings. Add subsections in the builder, then queue a new review.
                 </Alert>
               ) : null}
               {(activeRun?.section_summaries ?? []).map((summary) => (
-                <div key={summary.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div key={summary.id} className="rounded-xl border border-[#dce6e1] bg-white p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-xs font-black uppercase text-[#B6F7FF]">Section {summary.section_number}</div>
-                      <div className="mt-1 text-sm font-semibold text-white">{summary.section_title}</div>
+                      <div className="text-xs font-black uppercase text-[#287451]">Section {summary.section_number}</div>
+                      <div className="mt-1 text-sm font-semibold text-[#18372c]">{summary.section_title}</div>
                     </div>
-                    {scoringEnabled ? <div className="text-xl font-black text-white">{summary.score}/10</div> : null}
+                    <div className="text-xl font-black text-[#18372c]">{summary.score}/10</div>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-white/62">{summary.summary_comment}</p>
+                  <p className="mt-3 text-sm leading-6 text-[#52675e]">{summary.summary_comment}</p>
                 </div>
               ))}
               {activeRun && !isEvaluationRunActive(activeRun) && activeRun.status !== "FAILED" && !activeRun.section_summaries.length ? (
@@ -566,30 +585,31 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                   Run Comparison
                 </CardTitle>
                 <CardDescription>
-                  Deterministic finding changes against the selected baseline run.
+                  Score delta {comparison.delta >= 0 ? "+" : ""}
+                  {comparison.delta} against the selected baseline run.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                   {comparison.sections.map((section) => (
-                    <div key={section.section_number} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-xs font-black uppercase text-[#B6F7FF]">Section {section.section_number}</div>
-                      <div className="mt-1 text-sm font-semibold text-white">{section.section_title}</div>
-                      {scoringEnabled ? <div className="mt-3 text-sm text-white/64">
+                    <div key={section.section_number} className="rounded-xl border border-[#dce6e1] bg-white p-4">
+                      <div className="text-xs font-black uppercase text-[#287451]">Section {section.section_number}</div>
+                      <div className="mt-1 text-sm font-semibold text-[#18372c]">{section.section_title}</div>
+                      <div className="mt-3 text-sm text-[#52675e]">
                         Current {section.current_score}/10 · Baseline {section.baseline_score}/10
-                      </div> : null}
-                      {scoringEnabled ? <div className={cn("mt-2 text-sm font-bold", section.delta >= 0 ? "text-emerald-200" : "text-red-100")}>
+                      </div>
+                      <div className={cn("mt-2 text-sm font-bold", section.delta >= 0 ? "text-emerald-700" : "text-red-700")}>
                         Delta {section.delta >= 0 ? "+" : ""}
                         {section.delta}
-                      </div> : null}
+                      </div>
                     </div>
                   ))}
                 </div>
                 <div className="grid gap-2">
-                  <div className="text-xs font-black uppercase text-white/42">Changed findings</div>
+                  <div className="text-xs font-black uppercase text-[#52675e]">Changed findings</div>
                   {!comparison.changed_findings.length ? <Alert>No status changes between the selected runs.</Alert> : null}
                   {comparison.changed_findings.slice(0, 12).map((item) => (
-                    <div key={item.checklist_section} className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm text-white/68">
+                    <div key={item.checklist_section} className="rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-3 text-sm text-[#52675e]">
                       {item.checklist_section} · {item.baseline_status} → {item.current_status}
                     </div>
                   ))}
@@ -611,7 +631,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                 <Alert>Review is still processing. Findings will populate here automatically when the run completes.</Alert>
               ) : null}
               {activeRun?.status === "FAILED" ? (
-                <Alert className="border-red-400/30 bg-red-500/10 text-red-100">
+                <Alert className="border-red-200 bg-red-50 text-red-700">
                   {selectedRunStatusMessage || "This evaluation run did not complete."}
                 </Alert>
               ) : null}
@@ -622,9 +642,12 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
                 <FindingCard
                   key={finding.id}
                   canComment={canRunReview}
+                  canDecide={canDecideApproval}
                   documentId={documentId}
                   runId={activeRun?.id ?? ""}
                   finding={finding}
+                  projectId={projectId}
+                  targetSubsectionId={finding.subsection_id ?? findTargetSubsectionId(document, finding.checklist_section)}
                 />
               ))}
             </CardContent>
@@ -640,21 +663,21 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                <div className="text-xs font-bold uppercase text-white/46">Current status</div>
+              <div className="rounded-xl border border-[#dce6e1] bg-white p-3">
+                <div className="text-xs font-bold uppercase text-[#52675e]">Current status</div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge className={cn(runStatusClass(activeApproval?.status ?? "NO_REQUEST"))}>
                     {activeApproval?.status ?? "NO_REQUEST"}
                   </Badge>
                   {activeApproval?.requested_at ? (
-                    <span className="text-xs text-white/56">{new Date(activeApproval.requested_at).toLocaleString()}</span>
+                    <span className="text-xs text-[#52675e]">{new Date(activeApproval.requested_at).toLocaleString()}</span>
                   ) : null}
                 </div>
                 {activeApproval?.request_note ? (
-                  <p className="mt-3 text-sm leading-6 text-white/68">{activeApproval.request_note}</p>
+                  <p className="mt-3 text-sm leading-6 text-[#52675e]">{activeApproval.request_note}</p>
                 ) : null}
                 {activeApproval?.decision_note ? (
-                  <p className="mt-3 text-sm leading-6 text-white/68">{activeApproval.decision_note}</p>
+                  <p className="mt-3 text-sm leading-6 text-[#52675e]">{activeApproval.decision_note}</p>
                 ) : null}
               </div>
 
@@ -702,7 +725,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
               {!!approvals.length ? (
                 <div className="grid gap-2">
                   {approvals.slice(0, 5).map((approval) => (
-                    <div key={approval.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm text-white/68">
+                    <div key={approval.id} className="rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-3 text-sm text-[#52675e]">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <Badge className={cn(runStatusClass(approval.status))}>{approval.status}</Badge>
                         <span>{new Date(approval.requested_at).toLocaleString()}</span>
@@ -756,7 +779,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
             <CardContent className="grid gap-3">
               {!priorityActions.length ? <Alert>No priority actions recorded for this run.</Alert> : null}
               {priorityActions.map((item) => (
-                <div key={item} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-white/74">
+                <div key={item} className="rounded-xl border border-[#dce6e1] bg-white p-3 text-sm text-[#52675e]">
                   {item}
                 </div>
               ))}
@@ -770,7 +793,7 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
             <CardContent className="grid gap-3">
               {!warnings.length ? <Alert>No warnings on this run.</Alert> : null}
               {warnings.map((warning) => (
-                <div key={warning} className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3 text-sm text-amber-100">
+                <div key={warning} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                   {warning}
                 </div>
               ))}
@@ -784,9 +807,9 @@ export function EiaReviewCenter({ documentId, projectId, user }: EiaReviewCenter
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-      <div className="text-xs font-bold uppercase text-white/46">{label}</div>
-      <div className="mt-1 text-lg font-black text-white">{value}</div>
+    <div className="rounded-xl border border-[#dce6e1] bg-white p-3">
+      <div className="text-xs font-bold uppercase text-[#52675e]">{label}</div>
+      <div className="mt-1 text-lg font-black text-[#18372c]">{value}</div>
     </div>
   );
 }
@@ -794,12 +817,12 @@ function Metric({ label, value }: { label: string; value: string }) {
 function MetricTile({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
     <div className="flex items-center gap-3 px-5 py-4">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#67E8F9]/18 bg-[#67E8F9]/10 text-[#B6F7FF] [&_svg]:size-5">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-[#b9d8c8] bg-[#eaf5ef] text-[#287451] [&_svg]:size-5">
         {icon}
       </span>
       <div>
-        <div className="text-2xl font-black leading-none text-white">{value}</div>
-        <div className="mt-1 text-xs font-bold uppercase text-white/46">{label}</div>
+        <div className="text-2xl font-black leading-none text-[#18372c]">{value}</div>
+        <div className="mt-1 text-xs font-bold uppercase text-[#52675e]">{label}</div>
       </div>
     </div>
   );
@@ -807,20 +830,32 @@ function MetricTile({ icon, label, value }: { icon: ReactNode; label: string; va
 
 function FindingCard({
   canComment,
+  canDecide,
   documentId,
+  projectId,
   runId,
-  finding
+  finding,
+  targetSubsectionId
 }: {
   canComment: boolean;
+  canDecide: boolean;
   documentId: string;
+  projectId: string;
   runId: string;
   finding: EiaEvaluationFinding;
+  targetSubsectionId: string | null;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [comments, setComments] = useState<EiaEvaluationFindingComment[]>([]);
   const [commentValue, setCommentValue] = useState("");
   const [loadingComments, setLoadingComments] = useState(false);
   const [postingComment, setPostingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
+  const [decisionBusy, setDecisionBusy] = useState(false);
+  const [reviewerDecision, setReviewerDecision] = useState<string | null>(
+    typeof finding.finding_metadata.reviewer_decision === "string" ? finding.finding_metadata.reviewer_decision : null
+  );
 
   const loadComments = useCallback(async () => {
     if (!runId) {
@@ -867,146 +902,244 @@ function FindingCard({
     }
   }
 
+  async function decideFinding(decision: "CLOSED" | "RETAINED") {
+    setDecisionBusy(true);
+    setCommentError(null);
+    try {
+      const updated = await apiRequest<EiaEvaluationFinding>(
+        `/eia-documents/${documentId}/evaluation-runs/${runId}/findings/${finding.id}/decision`,
+        { method: "POST", body: JSON.stringify({ decision, note: decisionNote || null }) }
+      );
+      setReviewerDecision(typeof updated.finding_metadata.reviewer_decision === "string" ? updated.finding_metadata.reviewer_decision : decision);
+      setDecisionNote("");
+    } catch (err) {
+      setCommentError(err instanceof Error ? err.message : "Finding decision could not be saved");
+    } finally {
+      setDecisionBusy(false);
+    }
+  }
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+    <div className={cn("overflow-hidden rounded-xl border bg-white transition-all", expanded ? "border-[#287451]/20 shadow-sm" : "border-[#dce6e1]")}>
+      {/* Collapsed header — always visible */}
+      <button
+        type="button"
+        className="flex w-full items-start gap-3 p-4 text-left hover:bg-[#f8faf9]"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="mt-0.5 shrink-0">
+          <Badge className={cn("text-xs", findingStatusClass(finding.status))}>{finding.status.replace(/_/g, " ")}</Badge>
+        </div>
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className={cn(findingStatusClass(finding.status))}>{finding.status}</Badge>
-            <span className="text-xs font-black uppercase text-[#B6F7FF]">{finding.checklist_section}</span>
-            <span className="text-xs text-white/42">Confidence {Math.round(finding.confidence_score * 100)}%</span>
+            <span className="text-xs font-bold text-[#287451]">{finding.checklist_section}</span>
+            <span className="text-xs text-[#9aaba3]">{Math.round(finding.confidence_score * 100)}% confidence</span>
           </div>
-          <h3 className="mt-2 text-base font-bold leading-6 text-white">{finding.checklist_title}</h3>
+          <p className="mt-1 text-sm font-semibold leading-5 text-[#18372c]">{finding.checklist_title}</p>
+          {!expanded && finding.recommendation ? (
+            <p className="mt-1 line-clamp-1 text-xs text-[#697a73]">{finding.recommendation}</p>
+          ) : null}
         </div>
-        <Badge className="border-white/12 bg-white/[0.05] text-white/74">{finding.adequacy}</Badge>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <TextBlock title="Evidence Summary" body={finding.evidence_summary} />
-        <TextBlock title="Analysis" body={finding.ai_analysis} />
-      </div>
-
-      {finding.missing_elements.length ? (
-        <div className="mt-4 rounded-xl border border-red-400/18 bg-red-500/10 p-3">
-          <div className="text-xs font-black uppercase text-red-100">Missing or weak elements</div>
-          <ul className="mt-2 grid gap-2 text-sm text-red-50/92">
-            {finding.missing_elements.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+        <div className="flex shrink-0 items-center gap-2">
+          {targetSubsectionId && !expanded ? (
+            <Link
+              href={`/projects/${projectId}/eia/${documentId}#subsection-${targetSubsectionId}?ai=1`}
+              className="flex items-center gap-1 rounded-lg border border-[#b9d8c8] bg-[#eaf5ef] px-2 py-1 text-xs font-semibold text-[#287451] hover:bg-[#d8f0e5]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Sparkles className="size-3" /> Fix
+            </Link>
+          ) : null}
+          <span className="text-xs text-[#9aaba3]">{expanded ? "▲" : "▼"}</span>
         </div>
-      ) : null}
+      </button>
 
-      {finding.recommendation ? (
-        <div className="mt-4 rounded-xl border border-[#8BD15F]/18 bg-[#8BD15F]/10 p-3 text-sm text-[#E6F7D2]">
-          <div className="text-xs font-black uppercase text-[#E6F7D2]">Recommendation</div>
-          <p className="mt-2">{finding.recommendation}</p>
-        </div>
-      ) : null}
-
-      <div className="mt-4 grid gap-2">
-        <div className="text-xs font-black uppercase text-white/42">Evidence references</div>
-        {finding.evidence_references.map((reference) => (
-          <div key={`${reference.source_type}-${reference.chunk_id}`} className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-sm text-white/68">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge>{reference.source_type}</Badge>
-              {reference.subsection_number ? <span>{reference.subsection_number}</span> : null}
-              {reference.source_document_filename ? <span>{reference.source_document_filename}</span> : null}
-              {reference.page_number ? <span>Page {reference.page_number}</span> : null}
-            </div>
-            {reference.excerpt ? <p className="mt-2 leading-6 text-white/58">{reference.excerpt}</p> : null}
+      {/* Expanded detail */}
+      {expanded ? (
+        <div className="border-t border-[#e3eae6] p-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <TextBlock title="Evidence Summary" body={finding.evidence_summary} />
+            <TextBlock title="Analysis" body={finding.ai_analysis} />
           </div>
-        ))}
-      </div>
 
-      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="text-xs font-black uppercase text-white/42">Reviewer comments</div>
-          <Button type="button" size="sm" variant="ghost" onClick={() => void loadComments()}>
-            <RotateCw />
-            Refresh
-          </Button>
-        </div>
-        {commentError ? <Alert className="mb-3 border-red-400/30 bg-red-500/10 text-red-100">{commentError}</Alert> : null}
-        {loadingComments ? <Alert>Loading comments...</Alert> : null}
-        {!comments.length && !loadingComments ? <Alert>No reviewer comments yet.</Alert> : null}
-        <div className="grid gap-3">
-          {comments.map((comment) => (
-            <div key={comment.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <div className="flex items-center justify-between gap-2 text-xs text-white/46">
-                <span>{comment.user.full_name}</span>
-                <span>{new Date(comment.created_at).toLocaleString()}</span>
-              </div>
-              <p className="mt-2 text-sm leading-6 text-white/74">{comment.content}</p>
+          {finding.missing_elements.length ? (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+              <div className="mb-2 text-xs font-bold uppercase text-red-600">Missing or weak elements</div>
+              <ul className="grid gap-1.5 text-sm text-red-700">
+                {finding.missing_elements.map((item) => (
+                  <li key={item} className="flex items-start gap-2"><span className="mt-1 size-1.5 shrink-0 rounded-full bg-red-400" />{item}</li>
+                ))}
+              </ul>
             </div>
-          ))}
-        </div>
-        {canComment ? (
-          <form className="mt-3 grid gap-3" onSubmit={submitComment}>
-            <Textarea
-              className="min-h-24"
-              placeholder="Add reviewer notes for this finding."
-              value={commentValue}
-              onChange={(event) => setCommentValue(event.target.value)}
-            />
-            <div className="flex justify-end">
-              <Button type="submit" disabled={postingComment || !commentValue.trim()}>
-                {postingComment ? <Loader2 className="animate-spin" /> : <MessageSquarePlus />}
-                Add Comment
+          ) : null}
+
+          {finding.recommendation ? (
+            <div className="mt-4 rounded-xl border border-[#c5e0a5] bg-[#f0f9e4] p-3">
+              <div className="mb-1 text-xs font-bold uppercase text-[#287451]">Recommendation</div>
+              <p className="text-sm text-[#1f6848]">{finding.recommendation}</p>
+            </div>
+          ) : null}
+
+          {targetSubsectionId ? (
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#b9d8c8] bg-[#eaf5ef] p-3">
+              <p className="min-w-0 flex-1 text-sm text-[#344f44]">Improve the linked draft, then re-run the review to close this finding.</p>
+              <Button asChild type="button" size="sm">
+                <Link href={`/projects/${projectId}/eia/${documentId}#subsection-${targetSubsectionId}?ai=1`}>
+                  <Sparkles /> Improve with AI
+                </Link>
               </Button>
             </div>
-          </form>
-        ) : null}
-      </div>
+          ) : null}
+
+          {finding.evidence_references.length ? (
+            <details className="mt-4">
+              <summary className="cursor-pointer text-xs font-bold uppercase text-[#697a73]">
+                Evidence references ({finding.evidence_references.length})
+              </summary>
+              <div className="mt-2 grid gap-2">
+                {finding.evidence_references.map((reference) => (
+                  <div key={`${reference.source_type}-${reference.chunk_id}`} className="rounded-lg border border-[#dce6e1] bg-[#f8faf9] p-2.5 text-xs text-[#52675e]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge className="text-[10px]">{reference.source_type}</Badge>
+                      {reference.subsection_number ? <span>{reference.subsection_number}</span> : null}
+                      {reference.source_document_filename ? <span className="font-medium">{reference.source_document_filename}</span> : null}
+                      {reference.page_number ? <span>p.{reference.page_number}</span> : null}
+                    </div>
+                    {reference.excerpt ? <p className="mt-1.5 leading-5 text-[#697a73]">{reference.excerpt}</p> : null}
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
+
+          {canDecide ? (
+            <div className="mt-4 rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-3">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase text-[#697a73]">Reviewer decision</span>
+                {reviewerDecision ? <Badge>{reviewerDecision.replace(/_/g, " ")}</Badge> : null}
+              </div>
+              <p className="mb-3 text-xs text-[#9aaba3]">{reviewerDecision ? reviewerDecision.toLowerCase().replace(/_/g, " ") : "No decision yet"}</p>
+              <div className="grid gap-2">
+                <Textarea value={decisionNote} onChange={(e) => setDecisionNote(e.target.value)} placeholder="Record your reasoning before deciding." className="min-h-16 text-sm" />
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" disabled={decisionBusy} onClick={() => void decideFinding("CLOSED")}><CheckCircle2 />Close</Button>
+                  <Button type="button" size="sm" variant="secondary" disabled={decisionBusy} onClick={() => void decideFinding("RETAINED")}><ShieldAlert />Retain</Button>
+                </div>
+              </div>
+            </div>
+          ) : reviewerDecision ? (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-3">
+              <span className="text-xs font-bold uppercase text-[#697a73]">Decision:</span>
+              <Badge>{reviewerDecision.replace(/_/g, " ")}</Badge>
+            </div>
+          ) : null}
+
+          <details className="mt-4">
+            <summary className="cursor-pointer text-xs font-bold uppercase text-[#697a73]">
+              Comments ({comments.length})
+            </summary>
+            <div className="mt-2 grid gap-2">
+              {commentError ? <Alert className="border-red-200 bg-red-50 text-red-700">{commentError}</Alert> : null}
+              {loadingComments ? <p className="text-xs text-[#9aaba3]">Loading...</p> : null}
+              {!comments.length && !loadingComments ? <p className="text-xs text-[#9aaba3]">No comments yet.</p> : null}
+              {comments.map((comment) => (
+                <div key={comment.id} className="rounded-lg border border-[#dce6e1] bg-white p-3">
+                  <div className="flex justify-between text-xs text-[#9aaba3]">
+                    <span className="font-semibold">{comment.user.full_name}</span>
+                    <span>{new Date(comment.created_at).toLocaleString()}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-[#344f44]">{comment.content}</p>
+                </div>
+              ))}
+            </div>
+            {canComment ? (
+              <form className="mt-2 grid gap-2" onSubmit={submitComment}>
+                <Textarea
+                  className="min-h-16 text-sm"
+                  placeholder="Add a reviewer comment."
+                  value={commentValue}
+                  onChange={(event) => setCommentValue(event.target.value)}
+                />
+                <div className="flex justify-end">
+                  <Button type="submit" size="sm" disabled={postingComment || !commentValue.trim()}>
+                    {postingComment ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquarePlus className="size-3.5" />}
+                    Comment
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </details>
+        </div>
+      ) : null}
     </div>
   );
 }
 
+const RQEIA_BUILDER_SECTION: Record<string, string> = {
+  "1": "2",
+  "2": "4",
+  "3": "5",
+  "4": "6",
+  "5": "7",
+  "6": "1",
+  "7": "3",
+  "8": "13",
+  REG: "3"
+};
+
+function findTargetSubsectionId(document: EiaDocumentStructure | null, checklistSection: string): string | null {
+  const area = checklistSection.startsWith("REG") ? "REG" : checklistSection.split(".")[0];
+  const targetSectionNumber = RQEIA_BUILDER_SECTION[area];
+  if (!targetSectionNumber) return null;
+  const targetSection = document?.sections.find((section) => section.section_number === targetSectionNumber);
+  return targetSection?.subsections[0]?.id ?? null;
+}
+
 function TextBlock({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-      <div className="text-xs font-black uppercase text-white/42">{title}</div>
-      <p className="mt-2 text-sm leading-6 text-white/68">{body}</p>
+    <div className="rounded-xl border border-[#dce6e1] bg-[#f8faf9] p-3">
+      <div className="text-xs font-black uppercase text-[#697a73]">{title}</div>
+      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[#344f44]">{body}</p>
     </div>
   );
 }
 
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3 last:border-b-0 last:pb-0">
-      <span className="text-sm font-semibold text-white/52">{label}</span>
-      <span className="text-right text-sm text-white">{value}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-[#dce6e1] pb-3 last:border-b-0 last:pb-0">
+      <span className="text-sm font-semibold text-[#52675e]">{label}</span>
+      <span className="text-right text-sm text-[#18372c]">{value}</span>
     </div>
   );
 }
 
 function findingStatusClass(status: string) {
   if (status === "COMPLIANT") {
-    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === "PARTIALLY_COMPLIANT") {
-    return "border-amber-400/25 bg-amber-500/10 text-amber-100";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
   if (status === "NEEDS_IMPROVEMENT") {
-    return "border-red-400/25 bg-red-500/10 text-red-100";
+    return "border-red-200 bg-red-50 text-red-700";
   }
-  if (status === "MISSING_INFORMATION") {
-    return "border-red-500/30 bg-red-600/14 text-red-50";
+  if (status === "MISSING") {
+    return "border-red-200 bg-red-50 text-red-700";
   }
-  return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
+  return "border-[#b9d8c8] bg-[#eaf5ef] text-[#287451]";
 }
 
 function runStatusClass(status: string) {
   if (status === "COMPLETED" || status === "APPROVED") {
-    return "border-emerald-400/25 bg-emerald-500/10 text-emerald-100";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === "FAILED" || status === "CHANGES_REQUESTED") {
-    return "border-red-400/25 bg-red-500/10 text-red-100";
+    return "border-red-200 bg-red-50 text-red-700";
   }
   if (status === "RUNNING" || status === "PENDING" || status === "REQUESTED") {
-    return "border-[#67E8F9]/24 bg-[#67E8F9]/10 text-[#B6F7FF]";
+    return "border-[#b9d8c8] bg-[#eaf5ef] text-[#287451]";
   }
-  return "border-white/12 bg-white/[0.05] text-white/68";
+  return "border-[#dce6e1] bg-[#edf6f1] text-[#52675e]";
 }
 
 function isEvaluationRunActive(run: EiaEvaluationRun | EiaEvaluationRunDetail | null | undefined) {
@@ -1015,15 +1148,12 @@ function isEvaluationRunActive(run: EiaEvaluationRun | EiaEvaluationRunDetail | 
 
 function getEvaluationRunMetricLine(run: EiaEvaluationRun | EiaEvaluationRunDetail) {
   if (isEvaluationRunActive(run)) {
-    return "Processing review output. Findings appear after completion.";
+    return "Processing review output. Findings and score appear after completion.";
   }
   if (run.status === "FAILED") {
-    return "Run stopped before findings could be produced.";
+    return "Run stopped before a score could be produced.";
   }
-  if (run.run_metadata?.scoring_enabled === true) {
-    return `Score ${getRunMetadataNumber(run, "overall_score")}/10 · Appraisal ${getRunMetadataString(run, "overall_appraisal", "-")}`;
-  }
-  return "Deterministic checklist classification complete";
+  return `Score ${getRunMetadataNumber(run, "overall_score")}/10 · Appraisal ${getRunMetadataString(run, "overall_appraisal", "-")}`;
 }
 
 function getEvaluationRunStatusMessage(run: EiaEvaluationRun | EiaEvaluationRunDetail | null | undefined) {
@@ -1047,7 +1177,7 @@ function getEvaluationRunStatusMessage(run: EiaEvaluationRun | EiaEvaluationRunD
   if (run.status === "RUNNING") {
     return totalSubsections
       ? `Review is running. ${processedSubsections}/${totalSubsections} subsections processed.`
-      : "Review is running. Findings and section summaries will appear when processing finishes.";
+      : "Review is running. Findings, section summaries, and the overall score will appear when processing finishes.";
   }
   if (run.status === "FAILED") {
     return getRunMetadataString(run, "error", "This evaluation run did not complete.");
@@ -1060,7 +1190,7 @@ function getEvaluationRunStatusMessage(run: EiaEvaluationRun | EiaEvaluationRunD
 
 function countProblemFindings(findings: EiaEvaluationFinding[]) {
   return findings.filter((finding) =>
-    ["NEEDS_IMPROVEMENT", "MISSING_INFORMATION", "NEEDS_REVIEW"].includes(finding.status)
+    ["NEEDS_IMPROVEMENT", "MISSING", "NEEDS_REVIEW"].includes(finding.status)
   ).length;
 }
 
@@ -1089,4 +1219,44 @@ function getRunMetadataBoolean(run: EiaEvaluationRun | EiaEvaluationRunDetail | 
 function getRunMetadataStringList(run: EiaEvaluationRun | EiaEvaluationRunDetail | null, key: string) {
   const value = run?.run_metadata?.[key];
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function DeleteRunButton({ documentId, runId, onDeleted }: { documentId: string; runId: string; onDeleted: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await apiRequest(`/eia-documents/${documentId}/evaluation-runs/${runId}`, { method: "DELETE" });
+      onDeleted();
+    } finally {
+      setDeleting(false);
+      setConfirming(false);
+    }
+  }
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[#697a73]">Delete this run?</span>
+        <Button type="button" size="sm" disabled={deleting} onClick={() => void handleDelete()}>
+          {deleting ? <Loader2 className="size-3 animate-spin" /> : null}
+          Yes, delete
+        </Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setConfirming(false)}>Cancel</Button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="flex items-center gap-1.5 text-xs text-[#9aaba3] hover:text-red-600 transition-colors"
+      onClick={() => setConfirming(true)}
+    >
+      <Trash2 className="size-3" />
+      Delete run
+    </button>
+  );
 }

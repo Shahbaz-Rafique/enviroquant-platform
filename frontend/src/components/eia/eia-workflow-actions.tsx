@@ -58,7 +58,10 @@ export function EiaWorkflowActions({
       {error ? <Alert className="border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
 
       {normalizedStatus === "NOT_STARTED" ? (
-        <p className="text-xs font-medium text-[#6b7c74]">Assign an author or reviewer before work begins.</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-medium text-[#6b7c74]">Assign an author or reviewer before work begins.</p>
+          <a href="#assignments" className="text-xs font-semibold text-[#287451] hover:underline">Go to assignments</a>
+        </div>
       ) : null}
 
       {normalizedStatus === "ASSIGNED" && canAuthor ? (

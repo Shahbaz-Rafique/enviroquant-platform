@@ -28,13 +28,15 @@ class ChecklistMapping(Base):
     )
     checklist_section: Mapped[str] = mapped_column(String(20), nullable=False)
     checklist_title: Mapped[str] = mapped_column(String(500), nullable=False)
-    checklist_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    importance: Mapped[str] = mapped_column(String(20), default="HIGH", nullable=False)
+    checklist_version: Mapped[str] = mapped_column(
+        String(80), default="enviroquant-eia-checklist-2026.1", nullable=False
+    )
     regulation_requirement_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("regulation_requirements.id", ondelete="SET NULL"),
         nullable=True,
     )
-    importance: Mapped[str] = mapped_column(String(20), default="HIGH", nullable=False)
 
     tenant = relationship("Tenant")
     subsection = relationship("EiaSubSection", back_populates="checklist_mappings")

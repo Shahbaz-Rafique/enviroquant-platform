@@ -1,25 +1,25 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-[3px] px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4f7f3d]/20 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
+  "inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2f7d57]/25 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
   {
     variants: {
       variant: {
         default:
-          "workspace-primary-action bg-[#315f36] text-white shadow-none hover:bg-[#274f2d]",
+          "workspace-primary-action bg-[#287451] text-white shadow-sm hover:bg-[#1f6042]",
         secondary:
-          "border border-[#d5dad5] bg-white text-[#26362e] shadow-none hover:bg-[#f4f5f2]",
-        ghost: "text-[#68746e] hover:bg-[#eef1ec] hover:text-[#1b2922]",
+          "border border-[#cfdcd6] bg-white text-[#29483c] shadow-sm hover:bg-[#f3f7f5]",
+        ghost: "text-[#52675e] hover:bg-[#edf4f0] hover:text-[#18372c]",
         destructive:
           "bg-[#C64E4E] text-white shadow-[0_12px_24px_rgba(198,78,78,0.24)] hover:-translate-y-0.5 hover:bg-[#D55D5D]",
         topbar:
           "border border-white/70 bg-white text-[#104A83] shadow-[0_10px_26px_rgba(255,255,255,0.14)] hover:bg-[#F4F9FF]",
         outline:
-          "border border-[#93aa83] bg-transparent text-[#456f36] hover:bg-[#edf3e9]"
+          "border border-[#9fc6b2] bg-transparent text-[#236c4a] hover:bg-[#edf6f1]"
       },
       size: {
         default: "h-9 px-4",
@@ -40,9 +40,13 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     asChild?: boolean;
   };
 
-export function Button({ asChild = false, className, size, variant, ...props }: ButtonProps) {
-  const Comp = asChild ? Slot : "button";
-  return <Comp className={cn(buttonVariants({ variant, size, className }))} {...props} />;
-}
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ asChild = false, className, size, variant, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+  }
+);
+
+Button.displayName = "Button";
 
 export { buttonVariants };

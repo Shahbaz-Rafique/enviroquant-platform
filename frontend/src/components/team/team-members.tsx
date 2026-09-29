@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/api-client";
-import { hasPermission, PERMISSIONS } from "@/lib/permissions";
+import { hasAnyRole } from "@/lib/permissions";
 import type { User, UserInvitation } from "@/lib/types";
 
 type TeamMembersProps = {
@@ -32,7 +32,7 @@ export function TeamMembers({ user }: TeamMembersProps) {
   const [emailSent, setEmailSent] = useState<boolean | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState("CONSULTANT");
-  const canInvite = hasPermission(user, PERMISSIONS.USER_MANAGE);
+  const canInvite = hasAnyRole(user, ["owner", "admin"]);
 
   const loadMembers = useCallback(async () => {
     setLoading(true);

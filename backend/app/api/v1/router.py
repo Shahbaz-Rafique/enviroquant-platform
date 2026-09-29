@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.api.v1.endpoints import auth, documents, eia_documents, organizations, projects, regulations, tenants, users
+from app.api.v1.endpoints import auth, documents, eia_documents, organizations, projects, tenants, users
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.user import UserRead
@@ -14,7 +14,6 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(eia_documents.router, prefix="/eia-documents", tags=["eia-documents"])
-api_router.include_router(regulations.router, prefix="/regulations", tags=["regulations"])
 
 
 @api_router.get("/me", response_model=UserRead, tags=["auth"])

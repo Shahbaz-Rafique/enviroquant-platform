@@ -1,9 +1,8 @@
 "use client";
 
-import { ArrowRight, BriefcaseBusiness, ClipboardCheck, FileClock, FolderPlus, Leaf, RefreshCcw, Search, ShieldCheck } from "lucide-react";
-import Image from "next/image";
+import { ArrowRight, BriefcaseBusiness, ClipboardCheck, FileClock, FolderPlus, Leaf, LoaderCircle, RefreshCcw, Search, ShieldCheck, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -32,6 +31,9 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [projectPendingDeletion, setProjectPendingDeletion] = useState<Project | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -50,6 +52,22 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
+
+  const deleteProject = useCallback(async (project: Project) => {
+    setDeletingProjectId(project.id);
+    setError(null);
+    setNotice(null);
+    try {
+      await apiRequest<void>(`/projects/${project.id}`, { method: "DELETE" });
+      setProjects((current) => current.filter((item) => item.id !== project.id));
+      setNotice(`Project “${project.name}” was deleted.`);
+      setProjectPendingDeletion(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The project could not be deleted");
+    } finally {
+      setDeletingProjectId(null);
+    }
+  }, []);
 
   const stats = useMemo(
     () => ({
@@ -99,35 +117,26 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
   return (
     <>
       {!compact ? (
-        <section className="portal-hero relative mb-5 overflow-hidden rounded-[3px] border border-[#19352c] bg-[#071c17]">
-          <Image
-            aria-hidden="true"
-            alt=""
-            className="pointer-events-none absolute -bottom-28 right-[-3rem] hidden h-[400px] w-[400px] object-contain opacity-45 mix-blend-screen lg:block"
-            height={640}
-            src="/images/leaf.png"
-            width={640}
-          />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_30%,rgba(87,133,61,0.22),transparent_28%),linear-gradient(90deg,rgba(7,28,23,1)_0%,rgba(7,28,23,0.97)_58%,rgba(7,28,23,0.58)_100%)]" />
-          <div className="relative grid gap-5 p-6 md:p-8 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
+        <section className="mb-5 overflow-hidden rounded-xl border border-[#cfe0d7] bg-[#eaf4ee]">
+          <div className="grid gap-5 p-5 md:p-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
             <div>
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#91bd61]">
-                <Leaf className="size-4" /> AI-powered environmental intelligence
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#287451]">
+                <Leaf className="size-4" /> EnviroQuant workspace
               </div>
-              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.025em] text-white md:text-4xl">
+              <h1 className="mt-3 max-w-3xl text-3xl font-bold tracking-[-0.025em] text-[#173c2e] md:text-4xl">
                 {pageTitle}
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/66 md:text-base">{pageDescription}</p>
-              <p className="mt-4 flex items-center gap-2 text-sm font-semibold text-[#a9cc77]">
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-[#52675e] md:text-base">{pageDescription}</p>
+              <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-[#245f43]">
                 <ShieldCheck className="size-4" /> Evidence Before Conclusions™
               </p>
             </div>
-            <div className="border border-white/10 bg-[#102a21]/90 p-4 backdrop-blur-sm">
-              <span className="inline-flex rounded-sm border border-[#587d42] bg-[#183b2d] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#a9cc77]">Platform roadmap</span>
-              <p className="mt-3 text-sm font-semibold leading-6 text-white/88">
+            <div className="rounded-lg border border-[#c8dbd1] bg-white/75 p-4">
+              <span className="inline-flex rounded-full bg-[#e2f1e8] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[#236c4a]">Roadmap</span>
+              <p className="mt-3 text-sm font-semibold leading-6 text-[#29483c]">
                 Developed toward an Environmental Intelligence Operating System™
               </p>
-              <p className="mt-1 text-xs leading-5 text-white/48">Future platform capabilities are clearly marked and are not represented as currently available.</p>
+              <p className="mt-1 text-xs leading-5 text-[#6a7b73]">Future platform capabilities are clearly marked and are not represented as currently available.</p>
             </div>
           </div>
         </section>
@@ -209,6 +218,11 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
           </div>
         </div>
         <div className="p-5">
+          {notice ? (
+            <Alert className="mb-4 border-emerald-200 bg-emerald-50 text-emerald-800" role="status">
+              {notice}
+            </Alert>
+          ) : null}
           {error ? <Alert className="mb-4 border-red-200 bg-red-50 text-red-700">{error}</Alert> : null}
           {loading ? <Alert>Loading projects...</Alert> : null}
           {!loading && !projects.length ? (
@@ -219,12 +233,113 @@ export function ProjectsOverview({ compact = false, user }: ProjectsOverviewProp
           ) : null}
           <div className={cn("grid gap-4 md:grid-cols-2 xl:grid-cols-3", compact && "2xl:grid-cols-4")}>
             {filteredProjects.map((project) => (
-              <ProjectCard project={project} key={project.id} />
+              <ProjectCard
+                canDelete={hasPermission(user, PERMISSIONS.PROJECT_DELETE)}
+                deleting={deletingProjectId === project.id}
+                key={project.id}
+                onDelete={setProjectPendingDeletion}
+                project={project}
+              />
             ))}
           </div>
         </div>
       </section>
+      <DeleteProjectDialog
+        deleting={deletingProjectId === projectPendingDeletion?.id}
+        onCancel={() => setProjectPendingDeletion(null)}
+        onConfirm={deleteProject}
+        project={projectPendingDeletion}
+      />
     </>
+  );
+}
+
+function DeleteProjectDialog({
+  deleting,
+  onCancel,
+  onConfirm,
+  project
+}: {
+  deleting: boolean;
+  onCancel: () => void;
+  onConfirm: (project: Project) => void;
+  project: Project | null;
+}) {
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!project) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    cancelButtonRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocusRef.current?.focus();
+    };
+  }, [project]);
+
+  if (!project) return null;
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape" && !deleting) {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    if (event.shiftKey && document.activeElement === cancelButtonRef.current) {
+      event.preventDefault();
+      deleteButtonRef.current?.focus();
+    } else if (!event.shiftKey && document.activeElement === deleteButtonRef.current) {
+      event.preventDefault();
+      cancelButtonRef.current?.focus();
+    }
+  };
+
+  return (
+    <div
+      aria-describedby="delete-project-description"
+      aria-labelledby="delete-project-title"
+      aria-modal="true"
+      className="fixed inset-0 z-[100] grid place-items-center bg-[#10271f]/60 p-4 backdrop-blur-sm"
+      onKeyDown={handleKeyDown}
+      role="alertdialog"
+    >
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-red-200 bg-white shadow-[0_28px_80px_rgba(8,31,22,0.3)]">
+        <div className="flex items-start justify-between gap-4 border-b border-red-100 bg-red-50 px-5 py-4">
+          <div className="flex gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-red-100 text-red-700">
+              <Trash2 className="size-5" />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Permanent action</p>
+              <h2 className="mt-1 text-xl font-bold text-[#3e1d1d]" id="delete-project-title">Delete project?</h2>
+            </div>
+          </div>
+          <Button aria-label="Close delete confirmation" disabled={deleting} onClick={onCancel} size="icon" type="button" variant="ghost">
+            <X />
+          </Button>
+        </div>
+        <div className="px-5 py-5">
+          <p className="text-base font-semibold text-[#263d34]">{project.name}</p>
+          <p className="mt-2 text-sm leading-6 text-[#64766e]" id="delete-project-description">
+            This permanently removes the project and all associated EIA documents, evidence, reviews and assignments. This action cannot be undone.
+          </p>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button disabled={deleting} onClick={onCancel} ref={cancelButtonRef} type="button" variant="secondary">
+              Cancel
+            </Button>
+            <Button disabled={deleting} onClick={() => onConfirm(project)} ref={deleteButtonRef} type="button" variant="destructive">
+              {deleting ? <LoaderCircle className="animate-spin" /> : <Trash2 />}
+              {deleting ? "Deleting project…" : "Delete permanently"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

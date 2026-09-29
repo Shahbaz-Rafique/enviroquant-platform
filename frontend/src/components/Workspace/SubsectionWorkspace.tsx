@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Progress } from "@/components/ui/progress";
+import { SectionSuggestions } from "@/components/eia/section-suggestions";
 import { ApiError, apiRequest } from "@/lib/api-client";
 import {
   canCommentOnEiaDocument,
@@ -101,6 +102,8 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const [assistantSummary, setAssistantSummary] = useState<string | null>(null);
   const [assistantGuidance, setAssistantGuidance] = useState<string[]>([]);
   const [assistantEngine, setAssistantEngine] = useState<string | null>(null);
+  const [assistantProposedHtml, setAssistantProposedHtml] = useState<string | null>(null);
+  const [assistantProposedAction, setAssistantProposedAction] = useState<string | null>(null);
   const [sourceMappings, setSourceMappings] = useState<EiaSourceMapping[]>([]);
 
   const isWorkflowManager = hasAnyRole(user, ["owner", "admin", "project_manager"]);
@@ -469,7 +472,10 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
           tenant_id: user.tenant_id
         })
       });
-      mergeAssistantContent(action, response.generated_html);
+      if (action === "GENERATE_DRAFT" || action === "IMPROVE_DRAFT") {
+        setAssistantProposedHtml(response.generated_html);
+        setAssistantProposedAction(action);
+      }
       setAssistantSummary(response.summary);
       setAssistantGuidance(response.guidance_points);
       setAssistantEngine(`${response.engine} · ${response.model_version}`);
@@ -641,8 +647,8 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
             </div>
             <div className="p-4">
               <div className="mb-3">
-                <h2 className="text-base font-bold text-[#18372c]">Add information</h2>
-                <p className="mt-1 text-sm text-[#697a73]">Enter the subsection response and cite the evidence supporting each material statement.</p>
+                <h2 className="text-base font-bold text-[#18372c]">{canAuthorContent ? "Write your response" : "Read the response"}</h2>
+                <p className="mt-1 text-sm text-[#697a73]">{canAuthorContent ? "Write clearly and cite evidence for each important claim." : "Check the response and supporting evidence before making a review decision."}</p>
               </div>
               <TipTapEditor
                 ref={editorRef}
@@ -689,11 +695,13 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
         </main>
 
         <aside className="grid content-start gap-4 xl:sticky xl:top-20 xl:self-start">
-          <section className="builder-panel order-1 overflow-hidden">
+          <SectionSuggestions key={workspace.subsection.section_id} documentId={documentId} sectionId={workspace.subsection.section_id} />
+          <details className="builder-panel order-1 overflow-hidden">
+            <summary className="cursor-pointer p-4 font-semibold text-[#18372c]">Drafting tools and evidence details</summary>
             <div className="builder-section-title flex items-center justify-between gap-3">
               <span className="flex items-center gap-2">
                 <Bot className="size-5 text-[#B6F7FF]" />
-                Intelligence panel
+                Drafting tools
               </span>
               {canAuthorContent ? (
                 <Button
@@ -785,6 +793,32 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                     </Button>
                   </div>
                 ) : null}
+                {assistantProposedHtml ? (
+                  <div className="mt-4 rounded-xl border border-[#67E8F9]/25 bg-black/20 p-3">
+                    <div className="text-xs font-black uppercase tracking-[0.14em] text-[#B6F7FF]">AI proposal — review before applying</div>
+                    <div className="prose prose-invert prose-sm mt-3 max-h-72 overflow-y-auto text-white/80" dangerouslySetInnerHTML={{ __html: assistantProposedHtml }} />
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button size="sm" type="button" onClick={() => {
+                        if (assistantProposedAction === "IMPROVE_DRAFT") applyAssistantContent(assistantProposedHtml);
+                        else mergeAssistantContent(assistantProposedAction ?? "GENERATE_DRAFT", assistantProposedHtml);
+                        setAssistantProposedHtml(null);
+                        setAssistantProposedAction(null);
+                      }}>
+                        <CheckCircle2 />{assistantProposedAction === "IMPROVE_DRAFT" ? "Replace editor draft" : "Apply to editor"}
+                      </Button>
+                      {hasDraftContent && assistantProposedAction !== "IMPROVE_DRAFT" ? <Button size="sm" type="button" variant="secondary" onClick={() => {
+                        applyAssistantContent(`${editorContent.html}${assistantProposedHtml}`);
+                        setAssistantProposedHtml(null);
+                        setAssistantProposedAction(null);
+                      }}>Append instead</Button> : null}
+                      <Button size="sm" type="button" variant="ghost" onClick={() => {
+                        setAssistantProposedHtml(null);
+                        setAssistantProposedAction(null);
+                      }}>Discard</Button>
+                    </div>
+                    <p className="mt-2 text-xs text-white/48">Applying changes the editor only. Review and save explicitly to create a revision.</p>
+                  </div>
+                ) : null}
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
@@ -863,7 +897,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                 </div>
               </div>
             </div>
-          </section>
+          </details>
           <div className="order-2">
             <ChecklistPanel
               activeSubsectionId={subsection.id}

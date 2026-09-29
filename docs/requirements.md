@@ -98,7 +98,7 @@ The review engine classifies findings using deterministic statuses:
 - `COMPLIANT`
 - `PARTIALLY_COMPLIANT`
 - `NEEDS_IMPROVEMENT`
-- `MISSING_INFORMATION`
+- `MISSING`
 - `NEEDS_REVIEW`
 
 Each finding must include:

@@ -2,10 +2,11 @@ from sqlalchemy.orm import Session
 
 from app.models.checklist_mapping import ChecklistMapping
 from app.models.eia import EiaDocument, EiaSection, EiaSubSection
-from app.services.compliance_methodology import CHECKLIST_VERSION
 
 
-EIA_STRUCTURE = {
+# The RQEIA question set is a review methodology. It must remain independent
+# from the authoring/report structure used by the EIA Builder.
+RQEIA_REVIEW_STRUCTURE = {
     "1": {
         "title": "DESCRIPTION OF THE PROJECT",
         "subsections": [
@@ -210,9 +211,91 @@ EIA_STRUCTURE = {
 }
 
 
+EIA_BUILDER_STRUCTURE = {
+    "1": {"title": "EXECUTIVE SUMMARY", "subsections": [
+        {"number": "1.1", "title": "Non-Technical Executive Summary"},
+        {"number": "1.2", "title": "Key Impacts, Mitigation and Decision Readiness"},
+    ]},
+    "2": {"title": "PROJECT DESCRIPTION", "subsections": [
+        {"number": "2.1", "title": "Project Need, Objectives and Location"},
+        {"number": "2.2", "title": "Project Components, Layout and Design"},
+        {"number": "2.3", "title": "Construction, Operation and Decommissioning"},
+        {"number": "2.4", "title": "Inputs, Outputs, Emissions, Waste and Resources"},
+        {"number": "2.5", "title": "Programme, Workforce and Associated Facilities"},
+    ]},
+    "3": {"title": "POLICY, LEGAL AND REGULATORY FRAMEWORK", "subsections": [
+        {"number": "3.1", "title": "Applicable National and Local Requirements"},
+        {"number": "3.2", "title": "International Standards and Project Commitments"},
+        {"number": "3.3", "title": "Permits, Approvals and Compliance Obligations"},
+    ]},
+    "4": {"title": "ALTERNATIVES ASSESSMENT", "subsections": [
+        {"number": "4.1", "title": "No-Project Alternative"},
+        {"number": "4.2", "title": "Site, Design, Technology and Process Alternatives"},
+        {"number": "4.3", "title": "Comparison and Selection of the Preferred Alternative"},
+    ]},
+    "5": {"title": "ENVIRONMENTAL AND SOCIAL BASELINE", "subsections": [
+        {"number": "5.1", "title": "Study Area, Methods, Sources and Limitations"},
+        {"number": "5.2", "title": "Physical Environment"},
+        {"number": "5.3", "title": "Biodiversity and Ecosystem Services"},
+        {"number": "5.4", "title": "Social, Health, Cultural Heritage and Land Use"},
+        {"number": "5.5", "title": "Sensitive Receptors and Future Baseline"},
+    ]},
+    "6": {"title": "IMPACT ASSESSMENT", "subsections": [
+        {"number": "6.1", "title": "Scoping and Assessment Methodology"},
+        {"number": "6.2", "title": "Construction Impacts"},
+        {"number": "6.3", "title": "Operational Impacts"},
+        {"number": "6.4", "title": "Decommissioning, Accidents and Unplanned Events"},
+        {"number": "6.5", "title": "Impact Significance and Residual Effects"},
+    ]},
+    "7": {"title": "MITIGATION AND ENVIRONMENTAL MANAGEMENT", "subsections": [
+        {"number": "7.1", "title": "Mitigation Hierarchy and Commitments"},
+        {"number": "7.2", "title": "Environmental and Social Management Plan"},
+        {"number": "7.3", "title": "Responsibilities, Resources and Corrective Action"},
+    ]},
+    "8": {"title": "MONITORING PROGRAMME", "subsections": [
+        {"number": "8.1", "title": "Monitoring Indicators, Methods and Locations"},
+        {"number": "8.2", "title": "Thresholds, Frequency, Reporting and Response"},
+    ]},
+    "9": {"title": "CUMULATIVE IMPACTS", "subsections": [
+        {"number": "9.1", "title": "Other Developments and Valued Receptors"},
+        {"number": "9.2", "title": "Cumulative Effects, Mitigation and Residual Risk"},
+    ]},
+    "10": {"title": "CLIMATE, CARBON AND RESILIENCE", "subsections": [
+        {"number": "10.1", "title": "Greenhouse Gas Emissions and Mitigation"},
+        {"number": "10.2", "title": "Climate Risk, Adaptation and Resilience"},
+    ]},
+    "11": {"title": "STAKEHOLDER AND CONSULTATION RECORD", "subsections": [
+        {"number": "11.1", "title": "Stakeholder Identification and Engagement"},
+        {"number": "11.2", "title": "Issues Raised, Responses and Commitments"},
+        {"number": "11.3", "title": "Grievance and Ongoing Engagement"},
+    ]},
+    "12": {"title": "COMPLIANCE MATRIX", "subsections": [
+        {"number": "12.1", "title": "Requirement-to-Evidence Compliance Matrix"},
+        {"number": "12.2", "title": "Outstanding Obligations and Actions"},
+    ]},
+    "13": {"title": "ENVIRONMENTAL INTELLIGENCE AND QA", "subsections": [
+        {"number": "13.1", "title": "Evidence Traceability and Quality Assurance"},
+        {"number": "13.2", "title": "Data Gaps, Uncertainty and AI Transparency"},
+        {"number": "13.3", "title": "Professional Review and Reviewer Decisions"},
+    ]},
+    "14": {"title": "CONCLUSIONS AND DECISION READINESS", "subsections": [
+        {"number": "14.1", "title": "Overall Conclusions and Residual Effects"},
+        {"number": "14.2", "title": "Conditions, Priority Actions and Decision Readiness"},
+    ]},
+    "A": {"title": "APPENDICES AND EVIDENCE REGISTER", "subsections": [
+        {"number": "A.1", "title": "Appendix Schedule"},
+        {"number": "A.2", "title": "Evidence Register"},
+        {"number": "A.3", "title": "Figures, Tables and Supporting Records"},
+    ]},
+}
+
+# Backward-compatible import for code that still names the old constant.
+EIA_STRUCTURE = RQEIA_REVIEW_STRUCTURE
+
+
 def seed_eia_structure(db: Session, document: EiaDocument) -> None:
     subsection_order = 1
-    for section_order, (section_number, section_data) in enumerate(EIA_STRUCTURE.items(), start=1):
+    for section_order, (section_number, section_data) in enumerate(EIA_BUILDER_STRUCTURE.items(), start=1):
         section = EiaSection(
             tenant_id=document.tenant_id,
             eia_document_id=document.id,
@@ -236,99 +319,9 @@ def seed_eia_structure(db: Session, document: EiaDocument) -> None:
             )
             db.add(eia_subsection)
             db.flush()
-            db.add(
-                ChecklistMapping(
-                    tenant_id=document.tenant_id,
-                    subsection_id=eia_subsection.id,
-                    checklist_section=subsection["number"],
-                    checklist_title=subsection["title"],
-                    checklist_version=CHECKLIST_VERSION,
-                    importance=_importance_for_checklist_item(subsection["number"]),
-                )
-            )
             subsection_order += 1
 
     db.flush()
-
-
-def synchronize_eia_structure(db: Session, document: EiaDocument) -> dict[str, int]:
-    """Add missing checklist records without replacing consultant-authored content."""
-
-    sections_by_number = {section.section_number: section for section in document.sections}
-    subsections_by_number = {
-        subsection.subsection_number: subsection
-        for section in document.sections
-        for subsection in section.subsections
-    }
-    added_sections = 0
-    added_subsections = 0
-    updated_mappings = 0
-    subsection_order = 1
-
-    for section_order, (section_number, section_data) in enumerate(EIA_STRUCTURE.items(), start=1):
-        section = sections_by_number.get(section_number)
-        if section is None:
-            section = EiaSection(
-                tenant_id=document.tenant_id,
-                eia_document_id=document.id,
-                section_number=section_number,
-                title=section_data["title"],
-                display_order=section_order,
-            )
-            db.add(section)
-            db.flush()
-            sections_by_number[section_number] = section
-            added_sections += 1
-        else:
-            section.display_order = section_order
-
-        for item in section_data["subsections"]:
-            subsection = subsections_by_number.get(item["number"])
-            if subsection is None:
-                subsection = EiaSubSection(
-                    tenant_id=document.tenant_id,
-                    eia_document_id=document.id,
-                    section_id=section.id,
-                    subsection_number=item["number"],
-                    title=item["title"],
-                    completion_status="NOT_STARTED",
-                    progress_percentage=0.0,
-                    display_order=subsection_order,
-                )
-                db.add(subsection)
-                db.flush()
-                subsections_by_number[item["number"]] = subsection
-                added_subsections += 1
-            else:
-                subsection.display_order = subsection_order
-
-            mapping = next(
-                (value for value in subsection.checklist_mappings if value.checklist_section == item["number"]),
-                None,
-            )
-            if mapping is None:
-                mapping = ChecklistMapping(
-                    tenant_id=document.tenant_id,
-                    subsection_id=subsection.id,
-                    checklist_section=item["number"],
-                    checklist_title=item["title"],
-                    checklist_version=CHECKLIST_VERSION,
-                    importance=_importance_for_checklist_item(item["number"]),
-                )
-                db.add(mapping)
-                updated_mappings += 1
-            else:
-                mapping.checklist_title = item["title"]
-                mapping.checklist_version = CHECKLIST_VERSION
-            subsection_order += 1
-
-    document.checklist_version = CHECKLIST_VERSION
-    db.flush()
-    return {
-        "added_sections": added_sections,
-        "added_subsections": added_subsections,
-        "updated_mappings": updated_mappings,
-    }
 
 
 def _importance_for_checklist_item(checklist_section: str) -> str:

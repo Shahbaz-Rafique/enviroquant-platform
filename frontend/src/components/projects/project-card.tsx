@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Clock3, FileText, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock3, FileText, LoaderCircle, MapPin, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -10,18 +10,21 @@ import type { Project } from "@/lib/types";
 
 type ProjectCardProps = {
   project: Project;
+  canDelete?: boolean;
+  deleting?: boolean;
+  onDelete?: (project: Project) => void;
 };
 
 function formatStatus(status: string) {
   return status.replaceAll("_", " ").toUpperCase();
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ canDelete = false, deleting = false, onDelete, project }: ProjectCardProps) {
   const status = project.status.toUpperCase();
 
   return (
-    <Link href={`/projects/${project.id}`} className="block">
-      <Card className="group h-full overflow-hidden transition-all hover:-translate-y-0.5 hover:border-[#a8cbbb] hover:shadow-[0_12px_28px_rgba(15,45,34,0.1)]">
+    <Card className="group h-full overflow-hidden transition-all hover:-translate-y-0.5 hover:border-[#a8cbbb] hover:shadow-[0_12px_28px_rgba(15,45,34,0.1)]">
+      <Link href={`/projects/${project.id}`} className="block">
         <div className="flex h-full min-h-64 flex-col">
           <div className="border-b border-[#e3eae6] bg-[#f8faf9] p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -55,8 +58,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </div>
           </div>
         </div>
-      </Card>
-    </Link>
+      </Link>
+      {canDelete ? (
+        <div className="border-t border-[#e3eae6] bg-white px-4 py-3">
+          <Button
+            aria-label={`Delete ${project.name}`}
+            className="min-h-11 w-full border-red-200 text-red-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800"
+            disabled={deleting}
+            onClick={() => onDelete?.(project)}
+            type="button"
+            variant="secondary"
+          >
+            {deleting ? <LoaderCircle className="animate-spin" /> : <Trash2 />}
+            {deleting ? "Deleting project…" : "Delete project"}
+          </Button>
+        </div>
+      ) : null}
+    </Card>
   );
 }
 
