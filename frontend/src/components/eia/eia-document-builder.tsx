@@ -442,6 +442,56 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
     }
   }
 
+  async function saveAiDraftToSubsection(subsectionId: string, html: string) {
+    if (!document) {
+      throw new Error("The EIA document is not loaded yet.");
+    }
+    const target = document.sections
+      .flatMap((section) => section.subsections)
+      .find((subsection) => subsection.id === subsectionId);
+    if (!target) {
+      throw new Error("The selected subsection is no longer available.");
+    }
+    if (["APPROVED", "COMPLETE"].includes(target.completion_status)) {
+      throw new Error("This subsection is approved and locked. Reopen it before replacing its draft.");
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await apiRequest<EiaSubSection>(
+        `/eia-documents/${document.id}/subsections/${target.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            content_html: html,
+            content_json: null,
+            completion_status: ["NOT_STARTED", "ASSIGNED"].includes(target.completion_status)
+              ? "IN_PROGRESS"
+              : target.completion_status,
+            progress_percentage: Math.max(target.progress_percentage, 25),
+            expected_updated_at: target.updated_at
+          })
+        }
+      );
+      setDocument((current) => replaceSubsection(current, updated));
+      setSelectedSubsectionId(updated.id);
+      setContentHtml(updated.content_html || updated.content || html);
+      setContentJson(updated.content_json ?? null);
+      setCompletionStatus(updated.completion_status);
+      setProgressPercentage(updated.progress_percentage);
+      setSavedAt(new Date().toLocaleTimeString());
+      setSaveConflict(false);
+      void refreshDashboardData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "The AI draft could not be saved.";
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   let saveStatusText = "Read-only access";
   if (canAuthorContent) {
     saveStatusText = savedAt ? `Saved at ${savedAt}` : "Changes are saved when you select Save draft";
@@ -560,15 +610,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
           documentId={documentId}
           sectionId={selectedSubsection.section_id}
           autoOpen={autoOpenAi}
-          onInsertDraft={(subsectionId, html) => {
-            setSelectedSubsectionId(subsectionId);
-            setContentHtml(html);
-            setContentJson(null);
-            // Inserting a draft means work has started — allow saving immediately
-            if (completionStatus === "NOT_STARTED" || completionStatus === "ASSIGNED") {
-              setCompletionStatus("IN_PROGRESS");
-            }
-          }}
+          onInsertDraft={saveAiDraftToSubsection}
         />
       ) : null}
 

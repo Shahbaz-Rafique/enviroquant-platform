@@ -29,7 +29,7 @@ export function SectionSuggestions({
   documentId: string;
   sectionId: string;
   autoOpen?: boolean;
-  onInsertDraft?: (subsectionId: string, html: string) => void;
+  onInsertDraft?: (subsectionId: string, html: string) => void | Promise<void>;
 }) {
   const [result, setResult] = useState<Suggestions | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,10 +69,14 @@ export function SectionSuggestions({
     setConfirming(subsectionId);
   }
 
-  function confirmInsert(subsectionId: string, html: string) {
-    onInsertDraft?.(subsectionId, html);
-    setInserted((prev) => new Set(prev).add(subsectionId));
-    setConfirming(null);
+  async function confirmInsert(subsectionId: string, html: string) {
+    try {
+      await onInsertDraft?.(subsectionId, html);
+      setInserted((prev) => new Set(prev).add(subsectionId));
+      setConfirming(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The AI draft could not be saved.");
+    }
   }
 
   return (
@@ -116,7 +120,7 @@ export function SectionSuggestions({
                           <Button
                             type="button"
                             size="sm"
-                            onClick={() => confirmInsert(item.subsection_id, item.draft_html!)}
+                            onClick={() => void confirmInsert(item.subsection_id, item.draft_html!)}
                           >
                             Yes, insert
                           </Button>
@@ -137,7 +141,7 @@ export function SectionSuggestions({
                           onClick={() => requestInsert(item.subsection_id)}
                         >
                           <Wand2 className="size-3.5" />
-                          Insert draft
+                          Save AI draft
                         </Button>
                       )
                     ) : null}
