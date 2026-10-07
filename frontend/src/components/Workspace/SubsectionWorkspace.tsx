@@ -80,6 +80,9 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const router = useRouter();
   const editorRegionRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<TipTapEditorHandle | null>(null);
+  // Navigation can change the route before the previous workspace request returns.
+  // Keep only the response for the subsection that is still open.
+  const workspaceRequestRef = useRef(0);
   const [workspace, setWorkspace] = useState<EiaSubSectionWorkspaceType | null>(null);
   const [editorContent, setEditorContent] = useState<EditorContent>(emptyEditorContent);
   const [completionStatus, setCompletionStatus] = useState("NOT_STARTED");
@@ -130,14 +133,23 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
   const canUpload = canAuthorContent;
 
   const loadWorkspace = useCallback(async () => {
+    const requestId = ++workspaceRequestRef.current;
     setLoading(true);
     setError(null);
+    setWorkspace(null);
+    setEditorContent(emptyEditorContent);
     try {
       const data = await apiRequest<EiaSubSectionWorkspaceType>(
         `/eia-documents/subsections/${subsectionId}?tenant_id=${encodeURIComponent(user.tenant_id)}`
       );
+      if (requestId !== workspaceRequestRef.current) {
+        return;
+      }
       if (data.project_id !== projectId || data.eia_document_id !== documentId) {
         throw new Error("Subsection does not belong to this project EIA document");
+      }
+      if (data.subsection.id !== subsectionId) {
+        throw new Error("The loaded subsection does not match the section you selected");
       }
       setWorkspace(data);
       setEditorContent({
@@ -150,9 +162,14 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
       setSaveState("idle");
       setNewerVersionAvailable(false);
     } catch (err) {
+      if (requestId !== workspaceRequestRef.current) {
+        return;
+      }
       setError(err instanceof Error ? err.message : "Subsection workspace could not be loaded");
     } finally {
-      setLoading(false);
+      if (requestId === workspaceRequestRef.current) {
+        setLoading(false);
+      }
     }
   }, [documentId, projectId, subsectionId, user.tenant_id]);
 
@@ -651,6 +668,7 @@ export function SubsectionWorkspace({ documentId, projectId, subsectionId, user 
                 <p className="mt-1 text-sm text-[#697a73]">{canAuthorContent ? "Write clearly and cite evidence for each important claim." : "Check the response and supporting evidence before making a review decision."}</p>
               </div>
               <TipTapEditor
+                key={`${subsectionId}:${workspace.subsection.updated_at}`}
                 ref={editorRef}
                 content={editorContent.html}
                 editable={canAuthorContent}
