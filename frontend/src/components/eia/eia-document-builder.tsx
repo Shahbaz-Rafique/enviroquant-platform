@@ -98,6 +98,7 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
   const [selectedSubsectionId, setSelectedSubsectionId] = useState<string | null>(null);
   const [contentHtml, setContentHtml] = useState("<p></p>");
   const [contentJson, setContentJson] = useState<Record<string, unknown> | null>(null);
+  const [editorContentSubsectionId, setEditorContentSubsectionId] = useState<string | null>(null);
   const [completionStatus, setCompletionStatus] = useState("NOT_STARTED");
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [progressSummary, setProgressSummary] = useState<EiaDocumentProgress | null>(null);
@@ -331,10 +332,12 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
 
   useEffect(() => {
     if (!selectedSubsection) {
+      setEditorContentSubsectionId(null);
       return;
     }
     setContentHtml(selectedSubsection.content_html || selectedSubsection.content || "<p></p>");
     setContentJson(selectedSubsection.content_json ?? null);
+    setEditorContentSubsectionId(selectedSubsection.id);
     setCompletionStatus(selectedSubsection.completion_status);
     setProgressPercentage(selectedSubsection.progress_percentage);
     setSavedAt(null);
@@ -863,9 +866,9 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
               <span className="text-sm font-semibold text-[#344f44]">Assessment response</span>
               <span className="text-[11px] font-medium text-[#8a9a93]">{saveStatusText}</span>
             </div>
-            {selectedSubsection ? (
+            {selectedSubsection && editorContentSubsectionId === selectedSubsection.id ? (
               <TipTapEditor
-                key={selectedSubsectionId}
+                key={`${selectedSubsection.id}:${selectedSubsection.updated_at}`}
                 content={contentHtml}
                 editable={canAuthorContent}
                 onChange={({ html, json }) => {
@@ -874,6 +877,10 @@ export function EiaDocumentBuilder({ documentId, projectId, user }: EiaDocumentB
                 }}
                 onImageUpload={canAuthorContent ? uploadEditorImage : undefined}
               />
+            ) : selectedSubsection ? (
+              <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-[#cfdcd6] bg-white text-sm font-medium text-[#60736a]">
+                Loading subsection response…
+              </div>
             ) : (
               <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-[#cfdcd6] bg-white text-sm text-[#8a9a93]">
                 Select a subsection to start editing
