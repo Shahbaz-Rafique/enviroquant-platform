@@ -49,6 +49,9 @@ REVIEWER_TRANSITIONS = {
     ("READY_FOR_REVIEW", "UNDER_REVIEW"),
     ("UNDER_REVIEW", "REVISION_REQUIRED"),
     ("UNDER_REVIEW", "APPROVED"),
+    # A controlled issue can only be reopened by a reviewer/manager and must
+    # carry a recorded reason for the new revision cycle.
+    ("APPROVED", "REVISION_REQUIRED"),
 }
 
 

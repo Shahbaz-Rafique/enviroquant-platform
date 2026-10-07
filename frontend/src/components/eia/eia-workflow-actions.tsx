@@ -119,9 +119,32 @@ export function EiaWorkflowActions({
       ) : null}
 
       {normalizedStatus === "APPROVED" ? (
-        <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
-          <CheckCircle2 className="size-4" /> Approved and locked
-        </p>
+        canReview ? (
+          <div className="grid gap-2">
+            <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+              <CheckCircle2 className="size-4" /> Approved and locked
+            </p>
+            <Textarea
+              className="min-h-20"
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              placeholder="Reason for reopening this approved subsection"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy !== null || !comment.trim()}
+              onClick={() => void transition("REVISION_REQUIRED")}
+            >
+              {busy === "REVISION_REQUIRED" ? <Loader2 className="animate-spin" /> : <MessageSquareWarning />}
+              Reopen for revision
+            </Button>
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+            <CheckCircle2 className="size-4" /> Approved and locked
+          </p>
+        )
       ) : null}
     </div>
   );
